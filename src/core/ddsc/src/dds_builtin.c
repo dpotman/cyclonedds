@@ -64,15 +64,15 @@ dds_entity_t dds__get_builtin_topic (dds_entity_t entity, dds_entity_t topic)
   switch (topic)
   {
     case DDS_BUILTIN_TOPIC_DCPSPARTICIPANT:
-      topic_name = "DCPSParticipant";
+      topic_name = DDS_BUILTIN_TOPIC_NAME_PARTICIPANT;
       sertype = e->m_domain->builtin_participant_type;
       break;
     case DDS_BUILTIN_TOPIC_DCPSPUBLICATION:
-      topic_name = "DCPSPublication";
+      topic_name = DDS_BUILTIN_TOPIC_NAME_PUBLICATION;
       sertype = e->m_domain->builtin_writer_type;
       break;
     case DDS_BUILTIN_TOPIC_DCPSSUBSCRIPTION:
-      topic_name = "DCPSSubscription";
+      topic_name = DDS_BUILTIN_TOPIC_NAME_SUBSCRIPTION;
       sertype = e->m_domain->builtin_reader_type;
       break;
     default:
@@ -135,7 +135,7 @@ bool dds__validate_builtin_reader_qos (const dds_domain *dom, dds_entity_t topic
        should be addressed one day. */
     const uint64_t qmask = ~(QP_TOPIC_NAME | QP_TYPE_NAME);
     dds_qos_policy_id_t dummy;
-    return qos_match_mask_p (qos, bwr->wr.xqos, qmask, &dummy) && !qos_has_resource_limits (qos);
+    return qos_match_mask_p (bwr->wr.e.gv, qos, NULL, bwr->wr.xqos, NULL, qmask, &dummy, NULL, NULL) && !qos_has_resource_limits (qos);
   }
 }
 
@@ -286,9 +286,9 @@ void dds__builtin_init (struct dds_domain *dom)
 
   thread_state_awake (lookup_thread_state (), &dom->gv);
   const struct entity_index *gh = dom->gv.entity_index;
-  dom->builtintopic_writer_participant = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER), "DCPSParticipant", dom->builtin_participant_type, qos, builtintopic_whc_new (DSBT_PARTICIPANT, gh));
-  dom->builtintopic_writer_publications = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER), "DCPSPublication", dom->builtin_writer_type, qos, builtintopic_whc_new (DSBT_WRITER, gh));
-  dom->builtintopic_writer_subscriptions = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER), "DCPSSubscription", dom->builtin_reader_type, qos, builtintopic_whc_new (DSBT_READER, gh));
+  dom->builtintopic_writer_participant = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER), DDS_BUILTIN_TOPIC_NAME_PARTICIPANT, dom->builtin_participant_type, qos, builtintopic_whc_new (DSBT_PARTICIPANT, gh));
+  dom->builtintopic_writer_publications = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER), DDS_BUILTIN_TOPIC_NAME_PUBLICATION, dom->builtin_writer_type, qos, builtintopic_whc_new (DSBT_WRITER, gh));
+  dom->builtintopic_writer_subscriptions = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER), DDS_BUILTIN_TOPIC_NAME_SUBSCRIPTION, dom->builtin_reader_type, qos, builtintopic_whc_new (DSBT_READER, gh));
   thread_state_asleep (lookup_thread_state ());
 
   dds_delete_qos (qos);

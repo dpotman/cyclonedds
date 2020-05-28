@@ -1953,7 +1953,7 @@ static struct ddsi_serdata *remote_make_sample (struct ddsi_tkmap_instance **tk,
                   "data(application, vendor %u.%u): "PGUIDFMT" #%"PRId64": deserialization %s/%s failed (%s)\n",
                   sampleinfo->rst->vendor.id[0], sampleinfo->rst->vendor.id[1],
                   PGUID (guid), sampleinfo->seq,
-                  "FIXME", type->type_name,  // FIXME: topic name from pwr?
+                  pwr && (pwr->c.xqos->present & QP_TOPIC_NAME) ? pwr->c.xqos->topic_name : "", type->type_name,
                   failmsg ? failmsg : "for reasons unknown");
   }
   else
@@ -1975,7 +1975,8 @@ static struct ddsi_serdata *remote_make_sample (struct ddsi_tkmap_instance **tk,
       if (pwr) guid = pwr->e.guid; else memset (&guid, 0, sizeof (guid));
       GVTRACE ("data(application, vendor %u.%u): "PGUIDFMT" #%"PRId64": ST%x %s/%s:%s%s",
                sampleinfo->rst->vendor.id[0], sampleinfo->rst->vendor.id[1],
-               PGUID (guid), sampleinfo->seq, statusinfo, "FIXME", type->type_name, // FIXME: topic name from pwr?
+               PGUID (guid), sampleinfo->seq, statusinfo,
+               pwr && (pwr->c.xqos->present & QP_TOPIC_NAME) ? pwr->c.xqos->topic_name : "", type->type_name,
                tmp, res < sizeof (tmp) - 1 ? "" : "(trunc)");
     }
   }

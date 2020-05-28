@@ -12,6 +12,7 @@
 #ifndef Q_QOSMATCH_H
 #define Q_QOSMATCH_H
 
+#include "dds/ddsi/ddsi_typeid.h"
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -26,9 +27,13 @@ int partitions_match_p (const struct dds_qos *a, const struct dds_qos *b);
 
    reason will be set to the policy id of one of the mismatching QoS, or to
    DDS_INVALID_QOS_POLICY_ID if there is no mismatch or if the mismatch is
-   in topic or type name (those are not really QoS and don't have a policy id) */
-bool qos_match_mask_p (const dds_qos_t *rd, const dds_qos_t *wr, uint64_t mask, dds_qos_policy_id_t *reason) ddsrt_nonnull_all;
-bool qos_match_p (const struct dds_qos *rd, const struct dds_qos *wr, dds_qos_policy_id_t *reason) ddsrt_nonnull ((1, 2));
+   in topic or type name (those are not really QoS and don't have a policy id)
+
+   rd/wr_type_unknown is set to true in case the matching cannot be completed
+   because of missing type information. A type-lookup request is required to get the
+   details of the type to do the qos matching (e.g. check assignability) */
+bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd, const type_identifier_t *rd_typeid, const dds_qos_t *wr, const type_identifier_t *wr_typeid, uint64_t mask, dds_qos_policy_id_t *reason, bool *rd_typeid_req_lookup, bool *wr_typeid_req_lookup) ddsrt_nonnull ((2, 4, 7));
+bool qos_match_p (struct ddsi_domaingv *gv, const dds_qos_t *rd, const type_identifier_t *rd_typeid, const dds_qos_t *wr, const type_identifier_t *wr_typeid, dds_qos_policy_id_t *reason, bool *rd_typeid_req_lookup, bool *wr_typeid_req_lookup) ddsrt_nonnull ((2, 4));
 
 #if defined (__cplusplus)
 }

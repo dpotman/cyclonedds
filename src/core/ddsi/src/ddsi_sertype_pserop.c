@@ -23,6 +23,7 @@
 #include "dds/ddsi/ddsi_plist_generic.h"
 #include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_serdata_pserop.h"
+#include "dds/ddsi/ddsi_typelookup.h"
 
 static bool sertype_pserop_equal (const struct ddsi_sertype *acmn, const struct ddsi_sertype *bcmn)
 {
@@ -56,6 +57,22 @@ static uint32_t sertype_pserop_hash (const struct ddsi_sertype *tpcmn)
   if (tp->ops_key)
     h = ddsrt_mh3 (tp->ops_key, tp->nops_key * sizeof (*tp->ops_key), h);
   return h;
+}
+
+static void sertype_pserop_typeid_hash (const struct ddsi_sertype *tpcmn, unsigned char *buf)
+{
+  const struct ddsi_sertype_pserop *tp = (struct ddsi_sertype_pserop *) tpcmn;
+
+  ddsrt_md5_state_t md5st;
+  ddsrt_md5_init (&md5st);
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->memsize, sizeof (tp->memsize));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->nops, sizeof (tp->nops));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) tp->ops, (uint32_t) (tp->nops * sizeof (*tp->ops)));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->nops_key, sizeof (tp->nops_key));
+  if (tp->ops_key)
+    ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) tp->ops_key, (uint32_t) tp->nops_key * sizeof (*tp->ops_key));
+  ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) buf);
 }
 
 static void sertype_pserop_free (struct ddsi_sertype *tpcmn)
@@ -108,11 +125,30 @@ static void sertype_pserop_free_samples (const struct ddsi_sertype *sertype_comm
   }
 }
 
+static void sertype_pserop_serialize (const struct ddsi_sertype *sertype_common, size_t *sz, unsigned char **buf)
+{
+  (void) sertype_common;
+  (void) sz;
+  (void) buf;
+  abort ();
+}
+
+static void sertype_pserop_deserialize (struct ddsi_sertype *sertype_common, size_t sz, const unsigned char *serdata)
+{
+  (void) sertype_common;
+  (void) sz;
+  (void) serdata;
+  abort ();
+}
+
 const struct ddsi_sertype_ops ddsi_sertype_ops_pserop = {
   .equal = sertype_pserop_equal,
   .hash = sertype_pserop_hash,
+  .typeid_hash = sertype_pserop_typeid_hash,
   .free = sertype_pserop_free,
   .zero_samples = sertype_pserop_zero_samples,
   .realloc_samples = sertype_pserop_realloc_samples,
-  .free_samples = sertype_pserop_free_samples
+  .free_samples = sertype_pserop_free_samples,
+  .serialize = sertype_pserop_serialize,
+  .deserialize = sertype_pserop_deserialize
 };

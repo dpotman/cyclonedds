@@ -1043,19 +1043,20 @@ dds_create_topic(
 /**
  * @brief Creates a new topic with provided type handling.
  *
- * The type name for the topic is taken from the provided "sertopic" object. Topic
+ * The name for the type is taken from the provided "sertype" object. Type
  * matching is done on a combination of topic name and type name. Each successful
  * call to dds_create_topic creates a new topic entity sharing the same QoS
  * settings with all other topics of the same name.
  *
  * In case this function returns a valid handle, the ownership of the provided
- * sertopic is handed over to Cyclone. On return, the caller gets in the sertopic parameter a
- * pointer to the sertopic that is actually used by the topic. This can be the provided sertopic
- * (if this sertopic was not yet known in the domain), or a sertopic thas was
+ * sertype is handed over to Cyclone. On return, the caller gets in the sertype parameter a
+ * pointer to the sertype that is actually used by the topic. This can be the provided sertype
+ * (if this sertype was not yet known in the domain), or a sertype thas was
  * already known in the domain.
  *
  * @param[in]     participant  Participant on which to create the topic.
- * @param[in,out] sertopic     Internal description of the topic type (includes name). On return, the sertopic parameter is set to the actual sertopic that is used by the topic.
+ * @param[in]     name         Topic name
+ * @param[in,out] sertype      Internal description of the type . On return, the sertype parameter is set to the actual sertype that is used by the topic.
  * @param[in]     qos          QoS to set on the new topic (can be NULL).
  * @param[in]     listener     Any listener functions associated with the new topic (can be NULL).
  * @param[in]     sedp_plist   Topic description to be published as part of discovery (if NULL, not published).
@@ -1071,7 +1072,7 @@ dds_create_topic(
  * @retval DDS_RETCODE_INCONSISTENT_POLICY
  *             QoS mismatch between qos and an existing topic's QoS.
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
- *             Mismatch between type name in sertopic and pre-existing
+ *             Mismatch between type name in sertype and pre-existing
  *             topic's type name.
  */
 DDS_EXPORT dds_entity_t

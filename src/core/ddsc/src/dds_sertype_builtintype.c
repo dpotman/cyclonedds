@@ -21,6 +21,7 @@
 #include "dds/ddsi/q_freelist.h"
 #include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_iid.h"
+#include "dds/ddsi/ddsi_typelookup.h"
 #include "dds__serdata_builtintype.h"
 
 /* FIXME: sertopic /= ddstopic so a lot of stuff needs to be moved here from dds_topic.c and the free function needs to be implemented properly */
@@ -50,6 +51,15 @@ static uint32_t sertype_builtin_hash (const struct ddsi_sertype *tpcmn)
 {
   const struct ddsi_sertype_builtintype *tp = (struct ddsi_sertype_builtintype *) tpcmn;
   return (uint32_t) tp->entity_kind;
+}
+
+static void sertype_builtin_typeid_hash (const struct ddsi_sertype *tpcmn, unsigned char *seq)
+{
+  const struct ddsi_sertype_builtintype *tp = (struct ddsi_sertype_builtintype *) tpcmn;
+  ddsrt_md5_state_t md5st;
+  ddsrt_md5_init (&md5st);
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->entity_kind, sizeof (tp->entity_kind));
+  ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) seq);
 }
 
 static void free_pp (void *vsample)
@@ -145,6 +155,7 @@ static void sertype_builtin_free_samples (const struct ddsi_sertype *sertype_com
 const struct ddsi_sertype_ops ddsi_sertype_ops_builtintype = {
   .equal = sertype_builtin_equal,
   .hash = sertype_builtin_hash,
+  .typeid_hash = sertype_builtin_typeid_hash,
   .free = sertype_builtin_free,
   .zero_samples = sertype_builtin_zero_samples,
   .realloc_samples = sertype_builtin_realloc_samples,

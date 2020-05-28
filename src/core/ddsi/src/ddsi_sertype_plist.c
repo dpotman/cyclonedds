@@ -14,11 +14,13 @@
 #include <assert.h>
 #include <string.h>
 
+#include "dds/ddsrt/md5.h"
 #include "dds/ddsrt/mh3.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsi/ddsi_plist.h"
 #include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_serdata_plist.h"
+#include "dds/ddsi/ddsi_typelookup.h"
 
 static bool sertype_plist_equal (const struct ddsi_sertype *acmn, const struct ddsi_sertype *bcmn)
 {
@@ -38,6 +40,17 @@ static uint32_t sertype_plist_hash (const struct ddsi_sertype *tpcmn)
   h = ddsrt_mh3 (&tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier), h);
   h = ddsrt_mh3 (&tp->keyparam, sizeof (tp->keyparam), h);
   return h;
+}
+
+static void sertype_plist_typeid_hash (const struct ddsi_sertype *tpcmn, unsigned char *buf)
+{
+  const struct ddsi_sertype_plist *tp = (struct ddsi_sertype_plist *) tpcmn;
+
+  ddsrt_md5_state_t md5st;
+  ddsrt_md5_init (&md5st);
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->keyparam, sizeof (tp->keyparam));
+  ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) buf);
 }
 
 static void sertype_plist_free (struct ddsi_sertype *tpcmn)
@@ -85,11 +98,30 @@ static void sertype_plist_free_samples (const struct ddsi_sertype *sertype_commo
   }
 }
 
+static void sertype_plist_serialize (const struct ddsi_sertype *sertype_common, size_t *sz, unsigned char **buf)
+{
+  (void) sertype_common;
+  (void) sz;
+  (void) buf;
+  abort ();
+}
+
+static void sertype_plist_deserialize (struct ddsi_sertype *sertype_common, size_t sz, const unsigned char *serdata)
+{
+  (void) sertype_common;
+  (void) sz;
+  (void) serdata;
+  abort ();
+}
+
 const struct ddsi_sertype_ops ddsi_sertype_ops_plist = {
   .equal = sertype_plist_equal,
   .hash = sertype_plist_hash,
+  .typeid_hash = sertype_plist_typeid_hash,
   .free = sertype_plist_free,
   .zero_samples = sertype_plist_zero_samples,
   .realloc_samples = sertype_plist_realloc_samples,
-  .free_samples = sertype_plist_free_samples
+  .free_samples = sertype_plist_free_samples,
+  .serialize = sertype_plist_serialize,
+  .deserialize = sertype_plist_deserialize
 };

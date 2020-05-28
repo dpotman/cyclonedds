@@ -26,7 +26,8 @@
 #include "dds/ddsi/q_inverse_uint32_set.h"
 #include "dds/ddsi/ddsi_serdata_default.h"
 #include "dds/ddsi/ddsi_handshake.h"
-
+#include "dds/ddsi/ddsi_typeid.h"
+#include "dds/ddsi/ddsi_typelookup.h"
 #include "dds/ddsi/ddsi_tran.h"
 
 #if defined (__cplusplus)
@@ -242,6 +243,7 @@ struct participant
 struct endpoint_common {
   struct participant *pp;
   ddsi_guid_t group_guid;
+  type_identifier_t type_id;
 };
 
 struct generic_endpoint { /* FIXME: currently only local endpoints; proxies use entity_common + proxy_endpoint common */
@@ -417,6 +419,8 @@ struct proxy_endpoint_common
   ddsi_guid_t group_guid; /* 0:0:0:0 if not available */
   nn_vendorid_t vendor; /* cached from proxypp->vendor */
   seqno_t seq; /* sequence number of most recent SEDP message */
+  type_identifier_t type_id; /* type identifier for for type used by this proxy endpoint */
+  const struct ddsi_sertype * type; /* type */
 #ifdef DDSI_INCLUDE_SECURITY
   nn_security_info_t security_info;
 #endif
@@ -742,6 +746,7 @@ void local_reader_ary_setfastpath_ok (struct local_reader_ary *x, bool fastpath_
 void connect_writer_with_proxy_reader_secure(struct writer *wr, struct proxy_reader *prd, ddsrt_mtime_t tnow, int64_t crypto_handle);
 void connect_reader_with_proxy_writer_secure(struct reader *rd, struct proxy_writer *pwr, ddsrt_mtime_t tnow, int64_t crypto_handle);
 
+void update_proxy_endpoint_matching (const struct ddsi_domaingv *gv, struct generic_proxy_endpoint *proxy_ep);
 
 struct ddsi_writer_info;
 DDS_EXPORT void ddsi_make_writer_info(struct ddsi_writer_info *wrinfo, const struct entity_common *e, const struct dds_qos *xqos, uint32_t statusinfo);

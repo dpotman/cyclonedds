@@ -164,13 +164,13 @@ struct ddsi_serdata_ops {
 DDS_EXPORT void ddsi_serdata_init (struct ddsi_serdata *d, const struct ddsi_sertype *type, enum ddsi_serdata_kind kind);
 
 /**
- * @brief Return a reference to a serdata with possible topic conversion
+ * @brief Return a reference to a serdata with possible type conversion
  *
- * If `serdata` is of topic `topic`, this increments the reference count and returns
+ * If `serdata` is of type `type`, this increments the reference count and returns
  * `serdata`.  Otherwise, it constructs a new one from the serialised representation of
  * `serdata`.  This can fail, in which case it returns NULL.
  *
- * @param[in] topic    sertopic the returned serdata must have
+ * @param[in] type    sertype the returned serdata must have
  * @param[in] serdata  source sample (untouched except for the reference count and/or
  *   extracting the serialised representation)
  * @returns A reference to a serdata that is equivalent to the input with the correct

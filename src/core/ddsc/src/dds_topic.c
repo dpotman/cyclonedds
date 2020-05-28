@@ -152,6 +152,9 @@ static dds_return_t dds_topic_delete (dds_entity *e)
   struct dds_ktopic * const ktp = tp->m_ktopic;
   assert (dds_entity_kind (e->m_parent) == DDS_KIND_PARTICIPANT);
   dds_participant * const pp = (dds_participant *) e->m_parent;
+  type_identifier_t *type_id = ddsi_typeid_from_sertype (tp->m_stype);
+  ddsi_tl_meta_unref (&pp->m_entity.m_domain->gv, type_id, NULL);
+  ddsrt_free (type_id);
   ddsrt_free (tp->m_name);
   ddsi_sertype_unref (tp->m_stype);
 
@@ -363,6 +366,7 @@ dds_entity_t dds_create_topic_impl (dds_entity_t participant, const char * name,
   *sertype = sertype_registered;
   ddsrt_mutex_unlock (&pp->m_entity.m_mutex);
   dds_entity_unpin (&pp->m_entity);
+  ddsi_tl_meta_ref (gv, NULL, sertype_registered, NULL, NULL);
   GVTRACE ("dds_create_topic_generic: new topic %"PRId32"\n", hdl);
   return hdl;
 
@@ -494,6 +498,7 @@ dds_entity_t dds_find_topic (dds_entity_t participant, const char *name)
 
     dds_entity_t hdl = create_topic_pp_locked (pp, ktp, false, name, sertype, NULL, NULL);
     dds_participant_unlock (pp);
+    ddsi_tl_meta_ref (sertype->gv, NULL, sertype, NULL, NULL);
     return hdl;
   }
   dds_participant_unlock (pp);

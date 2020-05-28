@@ -261,9 +261,11 @@ struct ddsi_domaingv {
   dds_qos_t spdp_endpoint_xqos;
   dds_qos_t builtin_endpoint_xqos_rd;
   dds_qos_t builtin_endpoint_xqos_wr;
-#ifdef DDSI_INCLUDE_SECURITY
+  dds_qos_t builtin_volatile_xqos_rd;
+  dds_qos_t builtin_volatile_xqos_wr;
   dds_qos_t builtin_secure_volatile_xqos_rd;
   dds_qos_t builtin_secure_volatile_xqos_wr;
+#ifdef DDSI_INCLUDE_SECURITY
   dds_qos_t builtin_stateless_xqos_rd;
   dds_qos_t builtin_stateless_xqos_wr;
 #endif
@@ -298,6 +300,8 @@ struct ddsi_domaingv {
   struct ddsi_sertype *sedp_reader_type; /* key = endpoint GUID */
   struct ddsi_sertype *sedp_writer_type; /* key = endpoint GUID */
   struct ddsi_sertype *pmd_type; /* participant message data */
+  struct ddsi_sertype *tl_svc_request_type; /* TypeLookup service request, no key */
+  struct ddsi_sertype *tl_svc_reply_type; /* TypeLookup service reply, no key */
 #ifdef DDSI_INCLUDE_SECURITY
   struct ddsi_sertype *spdp_secure_type; /* key = participant GUID */
   struct ddsi_sertype *sedp_reader_secure_type; /* key = endpoint GUID */
@@ -325,6 +329,9 @@ struct ddsi_domaingv {
 
   ddsrt_mutex_t sertypes_lock;
   struct ddsrt_hh *sertypes;
+
+  ddsrt_mutex_t tl_admin_lock;
+  struct ddsrt_hh *tl_admin;
 
   /* security globals */
 #ifdef DDSI_INCLUDE_SECURITY
