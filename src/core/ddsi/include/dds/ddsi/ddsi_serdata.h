@@ -13,7 +13,7 @@
 #define DDSI_SERDATA_H
 
 #include "dds/ddsrt/sockets.h"
-#include "dds/ddsi/ddsi_sertopic.h"
+#include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_keyhash.h"
 
 #if defined (__cplusplus)
@@ -33,7 +33,7 @@ struct ddsi_serdata {
   uint32_t hash;
   ddsrt_atomic_uint32_t refc;
   enum ddsi_serdata_kind kind;
-  const struct ddsi_sertopic *topic;
+  const struct ddsi_sertype *type;
 
   /* these get set by generic code after creating the serdata */
   ddsrt_wctime_t timestamp;
@@ -58,20 +58,20 @@ typedef void (*ddsi_serdata_free_t) (struct ddsi_serdata *d);
    - fragchains may overlap, though I have never seen any DDS implementation
      actually send such nasty fragments
    - FIXME: get the encoding header out of the serialised data */
-typedef struct ddsi_serdata * (*ddsi_serdata_from_ser_t) (const struct ddsi_sertopic *topic, enum ddsi_serdata_kind kind, const struct nn_rdata *fragchain, size_t size);
+typedef struct ddsi_serdata * (*ddsi_serdata_from_ser_t) (const struct ddsi_sertype *type, enum ddsi_serdata_kind kind, const struct nn_rdata *fragchain, size_t size);
 
 /* Exactly like ddsi_serdata_from_ser_t, but with the data in an iovec and guaranteed absence of overlap */
-typedef struct ddsi_serdata * (*ddsi_serdata_from_ser_iov_t) (const struct ddsi_sertopic *topic, enum ddsi_serdata_kind kind, ddsrt_msg_iovlen_t niov, const ddsrt_iovec_t *iov, size_t size);
+typedef struct ddsi_serdata * (*ddsi_serdata_from_ser_iov_t) (const struct ddsi_sertype *type, enum ddsi_serdata_kind kind, ddsrt_msg_iovlen_t niov, const ddsrt_iovec_t *iov, size_t size);
 
 /* Construct a serdata from a keyhash (an SDK_KEY by definition) */
-typedef struct ddsi_serdata * (*ddsi_serdata_from_keyhash_t) (const struct ddsi_sertopic *topic, const struct ddsi_keyhash *keyhash);
+typedef struct ddsi_serdata * (*ddsi_serdata_from_keyhash_t) (const struct ddsi_sertype *type, const struct ddsi_keyhash *keyhash);
 
 /* Construct a serdata from an application sample
    - "kind" is KEY or DATA depending on the operation invoked by the application;
      e.g., write results in kind = DATA, dispose in kind = KEY.  The important bit
      is to not assume anything of the contents of non-key fields if kind = KEY
      unless additional application knowledge is available */
-typedef struct ddsi_serdata * (*ddsi_serdata_from_sample_t) (const struct ddsi_sertopic *topic, enum ddsi_serdata_kind kind, const void *sample);
+typedef struct ddsi_serdata * (*ddsi_serdata_from_sample_t) (const struct ddsi_sertype *type, enum ddsi_serdata_kind kind, const void *sample);
 
 /* Construct a topic-less serdata with just a keyvalue given a normal serdata (either key or data)
    - used for mapping key values to instance ids in tkmap
@@ -116,7 +116,7 @@ typedef bool (*ddsi_serdata_to_sample_t) (const struct ddsi_serdata *d, void *sa
 
 /* Create a sample from a topicless serdata, as returned by serdata_to_topicless.  This sample
    obviously has just the key fields filled in and is used for generating invalid samples. */
-typedef bool (*ddsi_serdata_topicless_to_sample_t) (const struct ddsi_sertopic *topic, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim);
+typedef bool (*ddsi_serdata_topicless_to_sample_t) (const struct ddsi_sertype *type, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim);
 
 /* Test key values of two serdatas for equality.  The two will have the same ddsi_serdata_ops,
    but are not necessarily of the same topic (one can decide to never consider them equal if they
@@ -132,7 +132,7 @@ typedef bool (*ddsi_serdata_eqkey_t) (const struct ddsi_serdata *a, const struct
    - returns the number of characters (excluding the terminating 0) needed to print it
      in full (or, as an optimization, it may pretend that it has printed it in full,
      returning bufsize-1) if it had to truncate) */
-typedef size_t (*ddsi_serdata_print_t) (const struct ddsi_sertopic *topic, const struct ddsi_serdata *d, char *buf, size_t size);
+typedef size_t (*ddsi_serdata_print_t) (const struct ddsi_sertype *type, const struct ddsi_serdata *d, char *buf, size_t size);
 
 /* Add keyhash (from serdata) to buffer (forcing md5 when necessary).
    - key needs to be set within serdata (can already be md5)
@@ -161,7 +161,7 @@ struct ddsi_serdata_ops {
 #define DDSI_SERDATA_HAS_FROM_SER_IOV 1
 #define DDSI_SERDATA_HAS_GET_KEYHASH 1
 
-DDS_EXPORT void ddsi_serdata_init (struct ddsi_serdata *d, const struct ddsi_sertopic *tp, enum ddsi_serdata_kind kind);
+DDS_EXPORT void ddsi_serdata_init (struct ddsi_serdata *d, const struct ddsi_sertype *type, enum ddsi_serdata_kind kind);
 
 /**
  * @brief Return a reference to a serdata with possible topic conversion
@@ -177,7 +177,7 @@ DDS_EXPORT void ddsi_serdata_init (struct ddsi_serdata *d, const struct ddsi_ser
  *   topic, or a null pointer on failure.  The reference must be released with @ref
  *   ddsi_serdata_unref.
  */
-DDS_EXPORT struct ddsi_serdata *ddsi_serdata_ref_as_topic (const struct ddsi_sertopic *topic, struct ddsi_serdata *serdata);
+DDS_EXPORT struct ddsi_serdata *ddsi_serdata_ref_as_type (const struct ddsi_sertype *type, struct ddsi_serdata *serdata);
 
 DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_ref (const struct ddsi_serdata *serdata_const) {
   struct ddsi_serdata *serdata = (struct ddsi_serdata *)serdata_const;
@@ -194,20 +194,20 @@ DDS_EXPORT inline uint32_t ddsi_serdata_size (const struct ddsi_serdata *d) {
   return d->ops->get_size (d);
 }
 
-DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_from_ser (const struct ddsi_sertopic *topic, enum ddsi_serdata_kind kind, const struct nn_rdata *fragchain, size_t size) {
-  return topic->serdata_ops->from_ser (topic, kind, fragchain, size);
+DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_from_ser (const struct ddsi_sertype *type, enum ddsi_serdata_kind kind, const struct nn_rdata *fragchain, size_t size) {
+  return type->serdata_ops->from_ser (type, kind, fragchain, size);
 }
 
-DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_from_ser_iov (const struct ddsi_sertopic *topic, enum ddsi_serdata_kind kind, ddsrt_msg_iovlen_t niov, const ddsrt_iovec_t *iov, size_t size) {
-  return topic->serdata_ops->from_ser_iov (topic, kind, niov, iov, size);
+DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_from_ser_iov (const struct ddsi_sertype *type, enum ddsi_serdata_kind kind, ddsrt_msg_iovlen_t niov, const ddsrt_iovec_t *iov, size_t size) {
+  return type->serdata_ops->from_ser_iov (type, kind, niov, iov, size);
 }
 
-DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_from_keyhash (const struct ddsi_sertopic *topic, const struct ddsi_keyhash *keyhash) {
-  return topic->serdata_ops->from_keyhash (topic, keyhash);
+DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_from_keyhash (const struct ddsi_sertype *type, const struct ddsi_keyhash *keyhash) {
+  return type->serdata_ops->from_keyhash (type, keyhash);
 }
 
-DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_from_sample (const struct ddsi_sertopic *topic, enum ddsi_serdata_kind kind, const void *sample) {
-  return topic->serdata_ops->from_sample (topic, kind, sample);
+DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_from_sample (const struct ddsi_sertype *type, enum ddsi_serdata_kind kind, const void *sample) {
+  return type->serdata_ops->from_sample (type, kind, sample);
 }
 
 DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_to_topicless (const struct ddsi_serdata *d) {
@@ -230,8 +230,8 @@ DDS_EXPORT inline bool ddsi_serdata_to_sample (const struct ddsi_serdata *d, voi
   return d->ops->to_sample (d, sample, bufptr, buflim);
 }
 
-DDS_EXPORT inline bool ddsi_serdata_topicless_to_sample (const struct ddsi_sertopic *topic, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim) {
-  return d->ops->topicless_to_sample (topic, d, sample, bufptr, buflim);
+DDS_EXPORT inline bool ddsi_serdata_topicless_to_sample (const struct ddsi_sertype *type, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim) {
+  return d->ops->topicless_to_sample (type, d, sample, bufptr, buflim);
 }
 
 DDS_EXPORT inline bool ddsi_serdata_eqkey (const struct ddsi_serdata *a, const struct ddsi_serdata *b) {
@@ -239,12 +239,12 @@ DDS_EXPORT inline bool ddsi_serdata_eqkey (const struct ddsi_serdata *a, const s
 }
 
 DDS_EXPORT inline bool ddsi_serdata_print (const struct ddsi_serdata *d, char *buf, size_t size) {
-  return d->ops->print (d->topic, d, buf, size);
+  return d->ops->print (d->type, d, buf, size);
 }
 
-DDS_EXPORT inline bool ddsi_serdata_print_topicless (const struct ddsi_sertopic *topic, const struct ddsi_serdata *d, char *buf, size_t size) {
+DDS_EXPORT inline bool ddsi_serdata_print_topicless (const struct ddsi_sertype *type, const struct ddsi_serdata *d, char *buf, size_t size) {
   if (d->ops->print)
-    return d->ops->print (topic, d, buf, size);
+    return d->ops->print (type, d, buf, size);
   else
   {
     buf[0] = 0;

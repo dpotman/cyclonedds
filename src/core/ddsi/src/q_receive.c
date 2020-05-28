@@ -1849,9 +1849,9 @@ static int handle_Gap (struct receiver_state *rst, ddsrt_etime_t tnow, struct nn
   return 1;
 }
 
-static struct ddsi_serdata *get_serdata (struct ddsi_sertopic const * const topic, const struct nn_rdata *fragchain, uint32_t sz, int justkey, unsigned statusinfo, ddsrt_wctime_t tstamp)
+static struct ddsi_serdata *get_serdata (struct ddsi_sertype const * const type, const struct nn_rdata *fragchain, uint32_t sz, int justkey, unsigned statusinfo, ddsrt_wctime_t tstamp)
 {
-  struct ddsi_serdata *sd = ddsi_serdata_from_ser (topic, justkey ? SDK_KEY : SDK_DATA, fragchain, sz);
+  struct ddsi_serdata *sd = ddsi_serdata_from_ser (type, justkey ? SDK_KEY : SDK_DATA, fragchain, sz);
   if (sd)
   {
     sd->statusinfo = statusinfo;
@@ -1869,7 +1869,7 @@ struct remote_sourceinfo {
   ddsrt_wctime_t tstamp;
 };
 
-static struct ddsi_serdata *remote_make_sample (struct ddsi_tkmap_instance **tk, struct ddsi_domaingv *gv, struct ddsi_sertopic const * const topic, void *vsourceinfo)
+static struct ddsi_serdata *remote_make_sample (struct ddsi_tkmap_instance **tk, struct ddsi_domaingv *gv, struct ddsi_sertype const * const type, void *vsourceinfo)
 {
   /* hopefully the compiler figures out that these are just aliases and doesn't reload them
      unnecessarily from memory */
@@ -1900,7 +1900,7 @@ static struct ddsi_serdata *remote_make_sample (struct ddsi_tkmap_instance **tk,
                   si->data_smhdr_flags, sampleinfo->size);
       return NULL;
     }
-    sample = get_serdata (topic, fragchain, sampleinfo->size, 0, statusinfo, tstamp);
+    sample = get_serdata (type, fragchain, sampleinfo->size, 0, statusinfo, tstamp);
   }
   else if (sampleinfo->size)
   {
@@ -1909,12 +1909,12 @@ static struct ddsi_serdata *remote_make_sample (struct ddsi_tkmap_instance **tk,
        as one would expect to receive */
     if (data_smhdr_flags & DATA_FLAG_KEYFLAG)
     {
-      sample = get_serdata (topic, fragchain, sampleinfo->size, 1, statusinfo, tstamp);
+      sample = get_serdata (type, fragchain, sampleinfo->size, 1, statusinfo, tstamp);
     }
     else
     {
       assert (data_smhdr_flags & DATA_FLAG_DATAFLAG);
-      sample = get_serdata (topic, fragchain, sampleinfo->size, 0, statusinfo, tstamp);
+      sample = get_serdata (type, fragchain, sampleinfo->size, 0, statusinfo, tstamp);
     }
   }
   else if (data_smhdr_flags & DATA_FLAG_INLINE_QOS)
@@ -1931,7 +1931,7 @@ static struct ddsi_serdata *remote_make_sample (struct ddsi_tkmap_instance **tk,
        * hash. This means the keyhash can't be decoded into a sample. */
       failmsg = "keyhash is protected";
     }
-    else if ((sample = ddsi_serdata_from_keyhash (topic, &qos->keyhash)) == NULL)
+    else if ((sample = ddsi_serdata_from_keyhash (type, &qos->keyhash)) == NULL)
       failmsg = "keyhash is MD5 and can't be converted to key value";
     else
     {
@@ -1953,7 +1953,7 @@ static struct ddsi_serdata *remote_make_sample (struct ddsi_tkmap_instance **tk,
                   "data(application, vendor %u.%u): "PGUIDFMT" #%"PRId64": deserialization %s/%s failed (%s)\n",
                   sampleinfo->rst->vendor.id[0], sampleinfo->rst->vendor.id[1],
                   PGUID (guid), sampleinfo->seq,
-                  topic->name, topic->type_name,
+                  "FIXME", type->type_name,  // FIXME: topic name from pwr?
                   failmsg ? failmsg : "for reasons unknown");
   }
   else
@@ -1975,7 +1975,7 @@ static struct ddsi_serdata *remote_make_sample (struct ddsi_tkmap_instance **tk,
       if (pwr) guid = pwr->e.guid; else memset (&guid, 0, sizeof (guid));
       GVTRACE ("data(application, vendor %u.%u): "PGUIDFMT" #%"PRId64": ST%x %s/%s:%s%s",
                sampleinfo->rst->vendor.id[0], sampleinfo->rst->vendor.id[1],
-               PGUID (guid), sampleinfo->seq, statusinfo, topic->name, topic->type_name,
+               PGUID (guid), sampleinfo->seq, statusinfo, "FIXME", type->type_name, // FIXME: topic name from pwr?
                tmp, res < sizeof (tmp) - 1 ? "" : "(trunc)");
     }
   }

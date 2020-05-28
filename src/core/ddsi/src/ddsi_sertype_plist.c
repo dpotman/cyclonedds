@@ -17,13 +17,13 @@
 #include "dds/ddsrt/mh3.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsi/ddsi_plist.h"
-#include "dds/ddsi/ddsi_sertopic.h"
+#include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_serdata_plist.h"
 
-static bool sertopic_plist_equal (const struct ddsi_sertopic *acmn, const struct ddsi_sertopic *bcmn)
+static bool sertype_plist_equal (const struct ddsi_sertype *acmn, const struct ddsi_sertype *bcmn)
 {
-  const struct ddsi_sertopic_plist *a = (struct ddsi_sertopic_plist *) acmn;
-  const struct ddsi_sertopic_plist *b = (struct ddsi_sertopic_plist *) bcmn;
+  const struct ddsi_sertype_plist *a = (struct ddsi_sertype_plist *) acmn;
+  const struct ddsi_sertype_plist *b = (struct ddsi_sertype_plist *) bcmn;
   if (a->native_encoding_identifier != b->native_encoding_identifier)
     return false;
   if (a->keyparam != b->keyparam)
@@ -31,33 +31,33 @@ static bool sertopic_plist_equal (const struct ddsi_sertopic *acmn, const struct
   return true;
 }
 
-static uint32_t sertopic_plist_hash (const struct ddsi_sertopic *tpcmn)
+static uint32_t sertype_plist_hash (const struct ddsi_sertype *tpcmn)
 {
-  const struct ddsi_sertopic_plist *tp = (struct ddsi_sertopic_plist *) tpcmn;
+  const struct ddsi_sertype_plist *tp = (struct ddsi_sertype_plist *) tpcmn;
   uint32_t h = 0;
   h = ddsrt_mh3 (&tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier), h);
   h = ddsrt_mh3 (&tp->keyparam, sizeof (tp->keyparam), h);
   return h;
 }
 
-static void sertopic_plist_free (struct ddsi_sertopic *tpcmn)
+static void sertype_plist_free (struct ddsi_sertype *tpcmn)
 {
-  struct ddsi_sertopic_plist *tp = (struct ddsi_sertopic_plist *) tpcmn;
-  ddsi_sertopic_fini (&tp->c);
+  struct ddsi_sertype_plist *tp = (struct ddsi_sertype_plist *) tpcmn;
+  ddsi_sertype_fini (&tp->c);
   ddsrt_free (tp);
 }
 
-static void sertopic_plist_zero_samples (const struct ddsi_sertopic *sertopic_common, void *sample, size_t count)
+static void sertype_plist_zero_samples (const struct ddsi_sertype *sertype_common, void *sample, size_t count)
 {
-  (void) sertopic_common;
+  (void) sertype_common;
   ddsi_plist_t *xs = sample;
   for (size_t i = 0; i < count; i++)
     ddsi_plist_init_empty (&xs[i]);
 }
 
-static void sertopic_plist_realloc_samples (void **ptrs, const struct ddsi_sertopic *sertopic_common, void *old, size_t oldcount, size_t count)
+static void sertype_plist_realloc_samples (void **ptrs, const struct ddsi_sertype *sertype_common, void *old, size_t oldcount, size_t count)
 {
-  (void) sertopic_common;
+  (void) sertype_common;
   ddsi_plist_t *new = (oldcount == count) ? old : dds_realloc (old, count * sizeof (ddsi_plist_t));
   if (new)
   {
@@ -68,9 +68,9 @@ static void sertopic_plist_realloc_samples (void **ptrs, const struct ddsi_serto
   }
 }
 
-static void sertopic_plist_free_samples (const struct ddsi_sertopic *sertopic_common, void **ptrs, size_t count, dds_free_op_t op)
+static void sertype_plist_free_samples (const struct ddsi_sertype *sertype_common, void **ptrs, size_t count, dds_free_op_t op)
 {
-  (void) sertopic_common;
+  (void) sertype_common;
   if (count > 0)
   {
 #ifndef NDEBUG
@@ -85,11 +85,11 @@ static void sertopic_plist_free_samples (const struct ddsi_sertopic *sertopic_co
   }
 }
 
-const struct ddsi_sertopic_ops ddsi_sertopic_ops_plist = {
-  .equal = sertopic_plist_equal,
-  .hash = sertopic_plist_hash,
-  .free = sertopic_plist_free,
-  .zero_samples = sertopic_plist_zero_samples,
-  .realloc_samples = sertopic_plist_realloc_samples,
-  .free_samples = sertopic_plist_free_samples
+const struct ddsi_sertype_ops ddsi_sertype_ops_plist = {
+  .equal = sertype_plist_equal,
+  .hash = sertype_plist_hash,
+  .free = sertype_plist_free,
+  .zero_samples = sertype_plist_zero_samples,
+  .realloc_samples = sertype_plist_realloc_samples,
+  .free_samples = sertype_plist_free_samples
 };

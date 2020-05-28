@@ -19,37 +19,37 @@
 #include "dds/ddsrt/md5.h"
 #include "dds/ddsi/q_config.h"
 #include "dds/ddsi/q_freelist.h"
-#include "dds/ddsi/ddsi_sertopic.h"
+#include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_iid.h"
-#include "dds__serdata_builtintopic.h"
+#include "dds__serdata_builtintype.h"
 
 /* FIXME: sertopic /= ddstopic so a lot of stuff needs to be moved here from dds_topic.c and the free function needs to be implemented properly */
 
-struct ddsi_sertopic *new_sertopic_builtintopic (enum ddsi_sertopic_builtintopic_type type, const char *name, const char *typename)
+struct ddsi_sertype *new_sertype_builtintype (enum ddsi_sertype_builtintype_entity_kind entity_kind, const char *typename)
 {
-  struct ddsi_sertopic_builtintopic *tp = ddsrt_malloc (sizeof (*tp));
-  ddsi_sertopic_init (&tp->c, name, typename, &ddsi_sertopic_ops_builtintopic, &ddsi_serdata_ops_builtintopic, false);
-  tp->type = type;
+  struct ddsi_sertype_builtintype *tp = ddsrt_malloc (sizeof (*tp));
+  ddsi_sertype_init (&tp->c, typename, &ddsi_sertype_ops_builtintype, &ddsi_serdata_ops_builtintype, false);
+  tp->entity_kind = entity_kind;
   return &tp->c;
 }
 
-static void sertopic_builtin_free (struct ddsi_sertopic *tp)
+static void sertype_builtin_free (struct ddsi_sertype *tp)
 {
-  ddsi_sertopic_fini (tp);
+  ddsi_sertype_fini (tp);
   ddsrt_free (tp);
 }
 
-static bool sertopic_builtin_equal (const struct ddsi_sertopic *acmn, const struct ddsi_sertopic *bcmn)
+static bool sertype_builtin_equal (const struct ddsi_sertype *acmn, const struct ddsi_sertype *bcmn)
 {
-  const struct ddsi_sertopic_builtintopic *a = (struct ddsi_sertopic_builtintopic *) acmn;
-  const struct ddsi_sertopic_builtintopic *b = (struct ddsi_sertopic_builtintopic *) bcmn;
-  return a->type == b->type;
+  const struct ddsi_sertype_builtintype *a = (struct ddsi_sertype_builtintype *) acmn;
+  const struct ddsi_sertype_builtintype *b = (struct ddsi_sertype_builtintype *) bcmn;
+  return a->entity_kind == b->entity_kind;
 }
 
-static uint32_t sertopic_builtin_hash (const struct ddsi_sertopic *tpcmn)
+static uint32_t sertype_builtin_hash (const struct ddsi_sertype *tpcmn)
 {
-  const struct ddsi_sertopic_builtintopic *tp = (struct ddsi_sertopic_builtintopic *) tpcmn;
-  return (uint32_t) tp->type;
+  const struct ddsi_sertype_builtintype *tp = (struct ddsi_sertype_builtintype *) tpcmn;
+  return (uint32_t) tp->entity_kind;
 }
 
 static void free_pp (void *vsample)
@@ -69,9 +69,9 @@ static void free_endpoint (void *vsample)
   sample->qos = NULL;
 }
 
-static size_t get_size (enum ddsi_sertopic_builtintopic_type type)
+static size_t get_size (enum ddsi_sertype_builtintype_entity_kind entity_kind)
 {
-  switch (type)
+  switch (entity_kind)
   {
     case DSBT_PARTICIPANT:
       return sizeof (dds_builtintopic_participant_t);
@@ -83,17 +83,17 @@ static size_t get_size (enum ddsi_sertopic_builtintopic_type type)
   return 0;
 }
 
-static void sertopic_builtin_zero_samples (const struct ddsi_sertopic *sertopic_common, void *samples, size_t count)
+static void sertype_builtin_zero_samples (const struct ddsi_sertype *sertype_common, void *samples, size_t count)
 {
-  const struct ddsi_sertopic_builtintopic *tp = (const struct ddsi_sertopic_builtintopic *)sertopic_common;
-  size_t size = get_size (tp->type);
+  const struct ddsi_sertype_builtintype *tp = (const struct ddsi_sertype_builtintype *)sertype_common;
+  size_t size = get_size (tp->entity_kind);
   memset (samples, 0, size * count);
 }
 
-static void sertopic_builtin_realloc_samples (void **ptrs, const struct ddsi_sertopic *sertopic_common, void *old, size_t oldcount, size_t count)
+static void sertype_builtin_realloc_samples (void **ptrs, const struct ddsi_sertype *sertype_common, void *old, size_t oldcount, size_t count)
 {
-  const struct ddsi_sertopic_builtintopic *tp = (const struct ddsi_sertopic_builtintopic *)sertopic_common;
-  const size_t size = get_size (tp->type);
+  const struct ddsi_sertype_builtintype *tp = (const struct ddsi_sertype_builtintype *)sertype_common;
+  const size_t size = get_size (tp->entity_kind);
   char *new = (oldcount == count) ? old : dds_realloc (old, size * count);
   if (new && count > oldcount)
     memset (new + size * oldcount, 0, size * (count - oldcount));
@@ -104,12 +104,12 @@ static void sertopic_builtin_realloc_samples (void **ptrs, const struct ddsi_ser
   }
 }
 
-static void sertopic_builtin_free_samples (const struct ddsi_sertopic *sertopic_common, void **ptrs, size_t count, dds_free_op_t op)
+static void sertype_builtin_free_samples (const struct ddsi_sertype *sertype_common, void **ptrs, size_t count, dds_free_op_t op)
 {
   if (count > 0)
   {
-    const struct ddsi_sertopic_builtintopic *tp = (const struct ddsi_sertopic_builtintopic *)sertopic_common;
-    const size_t size = get_size (tp->type);
+    const struct ddsi_sertype_builtintype *tp = (const struct ddsi_sertype_builtintype *)sertype_common;
+    const size_t size = get_size (tp->entity_kind);
 #ifndef NDEBUG
     for (size_t i = 0, off = 0; i < count; i++, off += size)
       assert ((char *)ptrs[i] == (char *)ptrs[0] + off);
@@ -118,7 +118,7 @@ static void sertopic_builtin_free_samples (const struct ddsi_sertopic *sertopic_
     {
       void (*f) (void *) = 0;
       char *ptr = ptrs[0];
-      switch (tp->type)
+      switch (tp->entity_kind)
       {
         case DSBT_PARTICIPANT:
           f = free_pp;
@@ -142,11 +142,11 @@ static void sertopic_builtin_free_samples (const struct ddsi_sertopic *sertopic_
   }
 }
 
-const struct ddsi_sertopic_ops ddsi_sertopic_ops_builtintopic = {
-  .equal = sertopic_builtin_equal,
-  .hash = sertopic_builtin_hash,
-  .free = sertopic_builtin_free,
-  .zero_samples = sertopic_builtin_zero_samples,
-  .realloc_samples = sertopic_builtin_realloc_samples,
-  .free_samples = sertopic_builtin_free_samples
+const struct ddsi_sertype_ops ddsi_sertype_ops_builtintype = {
+  .equal = sertype_builtin_equal,
+  .hash = sertype_builtin_hash,
+  .free = sertype_builtin_free,
+  .zero_samples = sertype_builtin_zero_samples,
+  .realloc_samples = sertype_builtin_realloc_samples,
+  .free_samples = sertype_builtin_free_samples
 };

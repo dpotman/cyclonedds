@@ -62,7 +62,7 @@ bool write_auth_handshake_message(const struct participant *pp, const struct pro
     nn_participant_generic_message_init(&pmg, &wr->e.guid, seq, &proxypp->e.guid, NULL, NULL, DDS_SECURITY_AUTH_HANDSHAKE, mdata, related_message_id);
   }
 
-  serdata = ddsi_serdata_from_sample (wr->topic, SDK_DATA, &pmg);
+  serdata = ddsi_serdata_from_sample (wr->type, SDK_DATA, &pmg);
   serdata->timestamp = ddsrt_time_wallclock ();
   result = enqueue_sample_wrlock_held (wr, seq, NULL, serdata, prd, 1) == 0;
   ddsi_serdata_unref (serdata);
@@ -169,7 +169,7 @@ static bool write_crypto_exchange_message(const struct participant *pp, const dd
 
   /* Get serialized message. */
   nn_participant_generic_message_init(&pmg, &wr->e.guid, seq, dst_pguid, dst_eguid, src_eguid, classid, tokens, NULL);
-  serdata = ddsi_serdata_from_sample (wr->topic, SDK_DATA, &pmg);
+  serdata = ddsi_serdata_from_sample (wr->type, SDK_DATA, &pmg);
   serdata->timestamp = ddsrt_time_wallclock ();
   tk = ddsi_tkmap_lookup_instance_ref (gv->m_tkmap, serdata);
   r = write_sample_p2p_wrlock_held(wr, seq, NULL, serdata, tk, prd);

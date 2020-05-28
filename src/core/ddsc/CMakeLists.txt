@@ -37,8 +37,8 @@ PREPEND(srcs_ddsc "${CMAKE_CURRENT_LIST_DIR}/src"
     dds_write.c
     dds_whc.c
     dds_whc_builtintopic.c
-    dds_serdata_builtintopic.c
-    dds_sertopic_builtintopic.c
+    dds_serdata_builtintype.c
+    dds_sertype_builtintype.c
 )
 
 PREPEND(hdrs_public_ddsc "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include/dds>$<INSTALL_INTERFACE:include/dds>"
@@ -76,7 +76,7 @@ PREPEND(hdrs_private_ddsc "${CMAKE_CURRENT_LIST_DIR}/src"
     dds__writer.h
     dds__whc.h
     dds__whc_builtintopic.h
-    dds__serdata_builtintopic.h
+    dds__serdata_builtintype.h
     dds__get_status.h
 )
 

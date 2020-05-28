@@ -26,10 +26,10 @@ PREPEND(srcs_ddsi "${CMAKE_CURRENT_LIST_DIR}/src"
     ddsi_serdata_default.c
     ddsi_serdata_pserop.c
     ddsi_serdata_plist.c
-    ddsi_sertopic.c
-    ddsi_sertopic_default.c
-    ddsi_sertopic_pserop.c
-    ddsi_sertopic_plist.c
+    ddsi_sertype.c
+    ddsi_sertype_default.c
+    ddsi_sertype_pserop.c
+    ddsi_sertype_plist.c
     ddsi_iid.c
     ddsi_tkmap.c
     ddsi_vendor.c
@@ -93,7 +93,7 @@ PREPEND(hdrs_private_ddsi "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi"
     ddsi_portmapping.h
     ddsi_handshake.h    
     ddsi_serdata.h
-    ddsi_sertopic.h
+    ddsi_sertype.h
     ddsi_serdata_default.h
     ddsi_serdata_pserop.h
     ddsi_serdata_plist.h

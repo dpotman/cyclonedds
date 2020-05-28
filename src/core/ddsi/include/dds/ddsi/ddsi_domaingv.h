@@ -262,8 +262,8 @@ struct ddsi_domaingv {
   dds_qos_t builtin_endpoint_xqos_rd;
   dds_qos_t builtin_endpoint_xqos_wr;
 #ifdef DDSI_INCLUDE_SECURITY
-  dds_qos_t builtin_volatile_xqos_rd;
-  dds_qos_t builtin_volatile_xqos_wr;
+  dds_qos_t builtin_secure_volatile_xqos_rd;
+  dds_qos_t builtin_secure_volatile_xqos_wr;
   dds_qos_t builtin_stateless_xqos_rd;
   dds_qos_t builtin_stateless_xqos_wr;
 #endif
@@ -294,17 +294,17 @@ struct ddsi_domaingv {
      transmit queue*/
   struct serdatapool *serpool;
   struct nn_xmsgpool *xmsgpool;
-  struct ddsi_sertopic *spdp_topic; /* key = participant GUID */
-  struct ddsi_sertopic *sedp_reader_topic; /* key = endpoint GUID */
-  struct ddsi_sertopic *sedp_writer_topic; /* key = endpoint GUID */
-  struct ddsi_sertopic *pmd_topic; /* participant message data */
+  struct ddsi_sertype *spdp_type; /* key = participant GUID */
+  struct ddsi_sertype *sedp_reader_type; /* key = endpoint GUID */
+  struct ddsi_sertype *sedp_writer_type; /* key = endpoint GUID */
+  struct ddsi_sertype *pmd_type; /* participant message data */
 #ifdef DDSI_INCLUDE_SECURITY
-  struct ddsi_sertopic *spdp_secure_topic; /* key = participant GUID */
-  struct ddsi_sertopic *sedp_reader_secure_topic; /* key = endpoint GUID */
-  struct ddsi_sertopic *sedp_writer_secure_topic; /* key = endpoint GUID */
-  struct ddsi_sertopic *pmd_secure_topic; /* participant message data */
-  struct ddsi_sertopic *pgm_stateless_topic; /* participant generic message */
-  struct ddsi_sertopic *pgm_volatile_topic; /* participant generic message */
+  struct ddsi_sertype *spdp_secure_type; /* key = participant GUID */
+  struct ddsi_sertype *sedp_reader_secure_type; /* key = endpoint GUID */
+  struct ddsi_sertype *sedp_writer_secure_type; /* key = endpoint GUID */
+  struct ddsi_sertype *pmd_secure_type; /* participant message data */
+  struct ddsi_sertype *pgm_stateless_type; /* participant generic message */
+  struct ddsi_sertype *pgm_volatile_type; /* participant generic message */
 #endif
 
   ddsrt_mutex_t sendq_lock;
@@ -323,8 +323,8 @@ struct ddsi_domaingv {
 
   struct nn_group_membership *mship;
 
-  ddsrt_mutex_t sertopics_lock;
-  struct ddsrt_hh *sertopics;
+  ddsrt_mutex_t sertypes_lock;
+  struct ddsrt_hh *sertypes;
 
   /* security globals */
 #ifdef DDSI_INCLUDE_SECURITY

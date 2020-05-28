@@ -21,13 +21,13 @@
 #include "dds/ddsi/q_config.h"
 #include "dds/ddsi/q_freelist.h"
 #include "dds/ddsi/ddsi_plist_generic.h"
-#include "dds/ddsi/ddsi_sertopic.h"
+#include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_serdata_pserop.h"
 
-static bool sertopic_pserop_equal (const struct ddsi_sertopic *acmn, const struct ddsi_sertopic *bcmn)
+static bool sertype_pserop_equal (const struct ddsi_sertype *acmn, const struct ddsi_sertype *bcmn)
 {
-  const struct ddsi_sertopic_pserop *a = (struct ddsi_sertopic_pserop *) acmn;
-  const struct ddsi_sertopic_pserop *b = (struct ddsi_sertopic_pserop *) bcmn;
+  const struct ddsi_sertype_pserop *a = (struct ddsi_sertype_pserop *) acmn;
+  const struct ddsi_sertype_pserop *b = (struct ddsi_sertype_pserop *) bcmn;
   if (a->native_encoding_identifier != b->native_encoding_identifier)
     return false;
   if (a->memsize != b->memsize)
@@ -44,9 +44,9 @@ static bool sertopic_pserop_equal (const struct ddsi_sertopic *acmn, const struc
   return true;
 }
 
-static uint32_t sertopic_pserop_hash (const struct ddsi_sertopic *tpcmn)
+static uint32_t sertype_pserop_hash (const struct ddsi_sertype *tpcmn)
 {
-  const struct ddsi_sertopic_pserop *tp = (struct ddsi_sertopic_pserop *) tpcmn;
+  const struct ddsi_sertype_pserop *tp = (struct ddsi_sertype_pserop *) tpcmn;
   uint32_t h = 0;
   h = ddsrt_mh3 (&tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier), h);
   h = ddsrt_mh3 (&tp->memsize, sizeof (tp->memsize), h);
@@ -58,22 +58,22 @@ static uint32_t sertopic_pserop_hash (const struct ddsi_sertopic *tpcmn)
   return h;
 }
 
-static void sertopic_pserop_free (struct ddsi_sertopic *tpcmn)
+static void sertype_pserop_free (struct ddsi_sertype *tpcmn)
 {
-  struct ddsi_sertopic_pserop *tp = (struct ddsi_sertopic_pserop *) tpcmn;
-  ddsi_sertopic_fini (&tp->c);
+  struct ddsi_sertype_pserop *tp = (struct ddsi_sertype_pserop *) tpcmn;
+  ddsi_sertype_fini (&tp->c);
   ddsrt_free (tp);
 }
 
-static void sertopic_pserop_zero_samples (const struct ddsi_sertopic *sertopic_common, void *sample, size_t count)
+static void sertype_pserop_zero_samples (const struct ddsi_sertype *sertype_common, void *sample, size_t count)
 {
-  const struct ddsi_sertopic_pserop *tp = (const struct ddsi_sertopic_pserop *)sertopic_common;
+  const struct ddsi_sertype_pserop *tp = (const struct ddsi_sertype_pserop *)sertype_common;
   memset (sample, 0, tp->memsize * count);
 }
 
-static void sertopic_pserop_realloc_samples (void **ptrs, const struct ddsi_sertopic *sertopic_common, void *old, size_t oldcount, size_t count)
+static void sertype_pserop_realloc_samples (void **ptrs, const struct ddsi_sertype *sertype_common, void *old, size_t oldcount, size_t count)
 {
-  const struct ddsi_sertopic_pserop *tp = (const struct ddsi_sertopic_pserop *)sertopic_common;
+  const struct ddsi_sertype_pserop *tp = (const struct ddsi_sertype_pserop *)sertype_common;
   const size_t size = tp->memsize;
   char *new = (oldcount == count) ? old : dds_realloc (old, size * count);
   if (new && count > oldcount)
@@ -85,11 +85,11 @@ static void sertopic_pserop_realloc_samples (void **ptrs, const struct ddsi_sert
   }
 }
 
-static void sertopic_pserop_free_samples (const struct ddsi_sertopic *sertopic_common, void **ptrs, size_t count, dds_free_op_t op)
+static void sertype_pserop_free_samples (const struct ddsi_sertype *sertype_common, void **ptrs, size_t count, dds_free_op_t op)
 {
   if (count > 0)
   {
-    const struct ddsi_sertopic_pserop *tp = (const struct ddsi_sertopic_pserop *)sertopic_common;
+    const struct ddsi_sertype_pserop *tp = (const struct ddsi_sertype_pserop *)sertype_common;
     const size_t size = tp->memsize;
 #ifndef NDEBUG
     for (size_t i = 0, off = 0; i < count; i++, off += size)
@@ -108,11 +108,11 @@ static void sertopic_pserop_free_samples (const struct ddsi_sertopic *sertopic_c
   }
 }
 
-const struct ddsi_sertopic_ops ddsi_sertopic_ops_pserop = {
-  .equal = sertopic_pserop_equal,
-  .hash = sertopic_pserop_hash,
-  .free = sertopic_pserop_free,
-  .zero_samples = sertopic_pserop_zero_samples,
-  .realloc_samples = sertopic_pserop_realloc_samples,
-  .free_samples = sertopic_pserop_free_samples
+const struct ddsi_sertype_ops ddsi_sertype_ops_pserop = {
+  .equal = sertype_pserop_equal,
+  .hash = sertype_pserop_hash,
+  .free = sertype_pserop_free,
+  .zero_samples = sertype_pserop_zero_samples,
+  .realloc_samples = sertype_pserop_realloc_samples,
+  .free_samples = sertype_pserop_free_samples
 };

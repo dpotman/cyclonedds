@@ -17,7 +17,6 @@
 #include "dds/ddsi/q_freelist.h"
 #include "dds/ddsrt/avl.h"
 #include "dds/ddsi/ddsi_serdata.h"
-#include "dds/ddsi/ddsi_sertopic.h"
 #include "dds/ddsi/ddsi_plist_generic.h"
 
 #include "dds/dds.h"
@@ -102,7 +101,7 @@ typedef bool (*dds_topic_intern_filter_fn) (const void * sample, void *ctx);
 #endif
 
 /* Reduced version of dds_topic_descriptor_t */
-struct ddsi_sertopic_default_desc {
+struct ddsi_sertype_default_desc {
   uint32_t m_size;    /* Size of topic type */
   uint32_t m_align;   /* Alignment of topic type */
   uint32_t m_flagset; /* Flags */
@@ -112,11 +111,11 @@ struct ddsi_sertopic_default_desc {
   uint32_t *m_ops;    /* Marshalling meta data */
 };
 
-struct ddsi_sertopic_default {
-  struct ddsi_sertopic c;
+struct ddsi_sertype_default {
+  struct ddsi_sertype c;
   uint16_t native_encoding_identifier; /* (PL_)?CDR_(LE|BE) */
   struct serdatapool *serpool;
-  struct ddsi_sertopic_default_desc type;
+  struct ddsi_sertype_default_desc type;
   size_t opt_size;
 };
 
@@ -133,7 +132,7 @@ struct ddsi_rawcdr_sample {
   size_t keysize;
 };
 
-extern DDS_EXPORT const struct ddsi_sertopic_ops ddsi_sertopic_ops_default;
+extern DDS_EXPORT const struct ddsi_sertype_ops ddsi_sertype_ops_default;
 
 extern DDS_EXPORT const struct ddsi_serdata_ops ddsi_serdata_ops_cdr;
 extern DDS_EXPORT const struct ddsi_serdata_ops ddsi_serdata_ops_cdr_nokey;

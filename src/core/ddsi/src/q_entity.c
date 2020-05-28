@@ -101,8 +101,8 @@ static const unsigned builtin_writers_besmask =
   NN_BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_WRITER;
 
 
-static dds_return_t new_writer_guid (struct writer **wr_out, const struct ddsi_guid *guid, const struct ddsi_guid *group_guid, struct participant *pp, const struct ddsi_sertopic *topic, const struct dds_qos *xqos, struct whc *whc, status_cb_t status_cb, void *status_cbarg);
-static dds_return_t new_reader_guid (struct reader **rd_out, const struct ddsi_guid *guid, const struct ddsi_guid *group_guid, struct participant *pp, const struct ddsi_sertopic *topic, const struct dds_qos *xqos, struct ddsi_rhc *rhc, status_cb_t status_cb, void *status_cbarg);
+static dds_return_t new_writer_guid (struct writer **wr_out, const struct ddsi_guid *guid, const struct ddsi_guid *group_guid, struct participant *pp, const char *topic_name, const struct ddsi_sertype *type, const struct dds_qos *xqos, struct whc *whc, status_cb_t status_cb, void *status_cbarg);
+static dds_return_t new_reader_guid (struct reader **rd_out, const struct ddsi_guid *guid, const struct ddsi_guid *group_guid, struct participant *pp, const char *topic_name, const struct ddsi_sertype *type, const struct dds_qos *xqos, struct ddsi_rhc *rhc, status_cb_t status_cb, void *status_cbarg);
 static struct participant *ref_participant (struct participant *pp, const struct ddsi_guid *guid_of_refing_entity);
 static void unref_participant (struct participant *pp, const struct ddsi_guid *guid_of_refing_entity);
 static struct entity_common *entity_common_from_proxy_endpoint_common (const struct proxy_endpoint_common *c);
@@ -120,7 +120,7 @@ static int gcreq_proxy_writer (struct proxy_writer *pwr);
 static int gcreq_proxy_reader (struct proxy_reader *prd);
 
 extern inline bool builtintopic_is_visible (const struct ddsi_builtin_topic_interface *btif, const struct ddsi_guid *guid, nn_vendorid_t vendorid);
-extern inline bool builtintopic_is_builtintopic (const struct ddsi_builtin_topic_interface *btif, const struct ddsi_sertopic *topic);
+extern inline bool builtintopic_is_builtintype (const struct ddsi_builtin_topic_interface *btif, const struct ddsi_sertype *type);
 extern inline struct ddsi_tkmap_instance *builtintopic_get_tkmap_entry (const struct ddsi_builtin_topic_interface *btif, const struct ddsi_guid *guid);
 extern inline void builtintopic_write (const struct ddsi_builtin_topic_interface *btif, const struct entity_common *e, ddsrt_wctime_t timestamp, bool alive);
 
@@ -294,9 +294,9 @@ static void local_reader_ary_insert (struct local_reader_ary *x, struct reader *
 {
   ddsrt_mutex_lock (&x->rdary_lock);
   x->rdary = ddsrt_realloc (x->rdary, (x->n_readers + 2) * sizeof (*x->rdary));
-  if (x->n_readers <= 1 || rd->topic == x->rdary[x->n_readers - 1]->topic)
+  if (x->n_readers <= 1 || rd->type == x->rdary[x->n_readers - 1]->type)
   {
-    /* if the first or second reader, or if the topic is the same as that of
+    /* if the first or second reader, or if the type is the same as that of
        the last one in the list simply appending the new will maintain order */
     x->rdary[x->n_readers] = rd;
   }
@@ -304,11 +304,11 @@ static void local_reader_ary_insert (struct local_reader_ary *x, struct reader *
   {
     uint32_t i;
     for (i = 0; i < x->n_readers; i++)
-      if (x->rdary[i]->topic == rd->topic)
+      if (x->rdary[i]->type == rd->type)
         break;
     if (i < x->n_readers)
     {
-      /* shift any with the same topic plus whichever follow to make room */
+      /* shift any with the same type plus whichever follow to make room */
       memmove (&x->rdary[i + 1], &x->rdary[i], (x->n_readers - i) * sizeof (x->rdary[i]));
     }
     x->rdary[i] = rd;
@@ -329,10 +329,10 @@ static void local_reader_ary_remove (struct local_reader_ary *x, struct reader *
   if (i + 1 < x->n_readers)
   {
     /* dropping the final one never requires any fixups; dropping one that has
-       the same topic as the last is as simple as moving the last one in the
+       the same type as the last is as simple as moving the last one in the
        removed one's location; else shift all following readers to keep it
-       grouped by topic */
-    if (rd->topic == x->rdary[x->n_readers - 1]->topic)
+       grouped by type */
+    if (rd->type == x->rdary[x->n_readers - 1]->type)
       x->rdary[i] = x->rdary[x->n_readers - 1];
     else
       memmove (&x->rdary[i], &x->rdary[i + 1], (x->n_readers - i - 1) * sizeof (x->rdary[i]));
@@ -563,7 +563,7 @@ static void add_security_builtin_endpoints(struct participant *pp, ddsi_guid_t *
 
     subguid->entityid = to_entityid (NN_ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_WRITER);
     wrinfo = whc_make_wrinfo (NULL, &gv->builtin_endpoint_xqos_wr);
-    new_writer_guid (NULL, subguid, group_guid, pp, gv->spdp_secure_topic, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
+    new_writer_guid (NULL, subguid, group_guid, pp, "DCPSParticipantsSecure", gv->spdp_secure_type, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
     whc_free_wrinfo (wrinfo);
     /* But we need the as_disc address set for SPDP, because we need to
        send it to everyone regardless of the existence of readers. */
@@ -572,28 +572,28 @@ static void add_security_builtin_endpoints(struct participant *pp, ddsi_guid_t *
 
     subguid->entityid = to_entityid (NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER);
     wrinfo = whc_make_wrinfo (NULL, &gv->builtin_stateless_xqos_wr);
-    new_writer_guid (NULL, subguid, group_guid, pp, gv->pgm_stateless_topic, &gv->builtin_stateless_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
+    new_writer_guid (NULL, subguid, group_guid, pp, "DCPSParticipantStatelessMessage", gv->pgm_stateless_type, &gv->builtin_stateless_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
     whc_free_wrinfo (wrinfo);
     pp->bes |= NN_BUILTIN_ENDPOINT_PARTICIPANT_STATELESS_MESSAGE_ANNOUNCER;
 
     subguid->entityid = to_entityid (NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_SECURE_WRITER);
-    wrinfo = whc_make_wrinfo (NULL, &gv->builtin_volatile_xqos_wr);
-    new_writer_guid (NULL, subguid, group_guid, pp, gv->pgm_volatile_topic, &gv->builtin_volatile_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
+    wrinfo = whc_make_wrinfo (NULL, &gv->builtin_secure_volatile_xqos_wr);
+    new_writer_guid (NULL, subguid, group_guid, pp, "DCPSParticipantVolatileMessageSecure", gv->pgm_volatile_type, &gv->builtin_secure_volatile_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
     whc_free_wrinfo (wrinfo);
     pp->bes |= NN_BUILTIN_ENDPOINT_PARTICIPANT_VOLATILE_SECURE_ANNOUNCER;
 
     wrinfo = whc_make_wrinfo (NULL, &gv->builtin_endpoint_xqos_wr);
 
     subguid->entityid = to_entityid (NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_WRITER);
-    new_writer_guid (NULL, subguid, group_guid, pp, gv->pmd_secure_topic, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
+    new_writer_guid (NULL, subguid, group_guid, pp, "DCPSParticipantMessageSecure", gv->pmd_secure_type, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
     pp->bes |= NN_BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_SECURE_ANNOUNCER;
 
     subguid->entityid = to_entityid (NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER);
-    new_writer_guid (NULL, subguid, group_guid, pp, gv->sedp_writer_secure_topic, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
+    new_writer_guid (NULL, subguid, group_guid, pp, "DCPSPublicationsSecure", gv->sedp_writer_secure_type, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
     pp->bes |= NN_BUILTIN_ENDPOINT_PUBLICATION_MESSAGE_SECURE_ANNOUNCER;
 
     subguid->entityid = to_entityid (NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_WRITER);
-    new_writer_guid (NULL, subguid, group_guid, pp, gv->sedp_reader_secure_topic, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
+    new_writer_guid (NULL, subguid, group_guid, pp, "DCPSSubscriptionsSecure", gv->sedp_reader_secure_type, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
     pp->bes |= NN_BUILTIN_ENDPOINT_SUBSCRIPTION_MESSAGE_SECURE_ANNOUNCER;
 
     whc_free_wrinfo (wrinfo);
@@ -602,11 +602,11 @@ static void add_security_builtin_endpoints(struct participant *pp, ddsi_guid_t *
   if (add_readers)
   {
     subguid->entityid = to_entityid (NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_READER);
-    new_reader_guid (NULL, subguid, group_guid, pp, gv->sedp_reader_secure_topic, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
+    new_reader_guid (NULL, subguid, group_guid, pp, "DCPSSubscriptionsSecure", gv->sedp_reader_secure_type, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
     pp->bes |= NN_BUILTIN_ENDPOINT_SUBSCRIPTION_MESSAGE_SECURE_DETECTOR;
 
     subguid->entityid = to_entityid (NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_READER);
-    new_reader_guid (NULL, subguid, group_guid, pp, gv->sedp_writer_secure_topic, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
+    new_reader_guid (NULL, subguid, group_guid, pp, "DCPSPublicationsSecure", gv->sedp_writer_secure_type, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
     pp->bes |= NN_BUILTIN_ENDPOINT_PUBLICATION_MESSAGE_SECURE_DETECTOR;
   }
 
@@ -615,19 +615,19 @@ static void add_security_builtin_endpoints(struct participant *pp, ddsi_guid_t *
    * besmode flag setting, because all participant do require authentication.
    */
   subguid->entityid = to_entityid (NN_ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_READER);
-  new_reader_guid (NULL, subguid, group_guid, pp, gv->spdp_secure_topic, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
+  new_reader_guid (NULL, subguid, group_guid, pp, "DCPSParticipantsSecure", gv->spdp_secure_type, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
   pp->bes |= NN_DISC_BUILTIN_ENDPOINT_PARTICIPANT_SECURE_DETECTOR;
 
   subguid->entityid = to_entityid (NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_SECURE_READER);
-  new_reader_guid (NULL, subguid, group_guid, pp, gv->pgm_volatile_topic, &gv->builtin_volatile_xqos_rd, NULL, NULL, NULL);
+  new_reader_guid (NULL, subguid, group_guid, pp, "DCPSParticipantVolatileMessageSecure", gv->pgm_volatile_type, &gv->builtin_secure_volatile_xqos_rd, NULL, NULL, NULL);
   pp->bes |= NN_BUILTIN_ENDPOINT_PARTICIPANT_VOLATILE_SECURE_DETECTOR;
 
   subguid->entityid = to_entityid (NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_READER);
-  new_reader_guid (NULL, subguid, group_guid, pp, gv->pgm_stateless_topic, &gv->builtin_stateless_xqos_rd, NULL, NULL, NULL);
+  new_reader_guid (NULL, subguid, group_guid, pp, "DCPSParticipantStatelessMessage", gv->pgm_stateless_type, &gv->builtin_stateless_xqos_rd, NULL, NULL, NULL);
   pp->bes |= NN_BUILTIN_ENDPOINT_PARTICIPANT_STATELESS_MESSAGE_DETECTOR;
 
   subguid->entityid = to_entityid (NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_READER);
-  new_reader_guid (NULL, subguid, group_guid, pp, gv->pmd_secure_topic, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
+  new_reader_guid (NULL, subguid, group_guid, pp, "DCPSParticipantMessageSecure", gv->pmd_secure_type, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
   pp->bes |= NN_BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_SECURE_DETECTOR;
 }
 #endif
@@ -640,16 +640,16 @@ static void add_builtin_endpoints(struct participant *pp, ddsi_guid_t *subguid, 
 
     /* SEDP writers: */
     subguid->entityid = to_entityid (NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER);
-    new_writer_guid (NULL, subguid, group_guid, pp, gv->sedp_reader_topic, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
+    new_writer_guid (NULL, subguid, group_guid, pp, "DCPSSubscription", gv->sedp_reader_type, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
     pp->bes |= NN_DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_ANNOUNCER;
 
     subguid->entityid = to_entityid (NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER);
-    new_writer_guid (NULL, subguid, group_guid, pp, gv->sedp_writer_topic, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
+    new_writer_guid (NULL, subguid, group_guid, pp, "DCPSPublication", gv->sedp_writer_type, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
     pp->bes |= NN_DISC_BUILTIN_ENDPOINT_PUBLICATION_ANNOUNCER;
 
     /* PMD writer: */
     subguid->entityid = to_entityid (NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER);
-    new_writer_guid (NULL, subguid, group_guid, pp, gv->pmd_topic, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
+    new_writer_guid (NULL, subguid, group_guid, pp, "DCPSParticipantMessage", gv->pmd_type, &gv->builtin_endpoint_xqos_wr, whc_new(gv, wrinfo), NULL, NULL);
     pp->bes |= NN_BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_WRITER;
 
     whc_free_wrinfo (wrinfo);
@@ -659,19 +659,19 @@ static void add_builtin_endpoints(struct participant *pp, ddsi_guid_t *subguid, 
   if (add_readers)
   {
     subguid->entityid = to_entityid (NN_ENTITYID_SPDP_BUILTIN_PARTICIPANT_READER);
-    new_reader_guid (NULL, subguid, group_guid, pp, gv->spdp_topic, &gv->spdp_endpoint_xqos, NULL, NULL, NULL);
+    new_reader_guid (NULL, subguid, group_guid, pp, "DCPSParticipant", gv->spdp_type, &gv->spdp_endpoint_xqos, NULL, NULL, NULL);
     pp->bes |= NN_DISC_BUILTIN_ENDPOINT_PARTICIPANT_DETECTOR;
 
     subguid->entityid = to_entityid (NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_READER);
-    new_reader_guid (NULL, subguid, group_guid, pp, gv->sedp_reader_topic, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
+    new_reader_guid (NULL, subguid, group_guid, pp, "DCPSSubscription", gv->sedp_reader_type, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
     pp->bes |= NN_DISC_BUILTIN_ENDPOINT_SUBSCRIPTION_DETECTOR;
 
     subguid->entityid = to_entityid (NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_READER);
-    new_reader_guid (NULL, subguid, group_guid, pp, gv->sedp_writer_topic, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
+    new_reader_guid (NULL, subguid, group_guid, pp, "DCPSPublication", gv->sedp_writer_type, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
     pp->bes |= NN_DISC_BUILTIN_ENDPOINT_PUBLICATION_DETECTOR;
 
     subguid->entityid = to_entityid (NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_READER);
-    new_reader_guid (NULL, subguid, group_guid, pp, gv->pmd_topic, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
+    new_reader_guid (NULL, subguid, group_guid, pp, "DCPSParticipantMessage", gv->pmd_type, &gv->builtin_endpoint_xqos_rd, NULL, NULL, NULL);
     pp->bes |= NN_BUILTIN_ENDPOINT_PARTICIPANT_MESSAGE_DATA_READER;
   }
 
@@ -996,7 +996,7 @@ dds_return_t new_participant_guid (ddsi_guid_t *ppguid, struct ddsi_domaingv *gv
   {
     subguid.entityid = to_entityid (NN_ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER);
     wrinfo = whc_make_wrinfo (NULL, &gv->spdp_endpoint_xqos);
-    new_writer_guid (NULL, &subguid, &group_guid, pp, gv->spdp_topic, &gv->spdp_endpoint_xqos, whc_new(gv, wrinfo), NULL, NULL);
+    new_writer_guid (NULL, &subguid, &group_guid, pp, "DCPSParticipant", gv->spdp_type, &gv->spdp_endpoint_xqos, whc_new(gv, wrinfo), NULL, NULL);
     whc_free_wrinfo (wrinfo);
     /* But we need the as_disc address set for SPDP, because we need to
        send it to everyone regardless of the existence of readers. */
@@ -2285,10 +2285,10 @@ static void deliver_historical_data (const struct writer *wr, const struct reade
   while (whc_sample_iter_borrow_next (&it, &sample))
   {
     struct ddsi_serdata *payload;
-    if ((payload = ddsi_serdata_ref_as_topic (rd->topic, sample.serdata)) == NULL)
+    if ((payload = ddsi_serdata_ref_as_type (rd->type, sample.serdata)) == NULL)
     {
       GVWARNING ("local: deserialization of %s/%s as %s/%s failed in topic type conversion\n",
-                 wr->topic->name, wr->topic->type_name, rd->topic->name, rd->topic->type_name);
+                 wr->xqos->topic_name, wr->type->type_name, rd->xqos->topic_name, rd->type->type_name);
     }
     else
     {
@@ -2473,7 +2473,7 @@ static void proxy_writer_add_connection (struct proxy_writer *pwr, struct reader
   if (ddsrt_avl_lookup_ipath (&pwr_readers_treedef, &pwr->readers, &rd->e.guid, &path))
     goto already_matched;
 
-  assert (rd->topic || is_builtin_endpoint (rd->e.guid.entityid, NN_VENDORID_ECLIPSE));
+  assert (rd->type || is_builtin_endpoint (rd->e.guid.entityid, NN_VENDORID_ECLIPSE));
   if (pwr->ddsi2direct_cb == 0 && rd->ddsi2direct_cb != 0)
   {
     pwr->ddsi2direct_cb = rd->ddsi2direct_cb;
@@ -3236,11 +3236,12 @@ static void update_proxy_participant_endpoint_matching (struct proxy_participant
 
 /* ENDPOINT --------------------------------------------------------- */
 
-static void new_reader_writer_common (const struct ddsrt_log_cfg *logcfg, const struct ddsi_guid *guid, const struct ddsi_sertopic *topic, const struct dds_qos *xqos)
+static void new_reader_writer_common (const struct ddsrt_log_cfg *logcfg, const struct ddsi_guid *guid, const char *topic_name, const char *type_name, const struct dds_qos *xqos)
 {
   const char *partition = "(default)";
   const char *partition_suffix = "";
-  assert (topic != NULL);
+  assert (topic_name != NULL);
+  assert (type_name != NULL);
   if (is_builtin_entityid (guid->entityid, NN_VENDORID_ECLIPSE))
   {
     /* continue printing it as not being in a partition, the actual
@@ -3258,8 +3259,8 @@ static void new_reader_writer_common (const struct ddsrt_log_cfg *logcfg, const 
             is_writer_entityid (guid->entityid) ? "writer" : "reader",
             PGUID (*guid),
             partition, partition_suffix,
-            topic->name,
-            topic->type_name);
+            topic_name,
+            type_name);
 }
 
 static void endpoint_common_init (struct entity_common *e, struct endpoint_common *c, struct ddsi_domaingv *gv, enum entity_kind kind, const struct ddsi_guid *guid, const struct ddsi_guid *group_guid, struct participant *pp, bool onlylocal)
@@ -3286,17 +3287,17 @@ static void endpoint_common_fini (struct entity_common *e, struct endpoint_commo
   entity_common_fini (e);
 }
 
-static int set_topic_type_name (dds_qos_t *xqos, const struct ddsi_sertopic * topic)
+static int set_topic_type_name (dds_qos_t *xqos, const char * topic_name, const char * type_name)
 {
   if (!(xqos->present & QP_TYPE_NAME))
   {
     xqos->present |= QP_TYPE_NAME;
-    xqos->type_name = ddsrt_strdup (topic->type_name);
+    xqos->type_name = ddsrt_strdup (type_name);
   }
   if (!(xqos->present & QP_TOPIC_NAME))
   {
     xqos->present |= QP_TOPIC_NAME;
-    xqos->topic_name = ddsrt_strdup (topic->name);
+    xqos->topic_name = ddsrt_strdup (topic_name);
   }
   return 0;
 }
@@ -3572,7 +3573,7 @@ int writer_set_notalive (struct writer *wr, bool notify)
   return ret;
 }
 
-static void new_writer_guid_common_init (struct writer *wr, const struct ddsi_sertopic *topic, const struct dds_qos *xqos, struct whc *whc, status_cb_t status_cb, void * status_entity)
+static void new_writer_guid_common_init (struct writer *wr, const char *topic_name, const struct ddsi_sertype *type, const struct dds_qos *xqos, struct whc *whc, status_cb_t status_cb, void * status_entity)
 {
   ddsrt_cond_init (&wr->throttle_cond);
   wr->seq = 0;
@@ -3610,7 +3611,7 @@ static void new_writer_guid_common_init (struct writer *wr, const struct ddsi_se
   ddsi_xqos_copy (wr->xqos, xqos);
   ddsi_xqos_mergein_missing (wr->xqos, &wr->e.gv->default_xqos_wr, ~(uint64_t)0);
   assert (wr->xqos->aliased == 0);
-  set_topic_type_name (wr->xqos, topic);
+  set_topic_type_name (wr->xqos, topic_name, type->type_name);
 
   ELOGDISC (wr, "WRITER "PGUIDFMT" QOS={", PGUID (wr->e.guid));
   ddsi_xqos_log (DDS_LC_DISCOVERY, &wr->e.gv->logconfig, wr->xqos);
@@ -3630,7 +3631,7 @@ static void new_writer_guid_common_init (struct writer *wr, const struct ddsi_se
   wr->include_keyhash =
     wr->e.gv->config.generate_keyhash &&
     ((wr->e.guid.entityid.u & NN_ENTITYID_KIND_MASK) == NN_ENTITYID_KIND_WRITER_WITH_KEY);
-  wr->topic = ddsi_sertopic_ref (topic);
+  wr->type = ddsi_sertype_ref (type);
   wr->as = new_addrset ();
   wr->as_group = NULL;
 
@@ -3742,7 +3743,7 @@ static void new_writer_guid_common_init (struct writer *wr, const struct ddsi_se
   local_reader_ary_init (&wr->rdary);
 }
 
-static dds_return_t new_writer_guid (struct writer **wr_out, const struct ddsi_guid *guid, const struct ddsi_guid *group_guid, struct participant *pp, const struct ddsi_sertopic *topic, const struct dds_qos *xqos, struct whc *whc, status_cb_t status_cb, void *status_entity)
+static dds_return_t new_writer_guid (struct writer **wr_out, const struct ddsi_guid *guid, const struct ddsi_guid *group_guid, struct participant *pp, const char *topic_name, const struct ddsi_sertype *type, const struct dds_qos *xqos, struct whc *whc, status_cb_t status_cb, void *status_entity)
 {
   struct writer *wr;
   ddsrt_mtime_t tnow = ddsrt_time_monotonic ();
@@ -3751,7 +3752,7 @@ static dds_return_t new_writer_guid (struct writer **wr_out, const struct ddsi_g
   assert (entidx_lookup_writer_guid (pp->e.gv->entity_index, guid) == NULL);
   assert (memcmp (&guid->prefix, &pp->e.guid.prefix, sizeof (guid->prefix)) == 0);
 
-  new_reader_writer_common (&pp->e.gv->logconfig, guid, topic, xqos);
+  new_reader_writer_common (&pp->e.gv->logconfig, guid, topic_name, type->type_name, xqos);
   wr = ddsrt_malloc (sizeof (*wr));
   if (wr_out)
     *wr_out = wr;
@@ -3760,9 +3761,9 @@ static dds_return_t new_writer_guid (struct writer **wr_out, const struct ddsi_g
    delete_participant won't interfere with our ability to address
    the participant */
 
-  const bool onlylocal = builtintopic_is_builtintopic (pp->e.gv->builtin_topic_interface, topic);
+  const bool onlylocal = builtintopic_is_builtintype (pp->e.gv->builtin_topic_interface, type);
   endpoint_common_init (&wr->e, &wr->c, pp->e.gv, EK_WRITER, guid, group_guid, pp, onlylocal);
-  new_writer_guid_common_init(wr, topic, xqos, whc, status_cb, status_entity);
+  new_writer_guid_common_init(wr, topic_name, type, xqos, whc, status_cb, status_entity);
 
 #ifdef DDSI_INCLUDE_SECURITY
   q_omg_security_register_writer(wr);
@@ -3822,7 +3823,7 @@ static dds_return_t new_writer_guid (struct writer **wr_out, const struct ddsi_g
   return 0;
 }
 
-dds_return_t new_writer (struct writer **wr_out, struct ddsi_guid *wrguid, const struct ddsi_guid *group_guid, struct participant *pp, const struct ddsi_sertopic *topic, const struct dds_qos *xqos, struct whc * whc, status_cb_t status_cb, void *status_cb_arg)
+dds_return_t new_writer (struct writer **wr_out, struct ddsi_guid *wrguid, const struct ddsi_guid *group_guid, struct participant *pp, const char *topic_name, const struct ddsi_sertype *type, const struct dds_qos *xqos, struct whc * whc, status_cb_t status_cb, void *status_cb_arg)
 {
   dds_return_t rc;
   uint32_t kind;
@@ -3831,20 +3832,20 @@ dds_return_t new_writer (struct writer **wr_out, struct ddsi_guid *wrguid, const
      awake and do not touch the thread's vtime (entidx_lookup already
      verifies we're awake) */
   wrguid->prefix = pp->e.guid.prefix;
-  kind = topic->topickind_no_key ? NN_ENTITYID_KIND_WRITER_NO_KEY : NN_ENTITYID_KIND_WRITER_WITH_KEY;
+  kind = type->typekind_no_key ? NN_ENTITYID_KIND_WRITER_NO_KEY : NN_ENTITYID_KIND_WRITER_WITH_KEY;
   if ((rc = pp_allocate_entityid (&wrguid->entityid, kind, pp)) < 0)
     return rc;
-  return new_writer_guid (wr_out, wrguid, group_guid, pp, topic, xqos, whc, status_cb, status_cb_arg);
+  return new_writer_guid (wr_out, wrguid, group_guid, pp, topic_name, type, xqos, whc, status_cb, status_cb_arg);
 }
 
-struct local_orphan_writer *new_local_orphan_writer (struct ddsi_domaingv *gv, ddsi_entityid_t entityid, struct ddsi_sertopic *topic, const struct dds_qos *xqos, struct whc *whc)
+struct local_orphan_writer *new_local_orphan_writer (struct ddsi_domaingv *gv, ddsi_entityid_t entityid, const char *topic_name, struct ddsi_sertype *type, const struct dds_qos *xqos, struct whc *whc)
 {
   ddsi_guid_t guid;
   struct local_orphan_writer *lowr;
   struct writer *wr;
   ddsrt_mtime_t tnow = ddsrt_time_monotonic ();
 
-  GVLOGDISC ("new_local_orphan_writer(%s/%s)\n", topic->name, topic->type_name);
+  GVLOGDISC ("new_local_orphan_writer(%s/%s)\n", topic_name, type->type_name);
   lowr = ddsrt_malloc (sizeof (*lowr));
   wr = &lowr->wr;
 
@@ -3853,7 +3854,7 @@ struct local_orphan_writer *new_local_orphan_writer (struct ddsi_domaingv *gv, d
   entity_common_init (&wr->e, gv, &guid, NULL, EK_WRITER, ddsrt_time_wallclock (), NN_VENDORID_ECLIPSE, true);
   wr->c.pp = NULL;
   memset (&wr->c.group_guid, 0, sizeof (wr->c.group_guid));
-  new_writer_guid_common_init (wr, topic, xqos, whc, 0, NULL);
+  new_writer_guid_common_init (wr, topic_name, type, xqos, whc, 0, NULL);
   entidx_insert_writer_guid (gv->entity_index, wr);
   builtintopic_write (gv->builtin_topic_interface, &wr->e, ddsrt_time_wallclock(), true);
   match_writer_with_local_readers (wr, tnow);
@@ -3930,7 +3931,7 @@ static void gc_delete_writer (struct gcreq *gcreq)
   local_reader_ary_fini (&wr->rdary);
   ddsrt_cond_destroy (&wr->throttle_cond);
 
-  ddsi_sertopic_unref ((struct ddsi_sertopic *) wr->topic);
+  ddsi_sertype_unref ((struct ddsi_sertype *) wr->type);
   endpoint_common_fini (&wr->e, &wr->c);
   ddsrt_free (wr);
 }
@@ -4236,7 +4237,8 @@ static dds_return_t new_reader_guid
   const struct ddsi_guid *guid,
   const struct ddsi_guid *group_guid,
   struct participant *pp,
-  const struct ddsi_sertopic *topic,
+  const char *topic_name,
+  const struct ddsi_sertype *type,
   const struct dds_qos *xqos,
   struct ddsi_rhc *rhc,
   status_cb_t status_cb,
@@ -4252,12 +4254,12 @@ static dds_return_t new_reader_guid
   assert (entidx_lookup_reader_guid (pp->e.gv->entity_index, guid) == NULL);
   assert (memcmp (&guid->prefix, &pp->e.guid.prefix, sizeof (guid->prefix)) == 0);
 
-  new_reader_writer_common (&pp->e.gv->logconfig, guid, topic, xqos);
+  new_reader_writer_common (&pp->e.gv->logconfig, guid, topic_name, type->type_name, xqos);
   rd = ddsrt_malloc (sizeof (*rd));
   if (rd_out)
     *rd_out = rd;
 
-  const bool onlylocal = builtintopic_is_builtintopic (pp->e.gv->builtin_topic_interface, topic);
+  const bool onlylocal = builtintopic_is_builtintype (pp->e.gv->builtin_topic_interface, type);
   endpoint_common_init (&rd->e, &rd->c, pp->e.gv, EK_READER, guid, group_guid, pp, onlylocal);
 
   /* Copy QoS, merging in defaults */
@@ -4265,7 +4267,7 @@ static dds_return_t new_reader_guid
   ddsi_xqos_copy (rd->xqos, xqos);
   ddsi_xqos_mergein_missing (rd->xqos, &pp->e.gv->default_xqos_rd, ~(uint64_t)0);
   assert (rd->xqos->aliased == 0);
-  set_topic_type_name (rd->xqos, topic);
+  set_topic_type_name (rd->xqos, topic_name, type->type_name);
 
   if (rd->e.gv->logconfig.c.mask & DDS_LC_DISCOVERY)
   {
@@ -4285,7 +4287,7 @@ static dds_return_t new_reader_guid
    */
   rd->handle_as_transient_local = (rd->xqos->durability.kind == DDS_DURABILITY_TRANSIENT_LOCAL) ||
                                   (rd->e.guid.entityid.u == NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_SECURE_READER);
-  rd->topic = ddsi_sertopic_ref (topic);
+  rd->type = ddsi_sertype_ref (type);
   rd->ddsi2direct_cb = 0;
   rd->ddsi2direct_cbarg = 0;
   rd->init_acknack_count = 0;
@@ -4296,7 +4298,7 @@ static dds_return_t new_reader_guid
 #ifdef DDSI_INCLUDE_SECURITY
   rd->sec_attr = NULL;
 #endif
-  if (topic == NULL)
+  if (type == NULL)
   {
     assert (is_builtin_entityid (rd->e.guid.entityid, NN_VENDORID_ECLIPSE));
   }
@@ -4388,7 +4390,8 @@ dds_return_t new_reader
   struct ddsi_guid *rdguid,
   const struct ddsi_guid *group_guid,
   struct participant *pp,
-  const struct ddsi_sertopic *topic,
+  const char *topic_name,
+  const struct ddsi_sertype *type,
   const struct dds_qos *xqos,
   struct ddsi_rhc * rhc,
   status_cb_t status_cb,
@@ -4399,10 +4402,10 @@ dds_return_t new_reader
   uint32_t kind;
 
   rdguid->prefix = pp->e.guid.prefix;
-  kind = topic->topickind_no_key ? NN_ENTITYID_KIND_READER_NO_KEY : NN_ENTITYID_KIND_READER_WITH_KEY;
+  kind = type->typekind_no_key ? NN_ENTITYID_KIND_READER_NO_KEY : NN_ENTITYID_KIND_READER_WITH_KEY;
   if ((rc = pp_allocate_entityid (&rdguid->entityid, kind, pp)) < 0)
     return rc;
-  return new_reader_guid (rd_out, rdguid, group_guid, pp, topic, xqos, rhc, status_cb, status_cbarg);
+  return new_reader_guid (rd_out, rdguid, group_guid, pp, topic_name, type, xqos, rhc, status_cb, status_cbarg);
 }
 
 static void gc_delete_reader (struct gcreq *gcreq)
@@ -4449,7 +4452,7 @@ static void gc_delete_reader (struct gcreq *gcreq)
   {
     (rd->status_cb) (rd->status_cb_entity, NULL);
   }
-  ddsi_sertopic_unref ((struct ddsi_sertopic *) rd->topic);
+  ddsi_sertype_unref ((struct ddsi_sertype *) rd->type);
 
   ddsi_xqos_fini (rd->xqos);
   ddsrt_free (rd->xqos);
@@ -4660,18 +4663,13 @@ static void add_proxy_builtin_endpoints(
                                  &gv->builtin_endpoint_xqos_rd);
 
   /* Security 'volatile' proxy endpoints. */
-  static const struct bestab bestab_volatile[] = {
+  static const struct bestab bestab_security_volatile[] = {
     LTE (PARTICIPANT_VOLATILE_SECURE_ANNOUNCER, P2P, PARTICIPANT_VOLATILE_SECURE_WRITER),
     LTE (PARTICIPANT_VOLATILE_SECURE_DETECTOR, P2P, PARTICIPANT_VOLATILE_SECURE_READER)
   };
-  create_proxy_builtin_endpoints(gv,
-                                 bestab_volatile,
-                                 (int)(sizeof (bestab_volatile) / sizeof (*bestab_volatile)),
-                                 ppguid,
-                                 proxypp,
-                                 timestamp,
-                                 &gv->builtin_volatile_xqos_wr,
-                                 &gv->builtin_volatile_xqos_rd);
+  create_proxy_builtin_endpoints(gv, bestab_security_volatile,
+    (int)(sizeof (bestab_security_volatile) / sizeof (*bestab_security_volatile)),
+    ppguid, proxypp, timestamp, &gv->builtin_secure_volatile_xqos_wr, &gv->builtin_secure_volatile_xqos_rd);
 
   /* Security 'stateless' proxy endpoints. */
   static const struct bestab bestab_stateless[] = {

@@ -52,7 +52,7 @@ extern "C" {
 
 struct dds_rhc;
 struct ddsi_plist;
-struct ddsi_sertopic;
+struct ddsi_sertype;
 struct ddsi_serdata;
 
 #define DDS_MIN_PSEUDO_HANDLE ((dds_entity_t) 0x7fff0000)
@@ -1077,7 +1077,8 @@ dds_create_topic(
 DDS_EXPORT dds_entity_t
 dds_create_topic_generic (
   dds_entity_t participant,
-  struct ddsi_sertopic **sertopic,
+  const char *name,
+  struct ddsi_sertype **sertype,
   const dds_qos_t *qos,
   const dds_listener_t *listener,
   const struct ddsi_plist *sedp_plist);
@@ -1085,7 +1086,8 @@ dds_create_topic_generic (
 DDS_DEPRECATED_EXPORT dds_entity_t
 dds_create_topic_arbitrary (
   dds_entity_t participant,
-  struct ddsi_sertopic *sertopic,
+  const char *name,
+  struct ddsi_sertype *sertype,
   const dds_qos_t *qos,
   const dds_listener_t *listener,
   const struct ddsi_plist *sedp_plist);

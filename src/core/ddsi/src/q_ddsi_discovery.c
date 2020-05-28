@@ -310,7 +310,7 @@ void get_participant_builtin_topic_data (const struct participant *pp, ddsi_plis
 
 static int write_and_fini_plist (struct writer *wr, ddsi_plist_t *ps, bool alive)
 {
-  struct ddsi_serdata *serdata = ddsi_serdata_from_sample (wr->topic, alive ? SDK_DATA : SDK_KEY, ps);
+  struct ddsi_serdata *serdata = ddsi_serdata_from_sample (wr->type, alive ? SDK_DATA : SDK_KEY, ps);
   ddsi_plist_fini (ps);
   serdata->statusinfo = alive ? 0 : (NN_STATUSINFO_DISPOSE | NN_STATUSINFO_UNREGISTER);
   serdata->timestamp = ddsrt_time_wallclock ();
@@ -1454,48 +1454,48 @@ int builtins_dqueue_handler (const struct nn_rsample_info *sampleinfo, const str
     goto done_upd_deliv;
   }
 
-  /* proxy writers don't reference a topic object, SPDP doesn't have matched readers
+  /* proxy writers don't reference a type object, SPDP doesn't have matched readers
      but all the GUIDs are known, so be practical and map that */
-  const struct ddsi_sertopic *topic;
+  const struct ddsi_sertype *type;
   switch (srcguid.entityid.u)
   {
     case NN_ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER:
-      topic = gv->spdp_topic;
+      type = gv->spdp_type;
       break;
     case NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER:
-      topic = gv->sedp_writer_topic;
+      type = gv->sedp_writer_type;
       break;
     case NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER:
-      topic = gv->sedp_reader_topic;
+      type = gv->sedp_reader_type;
       break;
     case NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER:
-      topic = gv->pmd_topic;
+      type = gv->pmd_type;
       break;
 #ifdef DDSI_INCLUDE_SECURITY
     case NN_ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_WRITER:
-      topic = gv->spdp_secure_topic;
+      type = gv->spdp_secure_type;
       break;
     case NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_SECURE_WRITER:
-      topic = gv->sedp_writer_secure_topic;
+      type = gv->sedp_writer_secure_type;
       break;
     case NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_SECURE_WRITER:
-      topic = gv->sedp_reader_secure_topic;
+      type = gv->sedp_reader_secure_type;
       break;
     case NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_WRITER:
-      topic = gv->pmd_secure_topic;
+      type = gv->pmd_secure_type;
       break;
     case NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER:
-      topic = gv->pgm_stateless_topic;
+      type = gv->pgm_stateless_type;
       break;
     case NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_VOLATILE_SECURE_WRITER:
-      topic = gv->pgm_volatile_topic;
+      type = gv->pgm_volatile_type;
       break;
 #endif
     default:
-      topic = NULL;
+      type = NULL;
       break;
   }
-  if (topic == NULL)
+  if (type == NULL)
   {
     /* unrecognized source entity id => ignore */
     goto done_upd_deliv;
@@ -1503,11 +1503,11 @@ int builtins_dqueue_handler (const struct nn_rsample_info *sampleinfo, const str
 
   struct ddsi_serdata *d;
   if (data_smhdr_flags & DATA_FLAG_DATAFLAG)
-    d = ddsi_serdata_from_ser (topic, SDK_DATA, fragchain, sampleinfo->size);
+    d = ddsi_serdata_from_ser (type, SDK_DATA, fragchain, sampleinfo->size);
   else if (data_smhdr_flags & DATA_FLAG_KEYFLAG)
-    d = ddsi_serdata_from_ser (topic, SDK_KEY, fragchain, sampleinfo->size);
+    d = ddsi_serdata_from_ser (type, SDK_KEY, fragchain, sampleinfo->size);
   else if ((qos.present & PP_KEYHASH) && !NN_STRICT_P(gv->config))
-    d = ddsi_serdata_from_keyhash (topic, &qos.keyhash);
+    d = ddsi_serdata_from_keyhash (type, &qos.keyhash);
   else
   {
     GVLOGDISC ("data(builtin, vendor %u.%u): "PGUIDFMT" #%"PRId64": missing payload\n",
@@ -1545,7 +1545,7 @@ int builtins_dqueue_handler (const struct nn_rsample_info *sampleinfo, const str
     if (pwr) guid = pwr->e.guid; else memset (&guid, 0, sizeof (guid));
     GVTRACE ("data(builtin, vendor %u.%u): "PGUIDFMT" #%"PRId64": ST%x %s/%s:%s%s\n",
              sampleinfo->rst->vendor.id[0], sampleinfo->rst->vendor.id[1],
-             PGUID (guid), sampleinfo->seq, statusinfo, d->topic->name, d->topic->type_name,
+             PGUID (guid), sampleinfo->seq, statusinfo, "FIXME", d->type->type_name,  // FIXME: topic name from pwr?
              tmp, res < sizeof (tmp) - 1 ? "" : "(trunc)");
   }
 

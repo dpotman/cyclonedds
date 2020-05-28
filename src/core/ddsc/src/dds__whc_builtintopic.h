@@ -13,13 +13,13 @@
 #define DDS_WHC_BUILTINTOPIC_H
 
 #include "dds/ddsi/q_whc.h"
-#include "dds__serdata_builtintopic.h"
+#include "dds__serdata_builtintype.h"
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
-struct whc *builtintopic_whc_new (enum ddsi_sertopic_builtintopic_type type, const struct entity_index *entidx);
+struct whc *builtintopic_whc_new (enum ddsi_sertype_builtintype_entity_kind entity_kind, const struct entity_index *entidx);
 
 #if defined (__cplusplus)
 }
