@@ -401,6 +401,7 @@ static void ddsc_multi_sertype_impl (dds_entity_t pp_pub, dds_entity_t pp_sub, e
   dds_qset_reliability (qos, DDS_RELIABILITY_RELIABLE, DDS_INFINITY);
   dds_qset_destination_order (qos, DDS_DESTINATIONORDER_BY_RECEPTION_TIMESTAMP);
   dds_qset_history (qos, DDS_HISTORY_KEEP_ALL, 0);
+  dds_qset_type_consistency (qos, DDS_TYPE_CONSISTENCY_ALLOW_TYPE_COERCION, false, false, false, false, false);
   if (mode == MSM_TRANSLOCAL)
   {
     dds_qset_durability (qos, DDS_DURABILITY_TRANSIENT_LOCAL);

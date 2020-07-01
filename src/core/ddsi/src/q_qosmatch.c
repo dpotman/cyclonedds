@@ -66,6 +66,14 @@ int partitions_match_p (const dds_qos_t *a, const dds_qos_t *b)
   }
 }
 
+static bool check_assignability (const struct tl_meta *rd_tlm, const struct tl_meta *wr_tlm, const dds_qos_t *rd_qos)
+{
+  /* FIXME: currently the assignability check is not really implemented, we're just comparing
+     the type_ids. In case force_type_validation is set to false, the assignability check
+     returns true so that topic matching is based only on topic name and type name */
+  return !rd_qos->type_consistency.force_type_validation || ddsi_typeid_equal (rd_tlm->type_id, wr_tlm->type_id);
+}
+
 bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const type_identifier_t *rd_typeid, const dds_qos_t *wr_qos, const type_identifier_t *wr_typeid, uint64_t mask, dds_qos_policy_id_t *reason, bool *rd_typeid_req_lookup, bool *wr_typeid_req_lookup)
 {
   DDSRT_UNUSED_ARG (gv);
@@ -86,35 +94,47 @@ bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const 
   if ((mask & QP_TYPE_NAME) && strcmp (rd_qos->type_name, wr_qos->type_name) != 0)
     return false;
 
-  /* FIXME: make type_id checking conditional on config setting (as this is not useful
-     to do until the assignability check is implemented) */
-  ddsrt_mutex_lock (&gv->tl_admin_lock);
-  struct tl_meta *rd_tlm = NULL, *wr_tlm = NULL;
-  if (rd_typeid != NULL)
-    rd_tlm = ddsi_tl_meta_lookup_locked (gv, rd_typeid);
-  assert (rd_typeid == NULL || rd_tlm != NULL);
-  if (rd_typeid != NULL && rd_tlm->state != TL_META_RESOLVED)
+  if ((rd_typeid == NULL || wr_typeid == NULL) && rd_qos->type_consistency.force_type_validation)
   {
-    GVTRACE ("rd typeid unresolved "PTYPEIDFMT, PTYPEID(*rd_typeid));
-    if (rd_typeid_req_lookup != NULL)
-      *rd_typeid_req_lookup = true;
-    ddsrt_mutex_unlock (&gv->tl_admin_lock);
+    *reason = DDS_TYPE_CONSISTENCY_ENFORCEMENT_QOS_POLICY_ID;
     return false;
   }
-  if (wr_typeid != NULL)
-    wr_tlm = ddsi_tl_meta_lookup_locked (gv, wr_typeid);
-  assert (wr_typeid == NULL || wr_tlm != NULL);
-  if (wr_typeid != NULL && wr_tlm->state != TL_META_RESOLVED)
+
+  struct tl_meta *rd_tlm = NULL, *wr_tlm = NULL;
+  ddsrt_mutex_lock (&gv->tl_admin_lock);
+  if (rd_typeid != NULL)
   {
-    GVTRACE ("wr typeid unresolved "PTYPEIDFMT, PTYPEID(*wr_typeid));
-    if (wr_typeid_req_lookup != NULL)
-      *wr_typeid_req_lookup = true;
+    rd_tlm = ddsi_tl_meta_lookup_locked (gv, rd_typeid);
+    assert (rd_tlm != NULL);
+    if (rd_tlm->state != TL_META_RESOLVED)
+    {
+      GVTRACE ("rd typeid unresolved "PTYPEIDFMT, PTYPEID(*rd_typeid));
+      if (rd_typeid_req_lookup != NULL)
+        *rd_typeid_req_lookup = true;
+      ddsrt_mutex_unlock (&gv->tl_admin_lock);
+      return false;
+    }
+  }
+  if (wr_typeid != NULL)
+  {
+    wr_tlm = ddsi_tl_meta_lookup_locked (gv, wr_typeid);
+    assert (wr_tlm != NULL);
+    if (wr_tlm->state != TL_META_RESOLVED)
+    {
+      GVTRACE ("wr typeid unresolved "PTYPEIDFMT, PTYPEID(*wr_typeid));
+      if (wr_typeid_req_lookup != NULL)
+        *wr_typeid_req_lookup = true;
+      ddsrt_mutex_unlock (&gv->tl_admin_lock);
+      return false;
+    }
+  }
+  if (rd_typeid != NULL && wr_typeid != NULL && !check_assignability (rd_tlm, wr_tlm, rd_qos))
+  {
+    *reason = DDS_TYPE_CONSISTENCY_ENFORCEMENT_QOS_POLICY_ID;
     ddsrt_mutex_unlock (&gv->tl_admin_lock);
     return false;
   }
   ddsrt_mutex_unlock (&gv->tl_admin_lock);
-
-  // FIXME: do the assignability check for rd_tlm->sertype and wr_tlm->sertype
 
   if ((mask & QP_RELIABILITY) && rd_qos->reliability.kind > wr_qos->reliability.kind) {
     *reason = DDS_RELIABILITY_QOS_POLICY_ID;

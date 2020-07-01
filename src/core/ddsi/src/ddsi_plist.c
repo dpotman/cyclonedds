@@ -1567,6 +1567,7 @@ static const struct piddesc piddesc_omg[] = {
   QP  (PARTITION,                           partition, XQ, XS, XSTOP),
   QP  (TIME_BASED_FILTER,                   time_based_filter, XD),
   QP  (TRANSPORT_PRIORITY,                  transport_priority, Xi),
+  QP  (TYPE_CONSISTENCY_ENFORCEMENT,        type_consistency, XE1, Xb, Xb, Xb, Xb, Xb),
   PP  (PROTOCOL_VERSION,                    protocol_version, Xox2),
   PP  (VENDORID,                            vendorid, Xox2),
   PP  (EXPECTS_INLINE_QOS,                  expects_inline_qos, Xb),
@@ -1701,11 +1702,7 @@ struct piddesc_index {
 
    FIXME: should compute them at build-time */
 #define DEFAULT_PROC_ARRAY_SIZE                20
-#ifdef DDSI_INCLUDE_SSM
-#define DEFAULT_OMG_PIDS_ARRAY_SIZE            (PID_READER_FAVOURS_SSM + 1)
-#else
-#define DEFAULT_OMG_PIDS_ARRAY_SIZE            (PID_STATUSINFO + 1)
-#endif
+#define DEFAULT_OMG_PIDS_ARRAY_SIZE            (PID_TYPE_CONSISTENCY_ENFORCEMENT + 1)
 #ifdef DDSI_INCLUDE_SECURITY
 #define SECURITY_OMG_PIDS_ARRAY_SIZE           (PID_IDENTITY_STATUS_TOKEN - PID_IDENTITY_TOKEN + 1)
 #define SECURITY_PROC_ARRAY_SIZE               4
@@ -3121,6 +3118,14 @@ void ddsi_xqos_init_default_reader (dds_qos_t *xqos)
   xqos->subscription_keys.use_key_list = 0;
   xqos->subscription_keys.key_list.n = 0;
   xqos->subscription_keys.key_list.strs = NULL;
+
+  xqos->present |= QP_TYPE_CONSISTENCY_ENFORCEMENT;
+  xqos->type_consistency.kind = DDS_TYPE_CONSISTENCY_ALLOW_TYPE_COERCION;
+  xqos->type_consistency.ignore_sequence_bounds = false;
+  xqos->type_consistency.ignore_string_bounds = false;
+  xqos->type_consistency.ignore_member_names = false;
+  xqos->type_consistency.prevent_type_widening = false;
+  xqos->type_consistency.force_type_validation = false;
 }
 
 void ddsi_xqos_init_default_writer (dds_qos_t *xqos)
