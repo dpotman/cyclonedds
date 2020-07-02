@@ -51,10 +51,18 @@ uint32_t ddsi_sertype_hash (const struct ddsi_sertype *a)
   return h ^ a->ops->hash (a);
 }
 
-struct ddsi_sertype *ddsi_sertype_ref (const struct ddsi_sertype *sertype_const)
+static struct ddsi_sertype *ddsi_sertype_ref_locked (const struct ddsi_sertype *sertype_const)
 {
   struct ddsi_sertype *sertype = (struct ddsi_sertype *) sertype_const;
-  ddsrt_atomic_inc32 (&sertype->refc);
+  sertype->refc++;
+  return sertype;
+}
+
+struct ddsi_sertype *ddsi_sertype_ref (const struct ddsi_sertype *sertype_const)
+{
+  ddsrt_mutex_lock (&sertype_const->gv->sertypes_lock);
+  struct ddsi_sertype *sertype = ddsi_sertype_ref_locked (sertype_const);
+  ddsrt_mutex_unlock (&sertype_const->gv->sertypes_lock);
   return sertype;
 }
 
@@ -63,37 +71,35 @@ struct ddsi_sertype *ddsi_sertype_lookup_locked (struct ddsi_domaingv *gv, const
   struct ddsi_sertype *sertype = ddsrt_hh_lookup (gv->sertypes, sertype_template);
 #ifndef NDEBUG
   if (sertype != NULL)
-    assert (sertype->gv != NULL);
+    assert (sertype->refc > 0);
 #endif
-  return sertype ? ddsi_sertype_ref (sertype) : NULL;
+  return sertype ? ddsi_sertype_ref_locked (sertype) : NULL;
 }
 
-void ddsi_sertype_register_locked (struct ddsi_domaingv *gv, struct ddsi_sertype *sertype)
+void ddsi_sertype_register_locked (struct ddsi_sertype *sertype)
 {
-  assert (sertype->gv == NULL);
-
-  (void) ddsi_sertype_ref (sertype);
-  sertype->gv = gv;
-  int x = ddsrt_hh_add (gv->sertypes, sertype);
+  assert (!sertype->registered);
+  (void) ddsi_sertype_ref_locked (sertype);
+  sertype->registered = true;
+  int x = ddsrt_hh_add (sertype->gv->sertypes, sertype);
   assert (x);
   (void) x;
 }
 
 void ddsi_sertype_unref (struct ddsi_sertype *sertype)
 {
-  if (ddsrt_atomic_dec32_ov (&sertype->refc) == 1)
+  struct ddsi_domaingv *gv = sertype->gv;
+  ddsrt_mutex_lock (&gv->sertypes_lock);
+  if (--sertype->refc == 0)
   {
-    /* if registered, drop from set of registered sertypes */
-    if (sertype->gv)
+    if (sertype->registered)
     {
-      ddsrt_mutex_lock (&sertype->gv->sertypes_lock);
-      (void) ddsrt_hh_remove (sertype->gv->sertypes, sertype);
-      ddsrt_mutex_unlock (&sertype->gv->sertypes_lock);
-      sertype->gv = NULL;
+      (void) ddsrt_hh_remove (gv->sertypes, sertype);
+      sertype->registered = false;
     }
-
     ddsi_sertype_free (sertype);
   }
+  ddsrt_mutex_unlock (&gv->sertypes_lock);
 }
 
 void ddsi_sertype_serialize (const struct ddsi_sertype *tp, size_t *sz, unsigned char **buf)
@@ -126,26 +132,26 @@ void ddsi_sertype_deserialize (struct ddsi_sertype *tp, size_t sz, const unsigne
   (*pos)++;
 }
 
-void ddsi_sertype_init_from_ser (struct ddsi_sertype *tp, const struct ddsi_sertype_ops *sertype_ops, size_t sz, unsigned char *serdata)
+void ddsi_sertype_init_from_ser (struct ddsi_domaingv *gv, struct ddsi_sertype *tp, const struct ddsi_sertype_ops *sertype_ops, size_t sz, unsigned char *serdata)
 {
-  ddsrt_atomic_st32 (&tp->refc, 0);
+  tp->refc = 0;
   tp->ops = sertype_ops;
   tp->ops->deserialize (tp, sz, serdata);
   tp->serdata_basehash = ddsi_sertype_compute_serdata_basehash (tp->serdata_ops);
-  /* set later, on registration */
-  tp->gv = NULL;
+  tp->gv = gv;
+  tp->registered = false;
 }
 
-void ddsi_sertype_init (struct ddsi_sertype *tp, const char *type_name, const struct ddsi_sertype_ops *sertype_ops, const struct ddsi_serdata_ops *serdata_ops, bool typekind_no_key)
+void ddsi_sertype_init (struct ddsi_domaingv *gv, struct ddsi_sertype *tp, const char *type_name, const struct ddsi_sertype_ops *sertype_ops, const struct ddsi_serdata_ops *serdata_ops, bool typekind_no_key)
 {
-  ddsrt_atomic_st32 (&tp->refc, 1);
+  tp->refc = 1;
   tp->type_name = ddsrt_strdup (type_name);
   tp->ops = sertype_ops;
   tp->serdata_ops = serdata_ops;
   tp->serdata_basehash = ddsi_sertype_compute_serdata_basehash (tp->serdata_ops);
   tp->typekind_no_key = typekind_no_key;
-  /* set later, on registration */
-  tp->gv = NULL;
+  tp->gv = gv;
+  tp->registered = false;
 }
 
 void ddsi_sertype_fini (struct ddsi_sertype *tp)

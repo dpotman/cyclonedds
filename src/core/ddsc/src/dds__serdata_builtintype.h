@@ -42,7 +42,7 @@ struct ddsi_sertype_builtintype {
 extern const struct ddsi_sertype_ops ddsi_sertype_ops_builtintype;
 extern const struct ddsi_serdata_ops ddsi_serdata_ops_builtintype;
 
-struct ddsi_sertype *new_sertype_builtintype (enum ddsi_sertype_builtintype_entity_kind entity_kind, const char *typename);
+struct ddsi_sertype *new_sertype_builtintype (struct ddsi_domaingv *gv, enum ddsi_sertype_builtintype_entity_kind entity_kind, const char *typename);
 
 #if defined (__cplusplus)
 }

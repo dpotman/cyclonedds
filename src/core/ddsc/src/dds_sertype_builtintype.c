@@ -26,10 +26,10 @@
 
 /* FIXME: sertopic /= ddstopic so a lot of stuff needs to be moved here from dds_topic.c and the free function needs to be implemented properly */
 
-struct ddsi_sertype *new_sertype_builtintype (enum ddsi_sertype_builtintype_entity_kind entity_kind, const char *typename)
+struct ddsi_sertype *new_sertype_builtintype (struct ddsi_domaingv *gv, enum ddsi_sertype_builtintype_entity_kind entity_kind, const char *typename)
 {
   struct ddsi_sertype_builtintype *tp = ddsrt_malloc (sizeof (*tp));
-  ddsi_sertype_init (&tp->c, typename, &ddsi_sertype_ops_builtintype, &ddsi_serdata_ops_builtintype, false);
+  ddsi_sertype_init (gv, &tp->c, typename, &ddsi_sertype_ops_builtintype, &ddsi_serdata_ops_builtintype, false);
   tp->entity_kind = entity_kind;
   return &tp->c;
 }

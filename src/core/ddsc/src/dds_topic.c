@@ -314,8 +314,8 @@ dds_entity_t dds_create_topic_impl (dds_entity_t participant, const char * name,
   /* See if we're allowed to create the topic; ktp is returned pinned & locked
      so we can be sure it doesn't disappear and its QoS can't change */
   GVTRACE ("dds_create_topic_generic (pp %p "PGUIDFMT" sertype %p reg?%s refc %"PRIu32" %s/%s)\n",
-           (void *) pp, PGUID (pp->m_entity.m_guid), (void *) (*sertype), (*sertype)->gv ? "yes" : "no",
-           ddsrt_atomic_ld32 (&(*sertype)->refc), name, (*sertype)->type_name);
+           (void *) pp, PGUID (pp->m_entity.m_guid), (void *) (*sertype), (*sertype)->registered ? "yes" : "no",
+           (*sertype)->refc, name, (*sertype)->type_name);
   ddsrt_mutex_lock (&pp->m_entity.m_mutex);
   struct dds_ktopic *ktp;
   if ((rc = lookup_and_check_ktopic (&ktp, pp, name, (*sertype)->type_name, new_qos)) != DDS_RETCODE_OK)
@@ -353,7 +353,7 @@ dds_entity_t dds_create_topic_impl (dds_entity_t participant, const char * name,
     else
     {
       GVTRACE ("dds_create_topic_generic: register new sertype %p\n", (void *) (*sertype));
-      ddsi_sertype_register_locked (gv, *sertype);
+      ddsi_sertype_register_locked (*sertype);
       sertype_registered = *sertype;
     }
     ddsrt_mutex_unlock (&gv->sertypes_lock);
@@ -365,8 +365,8 @@ dds_entity_t dds_create_topic_impl (dds_entity_t participant, const char * name,
   ddsi_sertype_unref (*sertype);
   *sertype = sertype_registered;
   ddsrt_mutex_unlock (&pp->m_entity.m_mutex);
-  dds_entity_unpin (&pp->m_entity);
   ddsi_tl_meta_ref (gv, NULL, sertype_registered, NULL, NULL);
+  dds_entity_unpin (&pp->m_entity);
   GVTRACE ("dds_create_topic_generic: new topic %"PRId32"\n", hdl);
   return hdl;
 
@@ -415,7 +415,7 @@ dds_entity_t dds_create_topic (dds_entity_t participant, const dds_topic_descrip
 
   st = dds_alloc (sizeof (*st));
 
-  ddsi_sertype_init (&st->c, desc->m_typename, &ddsi_sertype_ops_default, desc->m_nkeys ? &ddsi_serdata_ops_cdr : &ddsi_serdata_ops_cdr_nokey, (desc->m_nkeys == 0));
+  ddsi_sertype_init (&ppent->m_domain->gv, &st->c, desc->m_typename, &ddsi_sertype_ops_default, desc->m_nkeys ? &ddsi_serdata_ops_cdr : &ddsi_serdata_ops_cdr_nokey, (desc->m_nkeys == 0));
   st->native_encoding_identifier = (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN ? CDR_LE : CDR_BE);
   st->serpool = ppent->m_domain->gv.serpool;
   st->type.m_size = desc->m_size;

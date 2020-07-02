@@ -310,9 +310,9 @@ void handle_typelookup_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sam
     {
       GVTRACE (" type "PTYPEIDFMT, PTYPEID (r.type_identifier));
       st = ddsrt_malloc (sizeof (*st));
-      ddsi_sertype_init_from_ser (&st->c, &ddsi_sertype_ops_default, r.type_object.length, r.type_object.value);
+      ddsi_sertype_init_from_ser (gv, &st->c, &ddsi_sertype_ops_default, r.type_object.length, r.type_object.value);
       ddsrt_mutex_lock (&gv->sertypes_lock);
-      ddsi_sertype_register_locked (gv, &st->c);
+      ddsi_sertype_register_locked (&st->c);
       ddsrt_mutex_unlock (&gv->sertypes_lock);
 
       tlm->state = TL_META_RESOLVED;

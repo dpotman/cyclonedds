@@ -35,7 +35,8 @@ struct ddsi_sertype {
   bool typekind_no_key;
   char *type_name;
   struct ddsi_domaingv *gv;
-  ddsrt_atomic_uint32_t refc; /* counts refs from entities (topic, reader, writer), not from data */
+  uint32_t refc; /* counts refs from entities (topic, reader, writer), not from data */
+  bool registered;
 };
 
 /* The old and the new happen to have the same memory layout on a 64-bit machine
@@ -107,10 +108,10 @@ struct ddsi_sertype_ops {
 };
 
 struct ddsi_sertype *ddsi_sertype_lookup_locked (struct ddsi_domaingv *gv, const struct ddsi_sertype *sertype_template);
-void ddsi_sertype_register_locked (struct ddsi_domaingv *gv, struct ddsi_sertype *sertype);
+void ddsi_sertype_register_locked (struct ddsi_sertype *sertype);
 
-DDS_EXPORT void ddsi_sertype_init (struct ddsi_sertype *tp, const char *type_name, const struct ddsi_sertype_ops *sertype_ops, const struct ddsi_serdata_ops *serdata_ops, bool topickind_no_key);
-DDS_EXPORT void ddsi_sertype_init_from_ser (struct ddsi_sertype *tp, const struct ddsi_sertype_ops *sertype_ops, size_t sz, unsigned char *serdata);
+DDS_EXPORT void ddsi_sertype_init (struct ddsi_domaingv *gv, struct ddsi_sertype *tp, const char *type_name, const struct ddsi_sertype_ops *sertype_ops, const struct ddsi_serdata_ops *serdata_ops, bool topickind_no_key);
+DDS_EXPORT void ddsi_sertype_init_from_ser (struct ddsi_domaingv *gv, struct ddsi_sertype *tp, const struct ddsi_sertype_ops *sertype_ops, size_t sz, unsigned char *serdata);
 DDS_EXPORT void ddsi_sertype_fini (struct ddsi_sertype *tp);
 DDS_EXPORT struct ddsi_sertype *ddsi_sertype_ref (const struct ddsi_sertype *tp);
 DDS_EXPORT void ddsi_sertype_unref (struct ddsi_sertype *tp);
