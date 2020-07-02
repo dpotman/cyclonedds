@@ -181,6 +181,24 @@ static void sertype_default_deserialize (struct ddsi_sertype *sertype_common, si
   // i += tp->type.m_nops;
 }
 
+static bool sertype_default_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)
+{
+  struct ddsi_sertype_default *a = (struct ddsi_sertype_default *) type_a;
+  struct ddsi_sertype_default *b = (struct ddsi_sertype_default *) type_b;
+
+  // If receiving type disables type checking, type b is assignable
+  if (a->type.m_flagset & DDS_TOPIC_DISABLE_TYPECHECK)
+    return true;
+
+  // For now, the assignable check is just comparing the type-ids for a and b, so only equal types will match
+  type_identifier_t *typeid_a = ddsi_typeid_from_sertype (&a->c);
+  type_identifier_t *typeid_b = ddsi_typeid_from_sertype (&b->c);
+  bool assignable = ddsi_typeid_equal (typeid_a, typeid_b);
+  ddsrt_free (typeid_a);
+  ddsrt_free (typeid_b);
+  return assignable;
+}
+
 const struct ddsi_sertype_ops ddsi_sertype_ops_default = {
   .equal = sertype_default_equal,
   .hash = sertype_default_hash,
@@ -190,5 +208,6 @@ const struct ddsi_sertype_ops ddsi_sertype_ops_default = {
   .realloc_samples = sertype_default_realloc_samples,
   .free_samples = sertype_default_free_samples,
   .serialize = sertype_default_serialize,
-  .deserialize = sertype_default_deserialize
+  .deserialize = sertype_default_deserialize,
+  .assignable_from = sertype_default_assignable_from
 };

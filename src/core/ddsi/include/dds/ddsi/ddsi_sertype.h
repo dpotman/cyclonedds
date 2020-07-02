@@ -95,6 +95,9 @@ typedef void (*ddsi_sertype_serialize_t) (const struct ddsi_sertype *d, size_t *
 /* Deserialize this type */
 typedef void (*ddsi_sertype_deserialize_t) (struct ddsi_sertype *d, size_t sz, const unsigned char *serdata);
 
+/* Check if (an object of) type a is assignable from (an object of) the type b */
+typedef bool (*ddsi_sertype_assignable_from_t) (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b);
+
 struct ddsi_sertype_ops {
   ddsi_sertype_free_t free;
   ddsi_sertype_zero_samples_t zero_samples;
@@ -105,6 +108,7 @@ struct ddsi_sertype_ops {
   ddsi_sertype_typeid_hash_t typeid_hash;
   ddsi_sertype_serialize_t serialize;
   ddsi_sertype_deserialize_t deserialize;
+  ddsi_sertype_assignable_from_t assignable_from;
 };
 
 struct ddsi_sertype *ddsi_sertype_lookup_locked (struct ddsi_domaingv *gv, const struct ddsi_sertype *sertype_template);
@@ -148,6 +152,9 @@ DDS_EXPORT inline void ddsi_sertype_free_sample (const struct ddsi_sertype *tp, 
 }
 DDS_EXPORT inline void ddsi_sertype_typeid_hash (const struct ddsi_sertype *tp, unsigned char *buf) {
   tp->ops->typeid_hash (tp, buf);
+}
+DDS_EXPORT inline bool ddsi_sertype_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b) {
+  return type_a->ops->assignable_from (type_a, type_b);
 }
 
 #if defined (__cplusplus)

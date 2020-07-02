@@ -141,6 +141,13 @@ static void sertype_pserop_deserialize (struct ddsi_sertype *sertype_common, siz
   abort ();
 }
 
+static bool sertype_pserop_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)
+{
+  (void) type_a;
+  (void) type_b;
+  return true;
+}
+
 const struct ddsi_sertype_ops ddsi_sertype_ops_pserop = {
   .equal = sertype_pserop_equal,
   .hash = sertype_pserop_hash,
@@ -150,5 +157,6 @@ const struct ddsi_sertype_ops ddsi_sertype_ops_pserop = {
   .realloc_samples = sertype_pserop_realloc_samples,
   .free_samples = sertype_pserop_free_samples,
   .serialize = sertype_pserop_serialize,
-  .deserialize = sertype_pserop_deserialize
+  .deserialize = sertype_pserop_deserialize,
+  .assignable_from = sertype_pserop_assignable_from
 };

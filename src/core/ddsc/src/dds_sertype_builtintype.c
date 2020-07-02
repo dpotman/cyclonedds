@@ -152,6 +152,29 @@ static void sertype_builtin_free_samples (const struct ddsi_sertype *sertype_com
   }
 }
 
+static void sertype_builtin_serialize (const struct ddsi_sertype *sertype_common, size_t *sz, unsigned char **buf)
+{
+  (void) sertype_common;
+  (void) sz;
+  (void) buf;
+  abort ();
+}
+
+static void sertype_builtin_deserialize (struct ddsi_sertype *sertype_common, size_t sz, const unsigned char *serdata)
+{
+  (void) sertype_common;
+  (void) sz;
+  (void) serdata;
+  abort ();
+}
+
+static bool sertype_builtin_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)
+{
+  (void) type_a;
+  (void) type_b;
+  return true;
+}
+
 const struct ddsi_sertype_ops ddsi_sertype_ops_builtintype = {
   .equal = sertype_builtin_equal,
   .hash = sertype_builtin_hash,
@@ -159,5 +182,8 @@ const struct ddsi_sertype_ops ddsi_sertype_ops_builtintype = {
   .free = sertype_builtin_free,
   .zero_samples = sertype_builtin_zero_samples,
   .realloc_samples = sertype_builtin_realloc_samples,
-  .free_samples = sertype_builtin_free_samples
+  .free_samples = sertype_builtin_free_samples,
+  .serialize = sertype_builtin_serialize,
+  .deserialize = sertype_builtin_deserialize,
+  .assignable_from = sertype_builtin_assignable_from
 };

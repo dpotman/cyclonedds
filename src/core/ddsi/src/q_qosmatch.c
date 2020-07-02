@@ -66,12 +66,11 @@ int partitions_match_p (const dds_qos_t *a, const dds_qos_t *b)
   }
 }
 
-static bool check_assignability (const struct tl_meta *rd_tlm, const struct tl_meta *wr_tlm, const dds_qos_t *rd_qos)
+static bool check_assignability (struct tl_meta *rd_tlm, struct tl_meta *wr_tlm)
 {
-  /* FIXME: currently the assignability check is not really implemented, we're just comparing
-     the type_ids. In case force_type_validation is set to false, the assignability check
-     returns true so that topic matching is based only on topic name and type name */
-  return !rd_qos->type_consistency.force_type_validation || ddsi_typeid_equal (rd_tlm->type_id, wr_tlm->type_id);
+  assert (rd_tlm->sertype != NULL);
+  assert (wr_tlm->sertype != NULL);
+  return rd_tlm->sertype->ops->assignable_from (rd_tlm->sertype, wr_tlm->sertype);
 }
 
 bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const type_identifier_t *rd_typeid, const dds_qos_t *wr_qos, const type_identifier_t *wr_typeid, uint64_t mask, dds_qos_policy_id_t *reason, bool *rd_typeid_req_lookup, bool *wr_typeid_req_lookup)
@@ -128,7 +127,7 @@ bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const 
       return false;
     }
   }
-  if (rd_typeid != NULL && wr_typeid != NULL && !check_assignability (rd_tlm, wr_tlm, rd_qos))
+  if (rd_typeid != NULL && wr_typeid != NULL && !check_assignability (rd_tlm, wr_tlm))
   {
     *reason = DDS_TYPE_CONSISTENCY_ENFORCEMENT_QOS_POLICY_ID;
     ddsrt_mutex_unlock (&gv->tl_admin_lock);

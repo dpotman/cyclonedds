@@ -114,6 +114,13 @@ static void sertype_plist_deserialize (struct ddsi_sertype *sertype_common, size
   abort ();
 }
 
+static bool sertype_plist_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)
+{
+  (void) type_a;
+  (void) type_b;
+  return true;
+}
+
 const struct ddsi_sertype_ops ddsi_sertype_ops_plist = {
   .equal = sertype_plist_equal,
   .hash = sertype_plist_hash,
@@ -123,5 +130,6 @@ const struct ddsi_sertype_ops ddsi_sertype_ops_plist = {
   .realloc_samples = sertype_plist_realloc_samples,
   .free_samples = sertype_plist_free_samples,
   .serialize = sertype_plist_serialize,
-  .deserialize = sertype_plist_deserialize
+  .deserialize = sertype_plist_deserialize,
+  .assignable_from = sertype_plist_assignable_from
 };
