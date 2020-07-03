@@ -206,6 +206,8 @@ typedef struct dds_builtintopic_endpoint
   dds_instance_handle_t participant_instance_handle;
   char *topic_name;
   char *type_name;
+  unsigned char *type_identifier;
+  uint32_t type_identifier_sz;
   dds_qos_t *qos;
 }
 dds_builtintopic_endpoint_t;
@@ -3493,6 +3495,35 @@ dds_domain_set_deafmute (
   bool deaf,
   bool mute,
   dds_duration_t reset_after);
+
+/**
+ * @brief This function resolves the type information for the provided
+ * type identifier.
+ *
+ * @param[in]   entity              A domain entity or an entity bound to a domain, such
+ *                                  as a participant, reader or writer.
+ * @param[in]   type_identifier     Type identifier data
+ * @param[in]   type_identifier_sz  Length of the type identifier data
+ * @param[out]  sertype             The type information, or NULL if the type could not be resolved
+ *
+ * @returns A dds_return_t indicating success or failure.
+ *
+ * @retval DDS_RETCODE_OK
+ *             The operation was successful.
+ * @retval DDS_BAD_PARAMETER
+ *             The entity parameter is not a valid parameter, the type_identifier is not provided or
+ *             its length is incorrect, or the sertype out parameter is NULL
+ * @retval DDS_RETCODE_NOT_FOUND
+ *             A type with the provided type_identifier was not found
+ * @retval DDS_RETCODE_ILLEGAL_OPERATION
+ *             The operation is invoked on an inappropriate object.
+*/
+DDS_EXPORT dds_return_t
+dds_domain_resolve_type (
+  dds_entity_t entity,
+  unsigned char *type_identifier,
+  uint32_t type_identifier_sz,
+  const struct ddsi_sertype **sertype);
 
 #if defined (__cplusplus)
 }

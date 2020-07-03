@@ -365,3 +365,47 @@ void dds_write_set_batch (bool enable)
   ddsrt_mutex_unlock (&dds_global.m_mutex);
   dds_entity_unpin_and_drop_ref (&dds_global.m_entity);
 }
+
+dds_return_t dds_domain_resolve_type (dds_entity_t entity, unsigned char *type_identifier, uint32_t type_identifier_sz, const struct ddsi_sertype **sertype)
+{
+  struct dds_entity *e;
+  dds_return_t rc;
+  if ((rc = dds_entity_pin (entity, &e)) < 0)
+    return rc;
+  if (e->m_domain == NULL)
+  {
+    rc = DDS_RETCODE_ILLEGAL_OPERATION;
+    goto failed;
+  }
+
+  if (type_identifier == NULL || type_identifier_sz != TYPEID_HASH_LENGTH || sertype == NULL)
+  {
+    rc = DDS_RETCODE_BAD_PARAMETER;
+    goto failed;
+  }
+
+  type_identifier_t type_id;
+  memcpy (&type_id.hash, type_identifier, TYPEID_HASH_LENGTH);
+  struct tl_meta *tlm = ddsi_tl_meta_lookup (&e->m_domain->gv, &type_id);
+  if (tlm == NULL)
+  {
+    rc = DDS_RETCODE_NOT_FOUND;
+    goto failed;
+  }
+  if (tlm->state == TL_META_RESOLVED)
+    *sertype = tlm->sertype;
+  else
+  {
+    // FIXME: resolve the type information
+    //ddsi_tl_request_type (&e->m_domain->gv, &type_id);
+    rc = DDS_RETCODE_NOT_FOUND;
+    goto failed;
+  }
+  dds_entity_unpin (e);
+  return DDS_RETCODE_OK;
+
+failed:
+  dds_entity_unpin (e);
+  assert (rc != DDS_RETCODE_OK);
+  return rc;
+}

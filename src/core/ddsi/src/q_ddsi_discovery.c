@@ -1587,10 +1587,10 @@ int builtins_dqueue_handler (const struct nn_rsample_info *sampleinfo, const str
       handle_pmd_message (sampleinfo->rst, d);
       break;
     case NN_ENTITYID_TL_SVC_BUILTIN_REQUEST_WRITER:
-      handle_typelookup_request (gv, &sampleinfo->rst->dst_guid_prefix, d);
+      ddsi_tl_handle_request (gv, &sampleinfo->rst->dst_guid_prefix, d);
       break;
     case NN_ENTITYID_TL_SVC_BUILTIN_REPLY_WRITER:
-      handle_typelookup_reply (gv, d);
+      ddsi_tl_handle_reply (gv, d);
       break;
 #ifdef DDSI_INCLUDE_SECURITY
     case NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER:

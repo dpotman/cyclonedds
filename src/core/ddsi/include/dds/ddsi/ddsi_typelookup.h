@@ -78,12 +78,12 @@ int ddsi_tl_meta_equal (const struct tl_meta *a, const struct tl_meta *b);
 uint32_t ddsi_tl_meta_hash (const struct tl_meta *tl_meta);
 void ddsi_tl_meta_ref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const struct ddsi_sertype *type, const ddsi_guid_t *src_ep_guid, const ddsi_guid_prefix_t *dst);
 struct tl_meta * ddsi_tl_meta_lookup_locked (struct ddsi_domaingv *gv, const type_identifier_t *type_id);
+struct tl_meta * ddsi_tl_meta_lookup (struct ddsi_domaingv *gv, const type_identifier_t *type_id);
 void ddsi_tl_meta_unref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const ddsi_guid_t *src_ep_guid);
 
-struct participant *get_typelookup_pp (const struct ddsi_domaingv *gv, const ddsi_guid_prefix_t *guid_prefix);
-bool write_typelookup_request (struct ddsi_domaingv * const gv, const type_identifier_t *type_id);
-void handle_typelookup_request (struct ddsi_domaingv *gv, const ddsi_guid_prefix_t *guid_prefix, struct ddsi_serdata *sample_common);
-void handle_typelookup_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample_common);
+bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const type_identifier_t *type_id);
+void ddsi_tl_handle_request (struct ddsi_domaingv *gv, const ddsi_guid_prefix_t *guid_prefix, struct ddsi_serdata *sample_common);
+void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample_common);
 
 
 #if defined (__cplusplus)

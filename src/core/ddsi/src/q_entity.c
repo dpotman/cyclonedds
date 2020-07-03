@@ -2813,7 +2813,7 @@ static bool topickind_qos_match_p_lock (struct ddsi_domaingv *gv, struct entity_
 
   if (!ret && (rd_type_lookup || wr_type_lookup))
   {
-    (void) write_typelookup_request (gv, rd_type_lookup ? rd_typeid : wr_typeid);
+    (void) ddsi_tl_request_type (gv, rd_type_lookup ? rd_typeid : wr_typeid);
     return false;
   }
 

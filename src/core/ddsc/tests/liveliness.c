@@ -514,6 +514,7 @@ static void test_lease_duration_pwr(bool remote_reader)
   dds_delete_qos(ep->qos);
   dds_free(ep->topic_name);
   dds_free(ep->type_name);
+  dds_free(ep->type_identifier);
   dds_free(ep);
 
   /* cleanup */
