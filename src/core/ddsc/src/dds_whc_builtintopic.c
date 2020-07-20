@@ -21,13 +21,13 @@
 #include "dds/ddsi/q_entity.h"
 #include "dds/ddsi/ddsi_domaingv.h"
 #include "dds/ddsi/ddsi_tkmap.h"
-#include "dds__serdata_builtintype.h"
+#include "dds__serdata_builtintopic.h"
 #include "dds__whc_builtintopic.h"
 #include "dds__builtin.h"
 
 struct bwhc {
   struct whc common;
-  enum ddsi_sertype_builtintype_entity_kind entity_kind;
+  enum ddsi_sertype_builtintopic_entity_kind entity_kind;
   const struct entity_index *entidx;
 };
 
@@ -193,7 +193,7 @@ static const struct whc_ops bwhc_ops = {
   .free = bwhc_free
 };
 
-struct whc *builtintopic_whc_new (enum ddsi_sertype_builtintype_entity_kind entity_kind, const struct entity_index *entidx)
+struct whc *builtintopic_whc_new (enum ddsi_sertype_builtintopic_entity_kind entity_kind, const struct entity_index *entidx)
 {
   struct bwhc *whc = ddsrt_malloc (sizeof (*whc));
   whc->common.ops = &bwhc_ops;

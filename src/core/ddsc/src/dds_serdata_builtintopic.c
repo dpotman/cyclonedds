@@ -20,7 +20,7 @@
 #include "dds/ddsi/q_config.h"
 #include "dds/ddsi/q_freelist.h"
 #include "dds/ddsi/ddsi_plist.h"
-#include "dds__serdata_builtintype.h"
+#include "dds__serdata_builtintopic.h"
 #include "dds/ddsi/ddsi_tkmap.h"
 #include "dds/ddsi/q_entity.h"
 #include "dds/ddsi/ddsi_entity_index.h"
@@ -42,7 +42,7 @@ static uint32_t hash_guid (const ddsi_guid_t *g)
               >> 32);
 }
 
-static struct ddsi_serdata *fix_serdata_builtin(struct ddsi_serdata_builtintype *d, uint32_t basehash)
+static struct ddsi_serdata *fix_serdata_builtin(struct ddsi_serdata_builtintopic *d, uint32_t basehash)
 {
   d->c.hash = hash_guid (&d->key) ^ basehash;
   return &d->c;
@@ -50,39 +50,39 @@ static struct ddsi_serdata *fix_serdata_builtin(struct ddsi_serdata_builtintype 
 
 static bool serdata_builtin_eqkey(const struct ddsi_serdata *acmn, const struct ddsi_serdata *bcmn)
 {
-  const struct ddsi_serdata_builtintype *a = (const struct ddsi_serdata_builtintype *)acmn;
-  const struct ddsi_serdata_builtintype *b = (const struct ddsi_serdata_builtintype *)bcmn;
+  const struct ddsi_serdata_builtintopic *a = (const struct ddsi_serdata_builtintopic *)acmn;
+  const struct ddsi_serdata_builtintopic *b = (const struct ddsi_serdata_builtintopic *)bcmn;
   return memcmp (&a->key, &b->key, sizeof (a->key)) == 0;
 }
 
 static void serdata_builtin_free(struct ddsi_serdata *dcmn)
 {
-  struct ddsi_serdata_builtintype *d = (struct ddsi_serdata_builtintype *)dcmn;
+  struct ddsi_serdata_builtintopic *d = (struct ddsi_serdata_builtintopic *)dcmn;
   if (d->c.kind == SDK_DATA)
     ddsi_xqos_fini (&d->xqos);
   ddsrt_free (d);
 }
 
-static struct ddsi_serdata_builtintype *serdata_builtin_new(const struct ddsi_sertype_builtintype *tp, enum ddsi_serdata_kind kind)
+static struct ddsi_serdata_builtintopic *serdata_builtin_new(const struct ddsi_sertype_builtintopic *tp, enum ddsi_serdata_kind kind)
 {
-  struct ddsi_serdata_builtintype *d = ddsrt_malloc(sizeof (*d));
+  struct ddsi_serdata_builtintopic *d = ddsrt_malloc(sizeof (*d));
   ddsi_serdata_init (&d->c, &tp->c, kind);
   return d;
 }
 
-static void from_entity_pp (struct ddsi_serdata_builtintype *d, const struct participant *pp)
+static void from_entity_pp (struct ddsi_serdata_builtintopic *d, const struct participant *pp)
 {
   ddsi_xqos_copy(&d->xqos, &pp->plist->qos);
   d->pphandle = pp->e.iid;
 }
 
-static void from_entity_proxypp (struct ddsi_serdata_builtintype *d, const struct proxy_participant *proxypp)
+static void from_entity_proxypp (struct ddsi_serdata_builtintopic *d, const struct proxy_participant *proxypp)
 {
   ddsi_xqos_copy(&d->xqos, &proxypp->plist->qos);
   d->pphandle = proxypp->e.iid;
 }
 
-static void set_topic_name_type (struct ddsi_serdata_builtintype *d, const char *topic_name, const char *type_name)
+static void set_topic_name_type (struct ddsi_serdata_builtintopic *d, const char *topic_name, const char *type_name)
 {
   if (!(d->xqos.present & QP_TOPIC_NAME))
   {
@@ -96,14 +96,14 @@ static void set_topic_name_type (struct ddsi_serdata_builtintype *d, const char 
   }
 }
 
-static void from_entity_rd (struct ddsi_serdata_builtintype *d, const struct reader *rd)
+static void from_entity_rd (struct ddsi_serdata_builtintopic *d, const struct reader *rd)
 {
   d->pphandle = rd->c.pp->e.iid;
   ddsi_xqos_copy (&d->xqos, rd->xqos);
   set_topic_name_type (d, rd->xqos->topic_name, rd->type->type_name);
 }
 
-static void from_entity_prd (struct ddsi_serdata_builtintype *d, const struct proxy_reader *prd)
+static void from_entity_prd (struct ddsi_serdata_builtintopic *d, const struct proxy_reader *prd)
 {
   d->pphandle = prd->c.proxypp->e.iid;
   ddsi_xqos_copy(&d->xqos, prd->c.xqos);
@@ -111,14 +111,14 @@ static void from_entity_prd (struct ddsi_serdata_builtintype *d, const struct pr
   assert (d->xqos.present & QP_TYPE_NAME);
 }
 
-static void from_entity_wr (struct ddsi_serdata_builtintype *d, const struct writer *wr)
+static void from_entity_wr (struct ddsi_serdata_builtintopic *d, const struct writer *wr)
 {
   d->pphandle = wr->c.pp->e.iid;
   ddsi_xqos_copy (&d->xqos, wr->xqos);
   set_topic_name_type (d, wr->xqos->topic_name, wr->type->type_name);
 }
 
-static void from_entity_pwr (struct ddsi_serdata_builtintype *d, const struct proxy_writer *pwr)
+static void from_entity_pwr (struct ddsi_serdata_builtintopic *d, const struct proxy_writer *pwr)
 {
   d->pphandle = pwr->c.proxypp->e.iid;
   ddsi_xqos_copy(&d->xqos, pwr->c.xqos);
@@ -129,12 +129,12 @@ static void from_entity_pwr (struct ddsi_serdata_builtintype *d, const struct pr
 static struct ddsi_serdata *ddsi_serdata_builtin_from_keyhash (const struct ddsi_sertype *tpcmn, const ddsi_keyhash_t *keyhash)
 {
   /* FIXME: not quite elegant to manage the creation of a serdata for a built-in topic via this function, but I also find it quite unelegant to let from_sample read straight from the underlying internal entity, and to_sample convert to the external format ... I could claim the internal entity is the "serialised form", but that forces wrapping it in a fragchain in one way or another, which, though possible, is also a bit lacking in elegance. */
-  const struct ddsi_sertype_builtintype *tp = (const struct ddsi_sertype_builtintype *)tpcmn;
+  const struct ddsi_sertype_builtintopic *tp = (const struct ddsi_sertype_builtintopic *)tpcmn;
   union { ddsi_guid_t guid; ddsi_keyhash_t keyhash; } x;
   x.keyhash = *keyhash;
   x.guid = nn_ntoh_guid (x.guid);
   struct entity_common *entity = entidx_lookup_guid_untyped (tp->c.gv->entity_index, &x.guid);
-  struct ddsi_serdata_builtintype *d = serdata_builtin_new (tp, entity ? SDK_DATA : SDK_KEY);
+  struct ddsi_serdata_builtintopic *d = serdata_builtin_new (tp, entity ? SDK_DATA : SDK_KEY);
   d->key = x.guid;
   if (entity)
   {
@@ -173,7 +173,7 @@ static struct ddsi_serdata *ddsi_serdata_builtin_from_keyhash (const struct ddsi
 
 static struct ddsi_serdata *ddsi_serdata_builtin_from_sample (const struct ddsi_sertype *tpcmn, enum ddsi_serdata_kind kind, const void *sample)
 {
-  const struct ddsi_sertype_builtintype *tp = (const struct ddsi_sertype_builtintype *)tpcmn;
+  const struct ddsi_sertype_builtintopic *tp = (const struct ddsi_sertype_builtintopic *)tpcmn;
   union {
     dds_guid_t extguid;
     ddsi_keyhash_t keyhash;
@@ -239,7 +239,7 @@ static dds_qos_t *dds_qos_from_xqos_reuse (dds_qos_t *old, const dds_qos_t *src)
   return old;
 }
 
-static bool to_sample_pp (const struct ddsi_serdata_builtintype *d, struct dds_builtintopic_participant *sample)
+static bool to_sample_pp (const struct ddsi_serdata_builtintopic *d, struct dds_builtintopic_participant *sample)
 {
   convkey (&sample->key, &d->key);
   if (d->c.kind == SDK_DATA)
@@ -249,7 +249,7 @@ static bool to_sample_pp (const struct ddsi_serdata_builtintype *d, struct dds_b
   return true;
 }
 
-static bool to_sample_endpoint (const struct ddsi_serdata_builtintype *d, struct dds_builtintopic_endpoint *sample)
+static bool to_sample_endpoint (const struct ddsi_serdata_builtintopic *d, struct dds_builtintopic_endpoint *sample)
 {
   ddsi_guid_t ppguid;
   convkey (&sample->key, &d->key);
@@ -270,8 +270,8 @@ static bool to_sample_endpoint (const struct ddsi_serdata_builtintype *d, struct
 
 static bool serdata_builtin_topicless_to_sample (const struct ddsi_sertype *type, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
 {
-  const struct ddsi_serdata_builtintype *d = (const struct ddsi_serdata_builtintype *)serdata_common;
-  const struct ddsi_sertype_builtintype *tp = (const struct ddsi_sertype_builtintype *)type;
+  const struct ddsi_serdata_builtintopic *d = (const struct ddsi_serdata_builtintopic *)serdata_common;
+  const struct ddsi_sertype_builtintopic *tp = (const struct ddsi_sertype_builtintopic *)type;
   if (bufptr) abort(); else { (void)buflim; } /* FIXME: haven't implemented that bit yet! */
   /* FIXME: completing builtin topic support along these lines requires subscribers, publishers and topics to also become DDSI entities - which is probably a good thing anyway */
   switch (tp->entity_kind)
@@ -319,7 +319,7 @@ static size_t serdata_builtin_type_print (const struct ddsi_sertype *type, const
   return (size_t) snprintf (buf, size, "(blob)");
 }
 
-const struct ddsi_serdata_ops ddsi_serdata_ops_builtintype = {
+const struct ddsi_serdata_ops ddsi_serdata_ops_builtintopic = {
   .get_size = serdata_builtin_get_size,
   .eqkey = serdata_builtin_eqkey,
   .free = serdata_builtin_free,

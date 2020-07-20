@@ -29,7 +29,7 @@
 #include "dds__write.h"
 #include "dds__writer.h"
 #include "dds__whc_builtintopic.h"
-#include "dds__serdata_builtintype.h"
+#include "dds__serdata_builtintopic.h"
 #include "dds/ddsi/q_qosmatch.h"
 #include "dds/ddsi/ddsi_tkmap.h"
 
@@ -167,10 +167,10 @@ dds_entity_t dds__get_builtin_subscriber (dds_entity_t e)
   return sub;
 }
 
-static bool dds__builtin_is_builtintype (const struct ddsi_sertype *tp, void *vdomain)
+static bool dds__builtin_is_builtintopic (const struct ddsi_sertype *tp, void *vdomain)
 {
   (void) vdomain;
-  return tp->ops == &ddsi_sertype_ops_builtintype;
+  return tp->ops == &ddsi_sertype_ops_builtintopic;
 }
 
 static bool dds__builtin_is_visible (const ddsi_guid_t *guid, nn_vendorid_t vendorid, void *vdomain)
@@ -269,14 +269,14 @@ void dds__builtin_init (struct dds_domain *dom)
 
   dom->btif.arg = dom;
   dom->btif.builtintopic_get_tkmap_entry = dds__builtin_get_tkmap_entry;
-  dom->btif.builtintopic_is_builtintype = dds__builtin_is_builtintype;
+  dom->btif.builtintopic_is_builtintopic = dds__builtin_is_builtintopic;
   dom->btif.builtintopic_is_visible = dds__builtin_is_visible;
   dom->btif.builtintopic_write = dds__builtin_write;
   dom->gv.builtin_topic_interface = &dom->btif;
 
-  dom->builtin_participant_type = new_sertype_builtintype (&dom->gv, DSBT_PARTICIPANT, "org::eclipse::cyclonedds::builtin::DCPSParticipant");
-  dom->builtin_reader_type = new_sertype_builtintype (&dom->gv, DSBT_READER, "org::eclipse::cyclonedds::builtin::DCPSSubscription");
-  dom->builtin_writer_type = new_sertype_builtintype (&dom->gv, DSBT_WRITER, "org::eclipse::cyclonedds::builtin::DCPSPublication");
+  dom->builtin_participant_type = new_sertype_builtintopic (&dom->gv, DSBT_PARTICIPANT, "org::eclipse::cyclonedds::builtin::DCPSParticipant");
+  dom->builtin_reader_type = new_sertype_builtintopic (&dom->gv, DSBT_READER, "org::eclipse::cyclonedds::builtin::DCPSSubscription");
+  dom->builtin_writer_type = new_sertype_builtintopic (&dom->gv, DSBT_WRITER, "org::eclipse::cyclonedds::builtin::DCPSPublication");
 
   ddsrt_mutex_lock (&dom->gv.sertypes_lock);
   ddsi_sertype_register_locked (dom->builtin_participant_type);

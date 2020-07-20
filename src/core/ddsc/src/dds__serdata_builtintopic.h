@@ -21,28 +21,28 @@
 extern "C" {
 #endif
 
-struct ddsi_serdata_builtintype {
+struct ddsi_serdata_builtintopic {
   struct ddsi_serdata c;
   ddsi_guid_t key;
   dds_instance_handle_t pphandle;
   dds_qos_t xqos;
 };
 
-enum ddsi_sertype_builtintype_entity_kind {
+enum ddsi_sertype_builtintopic_entity_kind {
   DSBT_PARTICIPANT,
   DSBT_READER,
   DSBT_WRITER
 };
 
-struct ddsi_sertype_builtintype {
+struct ddsi_sertype_builtintopic {
   struct ddsi_sertype c;
-  enum ddsi_sertype_builtintype_entity_kind entity_kind;
+  enum ddsi_sertype_builtintopic_entity_kind entity_kind;
 };
 
-extern const struct ddsi_sertype_ops ddsi_sertype_ops_builtintype;
-extern const struct ddsi_serdata_ops ddsi_serdata_ops_builtintype;
+extern const struct ddsi_sertype_ops ddsi_sertype_ops_builtintopic;
+extern const struct ddsi_serdata_ops ddsi_serdata_ops_builtintopic;
 
-struct ddsi_sertype *new_sertype_builtintype (struct ddsi_domaingv *gv, enum ddsi_sertype_builtintype_entity_kind entity_kind, const char *typename);
+struct ddsi_sertype *new_sertype_builtintopic (struct ddsi_domaingv *gv, enum ddsi_sertype_builtintopic_entity_kind entity_kind, const char *typename);
 
 #if defined (__cplusplus)
 }

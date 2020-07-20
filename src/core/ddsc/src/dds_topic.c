@@ -33,7 +33,7 @@
 #include "dds/ddsi/ddsi_domaingv.h"
 #include "dds/ddsi/ddsi_cdrstream.h"
 #include "dds/ddsi/ddsi_security_omg.h"
-#include "dds__serdata_builtintype.h"
+#include "dds__serdata_builtintopic.h"
 
 DECL_ENTITY_LOCK_UNLOCK (extern inline, dds_topic)
 
@@ -361,7 +361,7 @@ dds_entity_t dds_create_topic_impl (dds_entity_t participant, const char * name,
 
   /* Create topic referencing ktopic & sertype_registered */
   /* FIXME: setting "implicit" based on sertype->ops is a hack */
-  hdl = create_topic_pp_locked (pp, ktp, (sertype_registered->ops == &ddsi_sertype_ops_builtintype), name, sertype_registered, listener, sedp_plist);
+  hdl = create_topic_pp_locked (pp, ktp, (sertype_registered->ops == &ddsi_sertype_ops_builtintopic), name, sertype_registered, listener, sedp_plist);
   ddsi_sertype_unref (*sertype);
   *sertype = sertype_registered;
   ddsrt_mutex_unlock (&pp->m_entity.m_mutex);

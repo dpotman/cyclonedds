@@ -122,7 +122,7 @@ static int gcreq_proxy_writer (struct proxy_writer *pwr);
 static int gcreq_proxy_reader (struct proxy_reader *prd);
 
 extern inline bool builtintopic_is_visible (const struct ddsi_builtin_topic_interface *btif, const struct ddsi_guid *guid, nn_vendorid_t vendorid);
-extern inline bool builtintopic_is_builtintype (const struct ddsi_builtin_topic_interface *btif, const struct ddsi_sertype *type);
+extern inline bool builtintopic_is_builtintopic (const struct ddsi_builtin_topic_interface *btif, const struct ddsi_sertype *type);
 extern inline struct ddsi_tkmap_instance *builtintopic_get_tkmap_entry (const struct ddsi_builtin_topic_interface *btif, const struct ddsi_guid *guid);
 extern inline void builtintopic_write (const struct ddsi_builtin_topic_interface *btif, const struct entity_common *e, ddsrt_wctime_t timestamp, bool alive);
 
@@ -3848,7 +3848,7 @@ static dds_return_t new_writer_guid (struct writer **wr_out, const struct ddsi_g
    delete_participant won't interfere with our ability to address
    the participant */
 
-  const bool onlylocal = builtintopic_is_builtintype (pp->e.gv->builtin_topic_interface, type);
+  const bool onlylocal = builtintopic_is_builtintopic (pp->e.gv->builtin_topic_interface, type);
   endpoint_common_init (&wr->e, &wr->c, pp->e.gv, EK_WRITER, guid, group_guid, pp, onlylocal, type);
   new_writer_guid_common_init(wr, topic_name, type, xqos, whc, status_cb, status_entity);
 
@@ -4353,7 +4353,7 @@ static dds_return_t new_reader_guid
   if (rd_out)
     *rd_out = rd;
 
-  const bool onlylocal = builtintopic_is_builtintype (pp->e.gv->builtin_topic_interface, type);
+  const bool onlylocal = builtintopic_is_builtintopic (pp->e.gv->builtin_topic_interface, type);
   endpoint_common_init (&rd->e, &rd->c, pp->e.gv, EK_READER, guid, group_guid, pp, onlylocal, type);
 
   /* Copy QoS, merging in defaults */
