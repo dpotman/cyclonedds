@@ -168,7 +168,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_subscription_data (dds_entity_t wri
       if ((prd = entidx_lookup_proxy_reader_guid (gh, &m->prd_guid)) != NULL)
       {
         if (prd->e.iid == ih)
-          ret = make_builtintopic_endpoint (&prd->e.guid, &prd->c.proxypp->e.guid, prd->c.proxypp->e.iid, prd->c.xqos, &prd->c.type_id);
+          ret = make_builtintopic_endpoint (&prd->e.guid, &prd->c.proxypp->e.guid, prd->c.proxypp->e.iid, prd->c.xqos, &wr->m_wr->c.type_id);
       }
     }
     for (const struct wr_rd_match *m = ddsrt_avl_iter_first (&wr_local_readers_treedef, &wr->m_wr->local_readers, &it);
@@ -179,7 +179,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_subscription_data (dds_entity_t wri
       if ((rd = entidx_lookup_reader_guid (gh, &m->rd_guid)) != NULL)
       {
         if (rd->e.iid == ih)
-          ret = make_builtintopic_endpoint (&rd->e.guid, &rd->c.pp->e.guid, rd->c.pp->e.iid, rd->xqos, &rd->c.type_id);
+          ret = make_builtintopic_endpoint (&rd->e.guid, &rd->c.pp->e.guid, rd->c.pp->e.iid, rd->xqos, &wr->m_wr->c.type_id);
       }
     }
 
