@@ -211,7 +211,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_publication_data (dds_entity_t read
       if ((pwr = entidx_lookup_proxy_writer_guid (gh, &m->pwr_guid)) != NULL)
       {
         if (pwr->e.iid == ih)
-          ret = make_builtintopic_endpoint (&pwr->e.guid, &pwr->c.proxypp->e.guid, pwr->c.proxypp->e.iid, pwr->c.xqos, &pwr->c.type_id);
+          ret = make_builtintopic_endpoint (&pwr->e.guid, &pwr->c.proxypp->e.guid, pwr->c.proxypp->e.iid, pwr->c.xqos, &rd->m_rd->c.type_id);
       }
     }
     for (const struct rd_wr_match *m = ddsrt_avl_iter_first (&rd_local_writers_treedef, &rd->m_rd->local_writers, &it);
@@ -222,7 +222,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_publication_data (dds_entity_t read
       if ((wr = entidx_lookup_writer_guid (gh, &m->wr_guid)) != NULL)
       {
         if (wr->e.iid == ih)
-          ret = make_builtintopic_endpoint (&wr->e.guid, &wr->c.pp->e.guid, wr->c.pp->e.iid, wr->xqos, &wr->c.type_id);
+          ret = make_builtintopic_endpoint (&wr->e.guid, &wr->c.pp->e.guid, wr->c.pp->e.iid, wr->xqos, &rd->m_rd->c.type_id);
       }
     }
     ddsrt_mutex_unlock (&rd->m_rd->e.lock);
