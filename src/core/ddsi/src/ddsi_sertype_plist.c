@@ -33,15 +33,6 @@ static bool sertype_plist_equal (const struct ddsi_sertype *acmn, const struct d
   return true;
 }
 
-static uint32_t sertype_plist_hash (const struct ddsi_sertype *tpcmn)
-{
-  const struct ddsi_sertype_plist *tp = (struct ddsi_sertype_plist *) tpcmn;
-  uint32_t h = 0;
-  h = ddsrt_mh3 (&tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier), h);
-  h = ddsrt_mh3 (&tp->keyparam, sizeof (tp->keyparam), h);
-  return h;
-}
-
 static void sertype_plist_typeid_hash (const struct ddsi_sertype *tpcmn, unsigned char *buf)
 {
   const struct ddsi_sertype_plist *tp = (struct ddsi_sertype_plist *) tpcmn;
@@ -51,6 +42,13 @@ static void sertype_plist_typeid_hash (const struct ddsi_sertype *tpcmn, unsigne
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier));
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->keyparam, sizeof (tp->keyparam));
   ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) buf);
+}
+
+static uint32_t sertype_plist_hash (const struct ddsi_sertype *tpcmn)
+{
+  unsigned char buf[16];
+  sertype_plist_typeid_hash (tpcmn, buf);
+  return (uint32_t) *buf;
 }
 
 static void sertype_plist_free (struct ddsi_sertype *tpcmn)
@@ -98,20 +96,21 @@ static void sertype_plist_free_samples (const struct ddsi_sertype *sertype_commo
   }
 }
 
-static void sertype_plist_serialize (const struct ddsi_sertype *sertype_common, size_t *sz, unsigned char **buf)
+static bool sertype_plist_serialize (const struct ddsi_sertype *stc, size_t *dst_sz, unsigned char **dst_buf)
 {
-  (void) sertype_common;
-  (void) sz;
-  (void) buf;
-  abort ();
+  (void) stc;
+  (void) dst_sz;
+  (void) dst_buf;
+  return false;
 }
 
-static void sertype_plist_deserialize (struct ddsi_sertype *sertype_common, size_t sz, const unsigned char *serdata)
+static bool sertype_plist_deserialize (struct ddsi_domaingv *gv, struct ddsi_sertype *stc, size_t src_sz, const unsigned char *src_data)
 {
-  (void) sertype_common;
-  (void) sz;
-  (void) serdata;
-  abort ();
+  (void) gv;
+  (void) stc;
+  (void) src_sz;
+  (void) src_data;
+  return false;
 }
 
 static bool sertype_plist_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)

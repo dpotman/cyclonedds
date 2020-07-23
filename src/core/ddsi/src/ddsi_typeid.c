@@ -19,7 +19,7 @@ type_identifier_t * ddsi_typeid_from_sertype (const struct ddsi_sertype *type)
 {
   assert (type != NULL);
   type_identifier_t *type_id = malloc (sizeof (*type_id));
-  type->ops->typeid_hash (type, type_id->hash.c);
+  type->ops->typeid_hash (type, type_id->hash);
   return type_id;
 }
 
@@ -27,18 +27,18 @@ type_identifier_t * ddsi_typeid_dup (const type_identifier_t *type_id)
 {
   assert (type_id);
   type_identifier_t *t = ddsrt_malloc (sizeof (*t));
-  memcpy (&t->hash.c, type_id->hash.c, TYPEID_HASH_LENGTH);
+  memcpy (&t->hash, type_id->hash, sizeof (t->hash));
   return t;
 }
 
 bool ddsi_typeid_equal (const type_identifier_t *a, const type_identifier_t *b)
 {
-  return memcmp (a->hash.c, b->hash.c, TYPEID_HASH_LENGTH) == 0;
+  return memcmp (a->hash, b->hash, sizeof (*a)) == 0;
 }
 
 bool ddsi_typeid_none (const type_identifier_t *typeid)
 {
   type_identifier_t empty;
-  memset (&empty, 0, TYPEID_HASH_LENGTH);
-  return memcmp (typeid, &empty, TYPEID_HASH_LENGTH) == 0;
+  memset (&empty, 0, sizeof (*typeid));
+  return memcmp (typeid, &empty, sizeof (*typeid)) == 0;
 }

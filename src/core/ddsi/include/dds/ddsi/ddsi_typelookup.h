@@ -23,8 +23,6 @@
 #include "dds/ddsi/ddsi_xqos.h"
 #include "dds/ddsi/ddsi_typeid.h"
 
-#define TYPEID_HASH_LENGTH 16
-
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -57,13 +55,13 @@ enum tl_meta_state
 };
 
 struct tl_meta {
-  struct ddsi_domaingv *gv;
   type_identifier_t *type_id;
   const struct ddsi_sertype *sertype;
   enum tl_meta_state state;
   ddsi_guid_prefix_t dst_prefix;
   dds_time_t ts_requested;
   ddsi_guid_t request_remote_guid;
+  seqno_t request_seqno;
   uint32_t n_endpoints;
   ddsi_guid_t *endpoints;
   uint32_t refc;
@@ -79,7 +77,7 @@ uint32_t ddsi_tl_meta_hash (const struct tl_meta *tl_meta);
 void ddsi_tl_meta_ref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const struct ddsi_sertype *type, const ddsi_guid_t *src_ep_guid, const ddsi_guid_prefix_t *dst);
 struct tl_meta * ddsi_tl_meta_lookup_locked (struct ddsi_domaingv *gv, const type_identifier_t *type_id);
 struct tl_meta * ddsi_tl_meta_lookup (struct ddsi_domaingv *gv, const type_identifier_t *type_id);
-void ddsi_tl_meta_unref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const ddsi_guid_t *src_ep_guid);
+void ddsi_tl_meta_unref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const struct ddsi_sertype *type, const ddsi_guid_t *ep_guid);
 
 bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const type_identifier_t *type_id);
 void ddsi_tl_handle_request (struct ddsi_domaingv *gv, const ddsi_guid_prefix_t *guid_prefix, struct ddsi_serdata *sample_common);

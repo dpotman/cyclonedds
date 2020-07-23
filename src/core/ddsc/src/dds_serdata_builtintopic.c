@@ -82,48 +82,29 @@ static void from_entity_proxypp (struct ddsi_serdata_builtintopic *d, const stru
   d->pphandle = proxypp->e.iid;
 }
 
-static void set_topic_name_type (struct ddsi_serdata_builtintopic *d, const char *topic_name, const char *type_name)
+static void from_endpoint_qos (struct ddsi_serdata_builtintopic *d, const dds_qos_t *xqos)
 {
-  if (!(d->xqos.present & QP_TOPIC_NAME))
-  {
-    d->xqos.topic_name = dds_string_dup (topic_name);
-    d->xqos.present |= QP_TOPIC_NAME;
-  }
-  if (!(d->xqos.present & QP_TYPE_NAME))
-  {
-    d->xqos.type_name = dds_string_dup (type_name);
-    d->xqos.present |= QP_TYPE_NAME;
-  }
+  ddsi_xqos_copy (&d->xqos, xqos);
+  assert (d->xqos.present & QP_TOPIC_NAME);
+  assert (d->xqos.present & QP_TYPE_NAME);
 }
 
 static void from_entity_rd (struct ddsi_serdata_builtintopic *d, const struct reader *rd)
 {
   d->pphandle = rd->c.pp->e.iid;
-  ddsi_xqos_copy (&d->xqos, rd->xqos);
-  set_topic_name_type (d, rd->xqos->topic_name, rd->type->type_name);
-}
-
-static void from_entity_prd (struct ddsi_serdata_builtintopic *d, const struct proxy_reader *prd)
-{
-  d->pphandle = prd->c.proxypp->e.iid;
-  ddsi_xqos_copy(&d->xqos, prd->c.xqos);
-  assert (d->xqos.present & QP_TOPIC_NAME);
-  assert (d->xqos.present & QP_TYPE_NAME);
+  from_endpoint_qos (d, rd->xqos);
 }
 
 static void from_entity_wr (struct ddsi_serdata_builtintopic *d, const struct writer *wr)
 {
   d->pphandle = wr->c.pp->e.iid;
-  ddsi_xqos_copy (&d->xqos, wr->xqos);
-  set_topic_name_type (d, wr->xqos->topic_name, wr->type->type_name);
+  from_endpoint_qos (d, wr->xqos);
 }
 
-static void from_entity_pwr (struct ddsi_serdata_builtintopic *d, const struct proxy_writer *pwr)
+static void from_entity_pe (struct ddsi_serdata_builtintopic *d, const struct proxy_endpoint_common *pec)
 {
-  d->pphandle = pwr->c.proxypp->e.iid;
-  ddsi_xqos_copy(&d->xqos, pwr->c.xqos);
-  assert (d->xqos.present & QP_TOPIC_NAME);
-  assert (d->xqos.present & QP_TYPE_NAME);
+  d->pphandle = pec->proxypp->e.iid;
+  from_endpoint_qos (d, pec->xqos);
 }
 
 static struct ddsi_serdata *ddsi_serdata_builtin_from_keyhash (const struct ddsi_sertype *tpcmn, const ddsi_keyhash_t *keyhash)
@@ -159,11 +140,11 @@ static struct ddsi_serdata *ddsi_serdata_builtin_from_keyhash (const struct ddsi
         break;
       case EK_PROXY_READER:
         assert (tp->entity_kind == DSBT_READER);
-        from_entity_prd (d, (const struct proxy_reader *) entity);
+        from_entity_pe (d, &((const struct proxy_reader *) entity)->c);
         break;
       case EK_PROXY_WRITER:
         assert (tp->entity_kind == DSBT_WRITER);
-        from_entity_pwr (d, (const struct proxy_writer *) entity);
+        from_entity_pe (d, &((const struct proxy_writer *) entity)->c);
         break;
     }
     ddsrt_mutex_unlock (&entity->qos_lock);
@@ -206,9 +187,9 @@ static struct ddsi_serdata *ddsi_serdata_builtin_from_sample (const struct ddsi_
   return ddsi_serdata_from_keyhash (tpcmn, &x.keyhash);
 }
 
-static struct ddsi_serdata *serdata_builtin_to_topicless (const struct ddsi_serdata *serdata_common)
+static struct ddsi_serdata *serdata_builtin_to_untyped (const struct ddsi_serdata *serdata_common)
 {
-  /* All built-in ones are currently topicless */
+  /* All built-in ones are currently untyped */
   return ddsi_serdata_ref (serdata_common);
 }
 
@@ -268,7 +249,7 @@ static bool to_sample_endpoint (const struct ddsi_serdata_builtintopic *d, struc
   return true;
 }
 
-static bool serdata_builtin_topicless_to_sample (const struct ddsi_sertype *type, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
+static bool serdata_builtin_untyped_to_sample (const struct ddsi_sertype *type, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
 {
   const struct ddsi_serdata_builtintopic *d = (const struct ddsi_serdata_builtintopic *)serdata_common;
   const struct ddsi_sertype_builtintopic *tp = (const struct ddsi_sertype_builtintopic *)type;
@@ -288,7 +269,7 @@ static bool serdata_builtin_topicless_to_sample (const struct ddsi_sertype *type
 
 static bool serdata_builtin_to_sample (const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
 {
-  return serdata_builtin_topicless_to_sample (serdata_common->type, serdata_common, sample, bufptr, buflim);
+  return serdata_builtin_untyped_to_sample (serdata_common->type, serdata_common, sample, bufptr, buflim);
 }
 
 static uint32_t serdata_builtin_get_size (const struct ddsi_serdata *serdata_common)
@@ -331,8 +312,8 @@ const struct ddsi_serdata_ops ddsi_serdata_ops_builtintopic = {
   .to_sample = serdata_builtin_to_sample,
   .to_ser_ref = serdata_builtin_to_ser_ref,
   .to_ser_unref = serdata_builtin_to_ser_unref,
-  .to_topicless = serdata_builtin_to_topicless,
-  .topicless_to_sample = serdata_builtin_topicless_to_sample,
+  .to_untyped = serdata_builtin_to_untyped,
+  .untyped_to_sample = serdata_builtin_untyped_to_sample,
   .print = serdata_builtin_type_print,
   .get_keyhash = 0
 };

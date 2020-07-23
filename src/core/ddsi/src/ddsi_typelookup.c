@@ -45,9 +45,9 @@ int ddsi_tl_meta_equal (const struct tl_meta *a, const struct tl_meta *b)
 
 uint32_t ddsi_tl_meta_hash (const struct tl_meta *tl_meta)
 {
-  uint32_t h = 0;
-  h = ddsrt_mh3 (&tl_meta->type_id->hash, TYPEID_HASH_LENGTH, h);
-  return h;
+  // As the type id is the key in the hash table and the type id currently only
+  // consists of a hash value, we'll use the first 32 bits of that hash for now
+  return (uint32_t) *tl_meta->type_id->hash;
 }
 
 static void ddsi_tl_meta_fini (struct tl_meta *tlm)
@@ -67,13 +67,14 @@ static void ddsi_tl_meta_unref_impl_locked (struct ddsi_domaingv *gv, struct tl_
     uint32_t n = 0;
     while (n < tlm->n_endpoints)
     {
-      if (!memcmp (&tlm->endpoints[n], ep_guid, sizeof (*ep_guid)))
+      if (memcmp (&tlm->endpoints[n], ep_guid, sizeof (*ep_guid)) != 0)
+        n++;
+      else
       {
         tlm->n_endpoints--;
         if (tlm->n_endpoints > 0)
         {
-          for (uint32_t m = n; m < tlm->n_endpoints; m++)
-            memcpy (&tlm->endpoints[m], &tlm->endpoints[m + 1], sizeof (*tlm->endpoints));
+          memmove (&tlm->endpoints[n], &tlm->endpoints[n + 1], (tlm->n_endpoints - n) * sizeof (*tlm->endpoints));
           tlm->endpoints = ddsrt_realloc (tlm->endpoints, tlm->n_endpoints * sizeof (*tlm->endpoints));
         }
         else
@@ -81,9 +82,8 @@ static void ddsi_tl_meta_unref_impl_locked (struct ddsi_domaingv *gv, struct tl_
           ddsrt_free (tlm->endpoints);
           tlm->endpoints = NULL;
         }
+        break;
       }
-      else
-        n++;
     }
   }
   if (--tlm->refc == 0)
@@ -138,7 +138,6 @@ void ddsi_tl_meta_ref (struct ddsi_domaingv *gv, const type_identifier_t *type_i
   {
     tlm = ddsrt_malloc (sizeof (*tlm));
     memset (tlm, 0, sizeof (*tlm));
-    tlm->gv = gv;
     tlm->state = TL_META_NEW;
     tlm->type_id = ddsi_typeid_dup (tid);
     ddsrt_hh_add (gv->tl_admin, tlm);
@@ -175,79 +174,95 @@ void ddsi_tl_meta_ref (struct ddsi_domaingv *gv, const type_identifier_t *type_i
     ddsrt_free (tid);
 }
 
-void ddsi_tl_meta_unref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const ddsi_guid_t *ep_guid)
+void ddsi_tl_meta_unref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const struct ddsi_sertype *type, const ddsi_guid_t *ep_guid)
 {
+  assert (type_id || type);
+  GVTRACE ("unref tl_meta");
+  type_identifier_t *tid;
+  if (type_id != NULL)
+    tid = (type_identifier_t *) type_id;
+  else
+  {
+    GVTRACE (" sertype %p", type);
+    tid = ddsi_typeid_from_sertype (type);
+  }
+  GVTRACE (" tid "PTYPEIDFMT, PTYPEID (*tid));
+
   ddsrt_mutex_lock (&gv->tl_admin_lock);
-  struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, type_id);
+  struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, tid);
   assert (tlm != NULL);
   ddsi_tl_meta_unref_impl_locked (gv, tlm, ep_guid);
   ddsrt_mutex_unlock (&gv->tl_admin_lock);
+  if (type_id == NULL)
+    ddsrt_free (tid);
 }
 
-static struct participant *get_typelookup_pp (const struct ddsi_domaingv *gv, const ddsi_guid_prefix_t *guid_prefix)
+static struct writer *get_typelookup_writer (const struct ddsi_domaingv *gv, const ddsi_guid_prefix_t *guid_prefix, uint32_t wr_eid)
 {
-  struct entidx_enum_participant est;
-  struct participant *pp = NULL;
-  bool pp_found = false;
-  entidx_enum_participant_init (&est, gv->entity_index);
-  while (!pp_found && (pp = entidx_enum_participant_next (&est)) != NULL)
+  struct participant *pp;
+  struct writer *wr = NULL;
+  if (guid_prefix_empty (guid_prefix))
   {
-    if (guid_prefix_empty (guid_prefix) || memcmp (&pp->e.guid.prefix, guid_prefix, sizeof (pp->e.guid.prefix)) == 0)
-      pp_found = true;
+    struct entidx_enum_participant est;
+    entidx_enum_participant_init (&est, gv->entity_index);
+    while (wr == NULL && (pp = entidx_enum_participant_next (&est)) != NULL)
+      wr = get_builtin_writer (pp, wr_eid);
+    entidx_enum_participant_fini (&est);
   }
-  entidx_enum_participant_fini (&est);
-  return pp;
+  else
+  {
+    ddsi_guid_t pp_guid = { .prefix = *guid_prefix, .entityid.u = NN_ENTITYID_PARTICIPANT };
+    pp = entidx_lookup_participant_guid (gv->entity_index, &pp_guid);
+    wr = get_builtin_writer (pp, wr_eid);
+  }
+  return wr;
 }
 
 bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const type_identifier_t *type_id)
 {
   ddsrt_mutex_lock (&gv->tl_admin_lock);
   struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, type_id);
+  GVTRACE ("tl-req ");
   if (tlm->state != TL_META_NEW)
   {
-    GVTRACE ("ddsi_tl_request_type - state not-new (%u) for "PTYPEIDFMT"\n", tlm->state, PTYPEID (*type_id));
+    GVTRACE ("state not-new (%u) for "PTYPEIDFMT"\n", tlm->state, PTYPEID (*type_id));
     ddsrt_mutex_unlock (&gv->tl_admin_lock);
     return false;
   }
 
-  struct participant *pp = get_typelookup_pp (gv, &tlm->dst_prefix);
-  struct writer *wr = get_builtin_writer (pp, NN_ENTITYID_TL_SVC_BUILTIN_REQUEST_WRITER);
+  struct writer *wr = get_typelookup_writer (gv, &tlm->dst_prefix, NN_ENTITYID_TL_SVC_BUILTIN_REQUEST_WRITER);
   if (wr == NULL)
   {
-    GVTRACE ("ddsi_tl_request_type("PGUIDFMT") - builtin TypeLookup service request writer not found\n", PGUID (pp->e.guid));
+    GVTRACE ("no pp found with tl request writer (prefix "PGUIDPREFIXFMT")", PGUIDPREFIX(tlm->dst_prefix));
     ddsrt_mutex_unlock (&gv->tl_admin_lock);
     return false;
   }
 
   type_lookup_request_t request;
   memcpy (&request.writer_guid, &wr->e.guid, sizeof (wr->e.guid));
-  request.sequence_number = wr->seq;
+  request.sequence_number = ++tlm->request_seqno;
   request.type_ids.n = 1;
   request.type_ids.type_ids = tlm->type_id;
+
   struct ddsi_serdata *serdata = ddsi_serdata_from_sample (gv->tl_svc_request_type, SDK_DATA, &request);
   serdata->timestamp = ddsrt_time_wallclock ();
 
-  GVTRACE (" wr-tl-req "PGUIDFMT" typeid "PTYPEIDFMT"\n", PGUID (wr->e.guid), PTYPEID(*type_id));
+  tlm->state = TL_META_REQUESTED;
+  ddsrt_mutex_unlock (&gv->tl_admin_lock);
+
+  GVTRACE ("wr "PGUIDFMT" typeid "PTYPEIDFMT"\n", PGUID (wr->e.guid), PTYPEID(*type_id));
   struct ddsi_tkmap_instance *tk = ddsi_tkmap_lookup_instance_ref (gv->m_tkmap, serdata);
   write_sample_gc (lookup_thread_state (), NULL, wr, serdata, tk);
-  tlm->state = TL_META_REQUESTED;
   ddsi_tkmap_instance_unref (gv->m_tkmap, tk);
-  ddsrt_mutex_unlock (&gv->tl_admin_lock);
   return true;
 }
 
-static void write_typelookup_reply (struct participant *pp, seqno_t seqno, type_identifier_type_object_pair_seq_t *types)
+static void write_typelookup_reply (struct writer *wr, seqno_t seqno, type_identifier_type_object_pair_seq_t *types)
 {
-  struct ddsi_domaingv * const gv = pp->e.gv;
+  struct ddsi_domaingv * const gv = wr->e.gv;
   type_lookup_reply_t reply;
 
-  struct writer *wr = get_builtin_writer (pp, NN_ENTITYID_TL_SVC_BUILTIN_REPLY_WRITER);
-  if (wr == NULL)
-  {
-    GVTRACE ("write_typelookup_reply("PGUIDFMT") - builtin TypeLookup service reply writer not found\n", PGUID (pp->e.guid));
-    return;
-  }
-
+  GVTRACE (" tl-reply ");
   memcpy (&reply.writer_guid, &wr->e.guid, sizeof (wr->e.guid));
   reply.sequence_number = seqno;
   reply.types.n = types->n;
@@ -255,7 +270,7 @@ static void write_typelookup_reply (struct participant *pp, seqno_t seqno, type_
   struct ddsi_serdata *serdata = ddsi_serdata_from_sample (gv->tl_svc_reply_type, SDK_DATA, &reply);
   serdata->timestamp = ddsrt_time_wallclock ();
 
-  GVTRACE (" wr-tl-reply wr "PGUIDFMT"\n", PGUID (wr->e.guid));
+  GVTRACE ("wr "PGUIDFMT"\n", PGUID (wr->e.guid));
   struct ddsi_tkmap_instance *tk = ddsi_tkmap_lookup_instance_ref (gv->m_tkmap, serdata);
   write_sample_gc (lookup_thread_state (), NULL, wr, serdata, tk);
   ddsi_tkmap_instance_unref (gv->m_tkmap, tk);
@@ -289,15 +304,15 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, const ddsi_guid_prefix_t 
   }
   ddsrt_mutex_unlock (&gv->tl_admin_lock);
 
-  if (types.n > 0)
-  {
-    struct participant *pp = get_typelookup_pp (gv, guid_prefix);
-    assert (pp != NULL);
-    write_typelookup_reply (pp, req->sequence_number, &types);
-    for (uint32_t n = 0; n < types.n; n++)
-      ddsrt_free (types.types[n].type_object.value);
-    ddsrt_free (types.types);
-  }
+  struct writer *wr = get_typelookup_writer (gv, guid_prefix, NN_ENTITYID_TL_SVC_BUILTIN_REPLY_WRITER);
+  if (wr != NULL)
+    write_typelookup_reply (wr, req->sequence_number, &types);
+  else
+    GVTRACE (" no tl-reply writer");
+
+  for (uint32_t n = 0; n < types.n; n++)
+    ddsrt_free (types.types[n].type_object.value);
+  ddsrt_free (types.types);
 }
 
 void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample_common)
@@ -320,7 +335,13 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample
     {
       GVTRACE (" type "PTYPEIDFMT, PTYPEID (r.type_identifier));
       st = ddsrt_malloc (sizeof (*st));
-      ddsi_sertype_init_from_ser (gv, &st->c, &ddsi_sertype_ops_default, r.type_object.length, r.type_object.value);
+      if (!ddsi_sertype_init_from_ser (gv, &st->c, &ddsi_sertype_ops_default, r.type_object.length, r.type_object.value))
+      {
+        GVTRACE (" deser failed\n");
+        ddsrt_free (st);
+        n++;
+        continue;
+      }
       ddsrt_mutex_lock (&gv->sertypes_lock);
       ddsi_sertype_register_locked (&st->c);
       ddsrt_mutex_unlock (&gv->sertypes_lock);

@@ -100,15 +100,23 @@ struct ddsi_serdata_default {
 typedef bool (*dds_topic_intern_filter_fn) (const void * sample, void *ctx);
 #endif
 
+typedef struct ddsi_sertype_default_desc_key_seq {
+  uint32_t nkeys;   /* Number of keys (can be 0) */
+  uint32_t *keys;   /* Key descriptors (NULL iff nkeys 0) */
+} ddsi_sertype_default_desc_key_seq_t;
+
+typedef struct ddsi_sertype_default_desc_op_seq {
+  uint32_t nops;    /* Number of words in ops (which >= number of ops stored in preproc output) */
+  uint32_t *ops;    /* Marshalling meta data */
+} ddsi_sertype_default_desc_op_seq_t;
+
 /* Reduced version of dds_topic_descriptor_t */
 struct ddsi_sertype_default_desc {
-  uint32_t m_size;    /* Size of topic type */
-  uint32_t m_align;   /* Alignment of topic type */
-  uint32_t m_flagset; /* Flags */
-  uint32_t m_nkeys;   /* Number of keys (can be 0) */
-  uint32_t *m_keys;   /* Key descriptors (NULL iff m_nkeys 0) */
-  uint32_t m_nops;    /* Number of words in m_ops (which >= number of ops stored in preproc output) */
-  uint32_t *m_ops;    /* Marshalling meta data */
+  uint32_t size;    /* Size of topic type */
+  uint32_t align;   /* Alignment of topic type */
+  uint32_t flagset; /* Flags */
+  ddsi_sertype_default_desc_key_seq_t keys;
+  ddsi_sertype_default_desc_op_seq_t ops;
 };
 
 struct ddsi_sertype_default {

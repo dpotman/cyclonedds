@@ -152,20 +152,21 @@ static void sertype_builtin_free_samples (const struct ddsi_sertype *sertype_com
   }
 }
 
-static void sertype_builtin_serialize (const struct ddsi_sertype *sertype_common, size_t *sz, unsigned char **buf)
+static bool sertype_builtin_serialize (const struct ddsi_sertype *stc, size_t *sz, unsigned char **buf)
 {
-  (void) sertype_common;
+  (void) stc;
   (void) sz;
   (void) buf;
-  abort ();
+  return false;
 }
 
-static void sertype_builtin_deserialize (struct ddsi_sertype *sertype_common, size_t sz, const unsigned char *serdata)
+static bool sertype_builtin_deserialize (struct ddsi_domaingv *gv, struct ddsi_sertype *stc, size_t sz, const unsigned char *data)
 {
-  (void) sertype_common;
+  (void) gv;
+  (void) stc;
   (void) sz;
-  (void) serdata;
-  abort ();
+  (void) data;
+  return false;
 }
 
 static bool sertype_builtin_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)

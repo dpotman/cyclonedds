@@ -90,10 +90,10 @@ typedef void (*ddsi_sertype_realloc_samples_t) (void **ptrs, const struct ddsi_s
 typedef void (*ddsi_sertype_free_samples_t) (const struct ddsi_sertype *d, void **ptrs, size_t count, dds_free_op_t op);
 
 /* Serialize this type */
-typedef void (*ddsi_sertype_serialize_t) (const struct ddsi_sertype *d, size_t *sz, unsigned char **buf);
+typedef bool (*ddsi_sertype_serialize_t) (const struct ddsi_sertype *d, size_t *dst_sz, unsigned char **dst_buf);
 
 /* Deserialize this type */
-typedef void (*ddsi_sertype_deserialize_t) (struct ddsi_sertype *d, size_t sz, const unsigned char *serdata);
+typedef bool (*ddsi_sertype_deserialize_t) (struct ddsi_domaingv *gv, struct ddsi_sertype *d, size_t src_sz, const unsigned char *src_data);
 
 /* Check if (an object of) type a is assignable from (an object of) the type b */
 typedef bool (*ddsi_sertype_assignable_from_t) (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b);
@@ -115,7 +115,7 @@ struct ddsi_sertype *ddsi_sertype_lookup_locked (struct ddsi_domaingv *gv, const
 void ddsi_sertype_register_locked (struct ddsi_sertype *sertype);
 
 DDS_EXPORT void ddsi_sertype_init (struct ddsi_domaingv *gv, struct ddsi_sertype *tp, const char *type_name, const struct ddsi_sertype_ops *sertype_ops, const struct ddsi_serdata_ops *serdata_ops, bool topickind_no_key);
-DDS_EXPORT void ddsi_sertype_init_from_ser (struct ddsi_domaingv *gv, struct ddsi_sertype *tp, const struct ddsi_sertype_ops *sertype_ops, size_t sz, unsigned char *serdata);
+DDS_EXPORT bool ddsi_sertype_init_from_ser (struct ddsi_domaingv *gv, struct ddsi_sertype *tp, const struct ddsi_sertype_ops *sertype_ops, size_t sz, unsigned char *serdata);
 DDS_EXPORT void ddsi_sertype_fini (struct ddsi_sertype *tp);
 DDS_EXPORT struct ddsi_sertype *ddsi_sertype_ref (const struct ddsi_sertype *tp);
 DDS_EXPORT void ddsi_sertype_unref (struct ddsi_sertype *tp);
@@ -123,8 +123,9 @@ DDS_EXPORT uint32_t ddsi_sertype_compute_serdata_basehash (const struct ddsi_ser
 
 DDS_EXPORT bool ddsi_sertype_equal (const struct ddsi_sertype *a, const struct ddsi_sertype *b);
 DDS_EXPORT uint32_t ddsi_sertype_hash (const struct ddsi_sertype *tp);
-DDS_EXPORT void ddsi_sertype_serialize (const struct ddsi_sertype *tp, size_t *sz, unsigned char **buf);
-DDS_EXPORT void ddsi_sertype_deserialize (struct ddsi_sertype *tp, size_t sz, const unsigned char *serdata, size_t *pos);
+DDS_EXPORT size_t ddsi_sertype_serialize_size (const struct ddsi_sertype *tp);
+DDS_EXPORT bool ddsi_sertype_serialize (const struct ddsi_sertype *tp, size_t *dst_pos, unsigned char *dst_buf);
+DDS_EXPORT bool ddsi_sertype_deserialize (struct ddsi_sertype *tp, size_t src_sz, const unsigned char *src_data, size_t *src_pos);
 
 DDS_EXPORT inline void ddsi_sertype_free (struct ddsi_sertype *tp) {
   tp->ops->free (tp);

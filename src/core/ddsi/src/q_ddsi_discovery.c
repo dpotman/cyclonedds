@@ -959,8 +959,8 @@ static int sedp_write_endpoint
       addrset_forall (as, add_locator_to_ps, &arg);
     }
 
-    memcpy (&ps.type_information.hash.c, type_id->hash.c, TYPEID_HASH_LENGTH);
-    ps.present |= PP_ADLINK_TYPE_INFORMATION;
+    memcpy (&ps.type_information, type_id, sizeof (ps.type_information) );
+    ps.present |= PP_CYCLONE_TYPE_INFORMATION;
   }
 
   if (xqos)
@@ -1213,7 +1213,7 @@ static void handle_SEDP_alive (const struct receiver_state *rst, seqno_t seq, dd
               ? "(default)" : xqos->partition.strs[0]),
              ((xqos->present & QP_PARTITION) && xqos->partition.n > 1) ? "+" : "",
              xqos->topic_name, xqos->type_name);
-  if (vendor_is_eclipse (vendorid) && datap->present & PP_ADLINK_TYPE_INFORMATION)
+  if (vendor_is_eclipse (vendorid) && datap->present & PP_CYCLONE_TYPE_INFORMATION)
     GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(datap->type_information));
 
   if (! is_writer && (datap->present & PP_EXPECTS_INLINE_QOS) && datap->expects_inline_qos)
@@ -1254,7 +1254,7 @@ static void handle_SEDP_alive (const struct receiver_state *rst, seqno_t seq, dd
   else
   {
     GVLOGDISC (" NEW");
-    if (vendor_is_eclipse (vendorid) && datap->present & PP_ADLINK_TYPE_INFORMATION)
+    if (vendor_is_eclipse (vendorid) && datap->present & PP_CYCLONE_TYPE_INFORMATION)
       ddsi_tl_meta_ref (gv, &datap->type_information, NULL, &datap->endpoint_guid, &rst->dst_guid_prefix);
   }
 
@@ -1379,6 +1379,20 @@ static void handle_SEDP (const struct receiver_state *rst, seqno_t seq, struct d
         break;
     }
     ddsi_plist_fini (&decoded_data);
+  }
+}
+
+static void handle_typelookup (const struct receiver_state *rst, ddsi_entityid_t wr_entity_id, struct ddsi_serdata *serdata)
+{
+  if (!(serdata->statusinfo & (NN_STATUSINFO_DISPOSE | NN_STATUSINFO_UNREGISTER)))
+  {
+    struct ddsi_domaingv * const gv = rst->gv;
+    if (wr_entity_id.u == NN_ENTITYID_TL_SVC_BUILTIN_REQUEST_WRITER)
+      ddsi_tl_handle_request (gv, &rst->dst_guid_prefix, serdata);
+    else if (wr_entity_id.u == NN_ENTITYID_TL_SVC_BUILTIN_REPLY_WRITER)
+      ddsi_tl_handle_reply (gv, serdata);
+    else
+      assert (false);
   }
 }
 
@@ -1566,7 +1580,7 @@ int builtins_dqueue_handler (const struct nn_rsample_info *sampleinfo, const str
     GVTRACE ("data(builtin, vendor %u.%u): "PGUIDFMT" #%"PRId64": ST%x %s/%s:%s%s\n",
              sampleinfo->rst->vendor.id[0], sampleinfo->rst->vendor.id[1],
              PGUID (guid), sampleinfo->seq, statusinfo,
-             pwr && (pwr->c.xqos->present & QP_TOPIC_NAME) ? pwr->c.xqos->topic_name : "", d->type->type_name,
+             pwr ? pwr->c.xqos->topic_name : "", d->type->type_name,
              tmp, res < sizeof (tmp) - 1 ? "" : "(trunc)");
   }
 
@@ -1587,10 +1601,8 @@ int builtins_dqueue_handler (const struct nn_rsample_info *sampleinfo, const str
       handle_pmd_message (sampleinfo->rst, d);
       break;
     case NN_ENTITYID_TL_SVC_BUILTIN_REQUEST_WRITER:
-      ddsi_tl_handle_request (gv, &sampleinfo->rst->dst_guid_prefix, d);
-      break;
     case NN_ENTITYID_TL_SVC_BUILTIN_REPLY_WRITER:
-      ddsi_tl_handle_reply (gv, d);
+      handle_typelookup (sampleinfo->rst, srcguid.entityid, d);
       break;
 #ifdef DDSI_INCLUDE_SECURITY
     case NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER:

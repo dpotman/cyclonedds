@@ -64,15 +64,15 @@ dds_entity_t dds__get_builtin_topic (dds_entity_t entity, dds_entity_t topic)
   switch (topic)
   {
     case DDS_BUILTIN_TOPIC_DCPSPARTICIPANT:
-      topic_name = DDS_BUILTIN_TOPIC_NAME_PARTICIPANT;
+      topic_name = DDS_BUILTIN_TOPIC_PARTICIPANT_NAME;
       sertype = e->m_domain->builtin_participant_type;
       break;
     case DDS_BUILTIN_TOPIC_DCPSPUBLICATION:
-      topic_name = DDS_BUILTIN_TOPIC_NAME_PUBLICATION;
+      topic_name = DDS_BUILTIN_TOPIC_PUBLICATION_NAME;
       sertype = e->m_domain->builtin_writer_type;
       break;
     case DDS_BUILTIN_TOPIC_DCPSSUBSCRIPTION:
-      topic_name = DDS_BUILTIN_TOPIC_NAME_SUBSCRIPTION;
+      topic_name = DDS_BUILTIN_TOPIC_SUBSCRIPTION_NAME;
       sertype = e->m_domain->builtin_reader_type;
       break;
     default:
@@ -286,9 +286,9 @@ void dds__builtin_init (struct dds_domain *dom)
 
   thread_state_awake (lookup_thread_state (), &dom->gv);
   const struct entity_index *gh = dom->gv.entity_index;
-  dom->builtintopic_writer_participant = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER), DDS_BUILTIN_TOPIC_NAME_PARTICIPANT, dom->builtin_participant_type, qos, builtintopic_whc_new (DSBT_PARTICIPANT, gh));
-  dom->builtintopic_writer_publications = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER), DDS_BUILTIN_TOPIC_NAME_PUBLICATION, dom->builtin_writer_type, qos, builtintopic_whc_new (DSBT_WRITER, gh));
-  dom->builtintopic_writer_subscriptions = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER), DDS_BUILTIN_TOPIC_NAME_SUBSCRIPTION, dom->builtin_reader_type, qos, builtintopic_whc_new (DSBT_READER, gh));
+  dom->builtintopic_writer_participant = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SPDP_BUILTIN_PARTICIPANT_WRITER), DDS_BUILTIN_TOPIC_PARTICIPANT_NAME, dom->builtin_participant_type, qos, builtintopic_whc_new (DSBT_PARTICIPANT, gh));
+  dom->builtintopic_writer_publications = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SEDP_BUILTIN_PUBLICATIONS_WRITER), DDS_BUILTIN_TOPIC_PUBLICATION_NAME, dom->builtin_writer_type, qos, builtintopic_whc_new (DSBT_WRITER, gh));
+  dom->builtintopic_writer_subscriptions = new_local_orphan_writer (&dom->gv, to_entityid (NN_ENTITYID_SEDP_BUILTIN_SUBSCRIPTIONS_WRITER), DDS_BUILTIN_TOPIC_SUBSCRIPTION_NAME, dom->builtin_reader_type, qos, builtintopic_whc_new (DSBT_READER, gh));
   thread_state_asleep (lookup_thread_state ());
 
   dds_delete_qos (qos);

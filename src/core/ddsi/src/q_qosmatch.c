@@ -70,7 +70,28 @@ static bool check_assignability (struct tl_meta *rd_tlm, struct tl_meta *wr_tlm)
 {
   assert (rd_tlm->sertype != NULL);
   assert (wr_tlm->sertype != NULL);
-  return rd_tlm->sertype->ops->assignable_from (rd_tlm->sertype, wr_tlm->sertype);
+  return ddsi_sertype_assignable_from (rd_tlm->sertype, wr_tlm->sertype);
+}
+
+static bool check_endpoint_typeid (struct ddsi_domaingv *gv, const type_identifier_t *typeid, struct tl_meta **tlm, bool *req_lookup)
+{
+  assert (tlm != NULL);
+  if (typeid != NULL)
+  {
+    ddsrt_mutex_lock (&gv->tl_admin_lock);
+    *tlm = ddsi_tl_meta_lookup_locked (gv, typeid);
+    assert (*tlm != NULL);
+    if ((*tlm)->state != TL_META_RESOLVED)
+    {
+      GVTRACE ("typeid unresolved "PTYPEIDFMT"\n", PTYPEID(*typeid));
+      if (req_lookup != NULL)
+        *req_lookup = true;
+      ddsrt_mutex_unlock (&gv->tl_admin_lock);
+      return false;
+    }
+    ddsrt_mutex_unlock (&gv->tl_admin_lock);
+  }
+  return true;
 }
 
 bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const type_identifier_t *rd_typeid, const dds_qos_t *wr_qos, const type_identifier_t *wr_typeid, uint64_t mask, dds_qos_policy_id_t *reason, bool *rd_typeid_req_lookup, bool *wr_typeid_req_lookup)
@@ -100,40 +121,15 @@ bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const 
   }
 
   struct tl_meta *rd_tlm = NULL, *wr_tlm = NULL;
-  ddsrt_mutex_lock (&gv->tl_admin_lock);
-  if (rd_typeid != NULL)
-  {
-    rd_tlm = ddsi_tl_meta_lookup_locked (gv, rd_typeid);
-    assert (rd_tlm != NULL);
-    if (rd_tlm->state != TL_META_RESOLVED)
-    {
-      GVTRACE ("rd typeid unresolved "PTYPEIDFMT, PTYPEID(*rd_typeid));
-      if (rd_typeid_req_lookup != NULL)
-        *rd_typeid_req_lookup = true;
-      ddsrt_mutex_unlock (&gv->tl_admin_lock);
-      return false;
-    }
-  }
-  if (wr_typeid != NULL)
-  {
-    wr_tlm = ddsi_tl_meta_lookup_locked (gv, wr_typeid);
-    assert (wr_tlm != NULL);
-    if (wr_tlm->state != TL_META_RESOLVED)
-    {
-      GVTRACE ("wr typeid unresolved "PTYPEIDFMT, PTYPEID(*wr_typeid));
-      if (wr_typeid_req_lookup != NULL)
-        *wr_typeid_req_lookup = true;
-      ddsrt_mutex_unlock (&gv->tl_admin_lock);
-      return false;
-    }
-  }
+  if (!check_endpoint_typeid (gv, rd_typeid, &rd_tlm, rd_typeid_req_lookup))
+    return false;
+  if (!check_endpoint_typeid (gv, wr_typeid, &wr_tlm, wr_typeid_req_lookup))
+    return false;
   if (rd_typeid != NULL && wr_typeid != NULL && !check_assignability (rd_tlm, wr_tlm))
   {
     *reason = DDS_TYPE_CONSISTENCY_ENFORCEMENT_QOS_POLICY_ID;
-    ddsrt_mutex_unlock (&gv->tl_admin_lock);
     return false;
   }
-  ddsrt_mutex_unlock (&gv->tl_admin_lock);
 
   if ((mask & QP_RELIABILITY) && rd_qos->reliability.kind > wr_qos->reliability.kind) {
     *reason = DDS_RELIABILITY_QOS_POLICY_ID;

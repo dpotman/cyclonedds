@@ -57,6 +57,11 @@ struct ddsi_serdata;
 
 #define DDS_MIN_PSEUDO_HANDLE ((dds_entity_t) 0x7fff0000)
 
+/** Indicates that the library uses ddsi_sertype (as a replacement for ddsi_sertopic). If sertype
+ *  is used, the function dds_create_topic_generic requires a topic name parameter, as this field
+ *  is not included in ddsi_sertype. */
+#define DDS_HAS_DDSI_SERTYPE 1
+
 /* @defgroup builtintopic_constants Convenience constants for referring to builtin topics
  *
  * These constants can be used in place of an actual dds_topic_t, when creating
@@ -207,7 +212,7 @@ typedef struct dds_builtintopic_endpoint
   char *topic_name;
   char *type_name;
   unsigned char *type_identifier;
-  uint32_t type_identifier_sz;
+  size_t type_identifier_sz;
   dds_qos_t *qos;
 }
 dds_builtintopic_endpoint_t;
@@ -3504,6 +3509,7 @@ dds_domain_set_deafmute (
  *                                  as a participant, reader or writer.
  * @param[in]   type_identifier     Type identifier data
  * @param[in]   type_identifier_sz  Length of the type identifier data
+ * @param[in]   timeout             Timeout for waiting for requested type information to be available
  * @param[out]  sertype             The type information, or NULL if the type could not be resolved
  *
  * @returns A dds_return_t indicating success or failure.
@@ -3522,8 +3528,9 @@ DDS_EXPORT dds_return_t
 dds_domain_resolve_type (
   dds_entity_t entity,
   unsigned char *type_identifier,
-  uint32_t type_identifier_sz,
-  const struct ddsi_sertype **sertype);
+  size_t type_identifier_sz,
+  dds_duration_t timeout,
+  struct ddsi_sertype **sertype);
 
 #if defined (__cplusplus)
 }

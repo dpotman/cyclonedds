@@ -402,14 +402,14 @@ static bool inst_has_unread (const struct rhc_instance *i)
   return inst_nread (i) < inst_nsamples (i);
 }
 
-static bool topicless_to_clean_invsample (const struct ddsi_sertype *type, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim)
+static bool untyped_to_clean_invsample (const struct ddsi_sertype *type, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim)
 {
-  /* ddsi_serdata_topicless_to_sample just deals with the key value, without paying any attention to attributes;
+  /* ddsi_serdata_untyped_to_sample just deals with the key value, without paying any attention to attributes;
      but that makes life harder for the user: the attributes of an invalid sample would be garbage, but would
      nonetheless have to be freed in the end.  Zero'ing it explicitly solves that problem. */
   ddsi_sertype_free_sample (type, sample, DDS_FREE_CONTENTS);
   ddsi_sertype_zero_sample (type, sample);
-  return ddsi_serdata_topicless_to_sample (type, d, sample, bufptr, buflim);
+  return ddsi_serdata_untyped_to_sample (type, d, sample, bufptr, buflim);
 }
 
 static uint32_t qmask_of_inst (const struct rhc_instance *inst);
@@ -628,7 +628,7 @@ static bool eval_predicate_sample (const struct dds_rhc_default *rhc, const stru
 
 static bool eval_predicate_invsample (const struct dds_rhc_default *rhc, const struct rhc_instance *inst, bool (*pred) (const void *sample))
 {
-  topicless_to_clean_invsample (rhc->type, inst->tk->m_sample, rhc->qcond_eval_samplebuf, NULL, NULL);
+  untyped_to_clean_invsample (rhc->type, inst->tk->m_sample, rhc->qcond_eval_samplebuf, NULL, NULL);
   bool ret = pred (rhc->qcond_eval_samplebuf);
   return ret;
 }
@@ -1958,7 +1958,7 @@ static bool read_take_to_sample (const struct ddsi_serdata * __restrict d, void 
 
 static bool read_take_to_invsample (const struct ddsi_sertype * __restrict type, const struct ddsi_serdata * __restrict d, void * __restrict * __restrict sample, void * __restrict * __restrict bufptr, void * __restrict buflim)
 {
-  return topicless_to_clean_invsample (type, d, *sample, (void **) bufptr, buflim);
+  return untyped_to_clean_invsample (type, d, *sample, (void **) bufptr, buflim);
 }
 
 static bool read_take_to_sample_ref (const struct ddsi_serdata * __restrict d, void * __restrict * __restrict sample, void * __restrict * __restrict bufptr, void * __restrict buflim)
@@ -2764,7 +2764,7 @@ static int rhc_check_counts_locked (struct dds_rhc_default *rhc, bool check_cond
       if (check_qcmask && rhc->nqconds > 0)
       {
         dds_querycond_mask_t qcmask;
-        topicless_to_clean_invsample (rhc->type, inst->tk->m_sample, rhc->qcond_eval_samplebuf, 0, 0);
+        untyped_to_clean_invsample (rhc->type, inst->tk->m_sample, rhc->qcond_eval_samplebuf, 0, 0);
         qcmask = 0;
         for (rciter = rhc->conds; rciter; rciter = rciter->m_next)
           if (rciter->m_query.m_filter != 0 && rciter->m_query.m_filter (rhc->qcond_eval_samplebuf))

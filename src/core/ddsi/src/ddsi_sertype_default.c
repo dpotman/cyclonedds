@@ -18,6 +18,7 @@
 #include "dds/ddsrt/mh3.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsrt/string.h"
+#include "dds/ddsi/ddsi_domaingv.h"
 #include "dds/ddsi/q_bswap.h"
 #include "dds/ddsi/q_config.h"
 #include "dds/ddsi/q_freelist.h"
@@ -32,39 +33,26 @@ static bool sertype_default_equal (const struct ddsi_sertype *acmn, const struct
   const struct ddsi_sertype_default *b = (struct ddsi_sertype_default *) bcmn;
   if (a->native_encoding_identifier != b->native_encoding_identifier)
     return false;
-  if (a->type.m_size != b->type.m_size)
+  if (a->type.size != b->type.size)
     return false;
-  if (a->type.m_align != b->type.m_align)
+  if (a->type.align != b->type.align)
     return false;
-  if (a->type.m_flagset != b->type.m_flagset)
+  if (a->type.flagset != b->type.flagset)
     return false;
-  if (a->type.m_nkeys != b->type.m_nkeys)
-    return false;
-  if (
-    (a->type.m_nkeys > 0) &&
-    memcmp (a->type.m_keys, b->type.m_keys, a->type.m_nkeys * sizeof (*a->type.m_keys)) != 0)
-    return false;
-  if (a->type.m_nops != b->type.m_nops)
+  if (a->type.keys.nkeys != b->type.keys.nkeys)
     return false;
   if (
-    (a->type.m_nops > 0) &&
-    memcmp (a->type.m_ops, b->type.m_ops, a->type.m_nops * sizeof (*a->type.m_ops)) != 0)
+    (a->type.keys.nkeys > 0) &&
+    memcmp (a->type.keys.keys, b->type.keys.keys, a->type.keys.nkeys * sizeof (*a->type.keys.keys)) != 0)
+    return false;
+  if (a->type.ops.nops != b->type.ops.nops)
+    return false;
+  if (
+    (a->type.ops.nops > 0) &&
+    memcmp (a->type.ops.ops, b->type.ops.ops, a->type.ops.nops * sizeof (*a->type.ops.ops)) != 0)
     return false;
   assert (a->opt_size == b->opt_size);
   return true;
-}
-
-static uint32_t sertype_default_hash (const struct ddsi_sertype *tpcmn)
-{
-  const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
-  uint32_t h = 0;
-  h = ddsrt_mh3 (&tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier), h);
-  h = ddsrt_mh3 (&tp->type.m_size, sizeof (tp->type.m_size), h);
-  h = ddsrt_mh3 (&tp->type.m_align, sizeof (tp->type.m_align), h);
-  h = ddsrt_mh3 (&tp->type.m_flagset, sizeof (tp->type.m_flagset), h);
-  h = ddsrt_mh3 (tp->type.m_keys, tp->type.m_nkeys * sizeof (*tp->type.m_keys), h);
-  h = ddsrt_mh3 (tp->type.m_ops, tp->type.m_nops * sizeof (*tp->type.m_ops), h);
-  return h;
 }
 
 static void sertype_default_typeid_hash (const struct ddsi_sertype *tpcmn, unsigned char *buf)
@@ -75,19 +63,26 @@ static void sertype_default_typeid_hash (const struct ddsi_sertype *tpcmn, unsig
   ddsrt_md5_state_t md5st;
   ddsrt_md5_init (&md5st);
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier));
-  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.m_size, sizeof (tp->type.m_size));
-  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.m_align, sizeof (tp->type.m_align));
-  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.m_flagset, sizeof (tp->type.m_flagset));
-  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) tp->type.m_keys, (uint32_t) (tp->type.m_nkeys * sizeof (*tp->type.m_keys)));
-  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) tp->type.m_ops, (uint32_t) (tp->type.m_nops * sizeof (*tp->type.m_ops)));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.size, sizeof (tp->type.size));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.align, sizeof (tp->type.align));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.flagset, sizeof (tp->type.flagset));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) tp->type.keys.keys, (uint32_t) (tp->type.keys.nkeys * sizeof (*tp->type.keys.keys)));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) tp->type.ops.ops, (uint32_t) (tp->type.ops.nops * sizeof (*tp->type.ops.ops)));
   ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) buf);
+}
+
+static uint32_t sertype_default_hash (const struct ddsi_sertype *tpcmn)
+{
+  unsigned char buf[16];
+  sertype_default_typeid_hash (tpcmn, buf);
+  return (uint32_t) *buf;
 }
 
 static void sertype_default_free (struct ddsi_sertype *tpcmn)
 {
   struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
-  ddsrt_free (tp->type.m_keys);
-  ddsrt_free (tp->type.m_ops);
+  ddsrt_free (tp->type.keys.keys);
+  ddsrt_free (tp->type.ops.ops);
   ddsi_sertype_fini (&tp->c);
   ddsrt_free (tp);
 }
@@ -95,13 +90,13 @@ static void sertype_default_free (struct ddsi_sertype *tpcmn)
 static void sertype_default_zero_samples (const struct ddsi_sertype *sertype_common, void *sample, size_t count)
 {
   const struct ddsi_sertype_default *tp = (const struct ddsi_sertype_default *)sertype_common;
-  memset (sample, 0, tp->type.m_size * count);
+  memset (sample, 0, tp->type.size * count);
 }
 
 static void sertype_default_realloc_samples (void **ptrs, const struct ddsi_sertype *sertype_common, void *old, size_t oldcount, size_t count)
 {
   const struct ddsi_sertype_default *tp = (const struct ddsi_sertype_default *)sertype_common;
-  const size_t size = tp->type.m_size;
+  const size_t size = tp->type.size;
   char *new = (oldcount == count) ? old : dds_realloc (old, size * count);
   if (new && count > oldcount)
     memset (new + size * oldcount, 0, size * (count - oldcount));
@@ -118,17 +113,17 @@ static void sertype_default_free_samples (const struct ddsi_sertype *sertype_com
   {
     const struct ddsi_sertype_default *tp = (const struct ddsi_sertype_default *)sertype_common;
     const struct ddsi_sertype_default_desc *type = &tp->type;
-    const size_t size = type->m_size;
+    const size_t size = type->size;
 #ifndef NDEBUG
     for (size_t i = 0, off = 0; i < count; i++, off += size)
       assert ((char *)ptrs[i] == (char *)ptrs[0] + off);
 #endif
-    if (type->m_flagset & DDS_TOPIC_NO_OPTIMIZE)
+    if (type->flagset & DDS_TOPIC_NO_OPTIMIZE)
     {
       char *ptr = ptrs[0];
       for (size_t i = 0; i < count; i++)
       {
-        dds_stream_free_sample (ptr, type->m_ops);
+        dds_stream_free_sample (ptr, type->ops.ops);
         ptr += size;
       }
     }
@@ -139,46 +134,36 @@ static void sertype_default_free_samples (const struct ddsi_sertype *sertype_com
   }
 }
 
-static void sertype_default_serialize (const struct ddsi_sertype *sertype_common, size_t *sz, unsigned char **buf)
+const enum pserop ddsi_sertype_default_desc_ops[] = { Xux3, XQ, Xu, XSTOP, XQ, Xu, XSTOP, XSTOP };
+
+static bool sertype_default_serialize (const struct ddsi_sertype *stc, size_t *dst_sz, unsigned char **dst_buf)
 {
-  assert (sz);
-  assert (buf);
-  const struct ddsi_sertype_default *tp = (const struct ddsi_sertype_default *) sertype_common;
-  size_t common_sz = 0; // serialized size of sertype_common in bytes
-  ddsi_sertype_serialize (sertype_common, &common_sz, buf);
-  *sz = common_sz + (5 + tp->type.m_nkeys + tp->type.m_nops) * sizeof (uint32_t);
-  *buf = ddsrt_realloc (*buf, *sz);
-  uint32_t *sd = (uint32_t *) (*buf + common_sz);
-  size_t pos = 0; // index in sd
-  sd[pos++] = ddsrt_toBE4u (tp->type.m_size);
-  sd[pos++] = ddsrt_toBE4u (tp->type.m_align);
-  sd[pos++] = ddsrt_toBE4u (tp->type.m_flagset);
-  sd[pos++] = ddsrt_toBE4u (tp->type.m_nkeys);
-  memcpy (&sd[pos], tp->type.m_keys, tp->type.m_nkeys * sizeof (*tp->type.m_keys));
-  pos += tp->type.m_nkeys;
-  sd[pos++] = ddsrt_toBE4u (tp->type.m_nops);
-  memcpy (&sd[pos], tp->type.m_ops, tp->type.m_nops * sizeof (*tp->type.m_ops));
-  // pos += tp->type.m_nops;
+  assert (dst_sz);
+  assert (dst_buf);
+  const struct ddsi_sertype_default *st = (const struct ddsi_sertype_default *) stc;
+  *dst_buf = ddsrt_malloc (ddsi_sertype_serialize_size (stc) + plist_ser_generic_size (&st->type, 0, ddsi_sertype_default_desc_ops));
+  *dst_sz = 0;
+  if (!ddsi_sertype_serialize (stc, dst_sz, *dst_buf))
+    return false;
+  return (plist_ser_generic_embeddable ((char *) *dst_buf, dst_sz, &st->type, 0, ddsi_sertype_default_desc_ops, false) >= 0);
 }
 
-static void sertype_default_deserialize (struct ddsi_sertype *sertype_common, size_t sz, const unsigned char *serdata)
+static bool sertype_default_deserialize (struct ddsi_domaingv *gv, struct ddsi_sertype *stc, size_t src_sz, const unsigned char *src_data)
 {
-  struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) sertype_common;
-  size_t pos = 0; // position in serdata in bytes
-  ddsi_sertype_deserialize (&tp->c, sz, serdata, &pos);
-  tp->c.serdata_ops = tp->c.typekind_no_key ? &ddsi_serdata_ops_cdr_nokey : &ddsi_serdata_ops_cdr;
-  assert (sz - pos >= 5 * sizeof (uint32_t));
-  uint32_t *sd = (uint32_t *)(serdata + pos);
-  size_t i = 0; // index in sd
-  tp->type.m_size = ddsrt_fromBE4u (sd[i++]);
-  tp->type.m_align = ddsrt_fromBE4u (sd[i++]);
-  tp->type.m_flagset = ddsrt_fromBE4u (sd[i++]);
-  tp->type.m_nkeys = ddsrt_fromBE4u (sd[i++]);
-  tp->type.m_keys = ddsrt_memdup (&sd[i], tp->type.m_nkeys * sizeof (uint32_t));
-  i += tp->type.m_nkeys;
-  tp->type.m_nops = ddsrt_fromBE4u (sd[i++]);
-  tp->type.m_ops = ddsrt_memdup (&sd[i], tp->type.m_nops * sizeof (uint32_t));
-  // i += tp->type.m_nops;
+  struct ddsi_sertype_default *st = (struct ddsi_sertype_default *) stc;
+  size_t srcoff = 0;
+  if (!ddsi_sertype_deserialize (&st->c, src_sz, src_data, &srcoff))
+    return false;
+  st->native_encoding_identifier = (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN ? CDR_LE : CDR_BE);
+  st->serpool = gv->serpool;
+  st->c.serdata_ops = st->c.typekind_no_key ? &ddsi_serdata_ops_cdr_nokey : &ddsi_serdata_ops_cdr;
+  if (plist_deser_generic_srcoff (&st->type, src_data, src_sz, &srcoff, false, ddsi_sertype_default_desc_ops) < 0)
+    return false;
+  if (!(st->type.flagset & DDS_TOPIC_NO_OPTIMIZE))
+    st->opt_size = dds_stream_check_optimize (&st->type);
+  else
+    st->opt_size = 0;
+  return true;
 }
 
 static bool sertype_default_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)
@@ -187,7 +172,7 @@ static bool sertype_default_assignable_from (const struct ddsi_sertype *type_a, 
   struct ddsi_sertype_default *b = (struct ddsi_sertype_default *) type_b;
 
   // If receiving type disables type checking, type b is assignable
-  if (a->type.m_flagset & DDS_TOPIC_DISABLE_TYPECHECK)
+  if (a->type.flagset & DDS_TOPIC_DISABLE_TYPECHECK)
     return true;
 
   // For now, the assignable check is just comparing the type-ids for a and b, so only equal types will match

@@ -63,7 +63,8 @@ extern "C" {
 #define PP_IDENTITY_STATUS_TOKEN                ((uint64_t)1 << 36)
 #define PP_DATA_TAGS                            ((uint64_t)1 << 37)
 
-#define PP_ADLINK_TYPE_INFORMATION              ((uint64_t)1 << 38)
+#define PP_CYCLONE_TYPE_INFORMATION             ((uint64_t)1 << 38)
+
 /* Set for unrecognized parameters that are in the reserved space or
    in our own vendor-specific space that have the
    PID_UNRECOGNIZED_INCOMPATIBLE_FLAG set (see DDSI 2.1 9.6.2.2.1) */

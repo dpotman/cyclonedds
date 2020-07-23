@@ -152,9 +152,7 @@ static dds_return_t dds_topic_delete (dds_entity *e)
   struct dds_ktopic * const ktp = tp->m_ktopic;
   assert (dds_entity_kind (e->m_parent) == DDS_KIND_PARTICIPANT);
   dds_participant * const pp = (dds_participant *) e->m_parent;
-  type_identifier_t *type_id = ddsi_typeid_from_sertype (tp->m_stype);
-  ddsi_tl_meta_unref (&pp->m_entity.m_domain->gv, type_id, NULL);
-  ddsrt_free (type_id);
+  ddsi_tl_meta_unref (&pp->m_entity.m_domain->gv, NULL, tp->m_stype, NULL);
   ddsrt_free (tp->m_name);
   ddsi_sertype_unref (tp->m_stype);
 
@@ -418,18 +416,18 @@ dds_entity_t dds_create_topic (dds_entity_t participant, const dds_topic_descrip
   ddsi_sertype_init (&ppent->m_domain->gv, &st->c, desc->m_typename, &ddsi_sertype_ops_default, desc->m_nkeys ? &ddsi_serdata_ops_cdr : &ddsi_serdata_ops_cdr_nokey, (desc->m_nkeys == 0));
   st->native_encoding_identifier = (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN ? CDR_LE : CDR_BE);
   st->serpool = ppent->m_domain->gv.serpool;
-  st->type.m_size = desc->m_size;
-  st->type.m_align = desc->m_align;
-  st->type.m_flagset = desc->m_flagset;
-  st->type.m_nkeys = desc->m_nkeys;
-  st->type.m_keys = ddsrt_malloc (st->type.m_nkeys  * sizeof (*st->type.m_keys));
-  for (uint32_t i = 0; i < st->type.m_nkeys; i++)
-    st->type.m_keys[i] = desc->m_keys[i].m_index;
-  st->type.m_nops = dds_stream_countops (desc->m_ops);
-  st->type.m_ops = ddsrt_memdup (desc->m_ops, st->type.m_nops * sizeof (*st->type.m_ops));
+  st->type.size = desc->m_size;
+  st->type.align = desc->m_align;
+  st->type.flagset = desc->m_flagset;
+  st->type.keys.nkeys = desc->m_nkeys;
+  st->type.keys.keys = ddsrt_malloc (st->type.keys.nkeys  * sizeof (*st->type.keys.keys));
+  for (uint32_t i = 0; i < st->type.keys.nkeys; i++)
+    st->type.keys.keys[i] = desc->m_keys[i].m_index;
+  st->type.ops.nops = dds_stream_countops (desc->m_ops);
+  st->type.ops.ops = ddsrt_memdup (desc->m_ops, st->type.ops.nops * sizeof (*st->type.ops.ops));
 
   /* Check if topic cannot be optimised (memcpy marshal) */
-  if (!(st->type.m_flagset & DDS_TOPIC_NO_OPTIMIZE)) {
+  if (!(st->type.flagset & DDS_TOPIC_NO_OPTIMIZE)) {
     st->opt_size = dds_stream_check_optimize (&st->type);
     DDS_CTRACE (&ppent->m_domain->gv.logconfig, "Marshalling for type: %s is %soptimised\n", desc->m_typename, st->opt_size ? "" : "not ");
   }

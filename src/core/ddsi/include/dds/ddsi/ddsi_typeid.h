@@ -16,10 +16,11 @@
 #include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_guid.h"
 
-#define TYPEID_HASH_LENGTH 16
+#define PFMT4B "%02x%02x%02x%02x"
+#define PTYPEIDFMT PFMT4B "-" PFMT4B "-" PFMT4B "-" PFMT4B
 
-#define PTYPEIDFMT "%08x-%08x-%08x-%08x"
-#define PTYPEID(x) ((x).hash.u[1]), ((x).hash.u[1]), ((x).hash.u[2]), ((x).hash.u[3])
+#define PTYPEID4B(x, n) ((x).hash[n]), ((x).hash[n + 1]), ((x).hash[n + 2]), ((x).hash[n + 3])
+#define PTYPEID(x) PTYPEID4B(x, 0), PTYPEID4B(x, 4), PTYPEID4B(x, 8), PTYPEID4B(x, 12)
 
 #if defined (__cplusplus)
 extern "C" {
@@ -27,13 +28,8 @@ extern "C" {
 
 struct ddsi_sertype;
 
-typedef union {
-  unsigned char c[TYPEID_HASH_LENGTH];
-  uint32_t u[4];
-} type_identifier_hash_t;
-
 typedef struct type_identifier {
-  type_identifier_hash_t hash;
+  unsigned char hash[16];
 } type_identifier_t;
 
 typedef struct type_identifier_seq {

@@ -293,7 +293,7 @@ struct writer
   struct addrset *ssm_as;
 #endif
   uint32_t alive_vclock; /* virtual clock counting transitions between alive/not-alive */
-  const struct ddsi_sertype * type; /* type */
+  const struct ddsi_sertype * type; /* type of the data written by this writer */
   struct addrset *as; /* set of addresses to publish to */
   struct addrset *as_group; /* alternate case, used for SPDP, when using Cloud with multiple bootstrap locators */
   struct xevent *heartbeat_xevent; /* timed event for "periodically" publishing heartbeats when unack'd data present, NULL <=> unreliable */
@@ -352,7 +352,7 @@ struct reader
 #ifdef DDSI_INCLUDE_NETWORK_PARTITIONS
   struct addrset *as;
 #endif
-  const struct ddsi_sertype * type; /* type */
+  const struct ddsi_sertype * type; /* type of the data read by this reader */
   uint32_t num_writers; /* total number of matching PROXY writers */
   ddsrt_avl_tree_t writers; /* all matching PROXY writers, see struct rd_pwr_match */
   ddsrt_avl_tree_t local_writers; /* all matching LOCAL writers, see struct rd_wr_match */
@@ -420,7 +420,7 @@ struct proxy_endpoint_common
   nn_vendorid_t vendor; /* cached from proxypp->vendor */
   seqno_t seq; /* sequence number of most recent SEDP message */
   type_identifier_t type_id; /* type identifier for for type used by this proxy endpoint */
-  const struct ddsi_sertype * type; /* type */
+  const struct ddsi_sertype * type; /* sertype for data this endpoint reads/writes */
 #ifdef DDSI_INCLUDE_SECURITY
   nn_security_info_t security_info;
 #endif

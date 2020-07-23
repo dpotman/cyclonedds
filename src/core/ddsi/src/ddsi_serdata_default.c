@@ -350,7 +350,7 @@ static struct ddsi_serdata *ddsi_serdata_from_keyhash_cdr (const struct ddsi_ser
 {
   /* FIXME: not quite sure this is correct, though a check against a specially hacked OpenSplice suggests it is */
   const struct ddsi_sertype_default *tp = (const struct ddsi_sertype_default *)tpcmn;
-  if (!(tp->type.m_flagset & DDS_TOPIC_FIXED_KEY))
+  if (!(tp->type.flagset & DDS_TOPIC_FIXED_KEY))
   {
     /* keyhash is MD5 of a key value, so impossible to turn into a key value */
     return NULL;
@@ -391,12 +391,12 @@ static void gen_keyhash_from_sample (const struct ddsi_sertype_default *type, dd
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
   kh->m_set = 1;
-  if (desc->m_nkeys == 0)
+  if (desc->keys.nkeys == 0)
   {
     kh->m_iskey = 1;
     kh->m_keysize = 0;
   }
-  else if (desc->m_flagset & DDS_TOPIC_FIXED_KEY)
+  else if (desc->flagset & DDS_TOPIC_FIXED_KEY)
   {
     dds_ostreamBE_t os;
     kh->m_iskey = 1;
@@ -461,7 +461,7 @@ static struct ddsi_serdata *serdata_default_from_sample_cdr_nokey (const struct 
   return fix_serdata_default_nokey (d, tpcmn->serdata_basehash);
 }
 
-static struct ddsi_serdata *serdata_default_to_topicless (const struct ddsi_serdata *serdata_common)
+static struct ddsi_serdata *serdata_default_to_untyped (const struct ddsi_serdata *serdata_common)
 {
   const struct ddsi_serdata_default *d = (const struct ddsi_serdata_default *)serdata_common;
   const struct ddsi_sertype_default *tp = (const struct ddsi_sertype_default *)d->c.type;
@@ -548,7 +548,7 @@ static bool serdata_default_to_sample_cdr (const struct ddsi_serdata *serdata_co
   return true; /* FIXME: can't conversion to sample fail? */
 }
 
-static bool serdata_default_topicless_to_sample_cdr (const struct ddsi_sertype *sertype_common, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
+static bool serdata_default_untyped_to_sample_cdr (const struct ddsi_sertype *sertype_common, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
 {
   const struct ddsi_serdata_default *d = (const struct ddsi_serdata_default *)serdata_common;
   const struct ddsi_sertype_default *tp = (const struct ddsi_sertype_default *) sertype_common;
@@ -563,7 +563,7 @@ static bool serdata_default_topicless_to_sample_cdr (const struct ddsi_sertype *
   return true; /* FIXME: can't conversion to sample fail? */
 }
 
-static bool serdata_default_topicless_to_sample_cdr_nokey (const struct ddsi_sertype *sertype_common, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
+static bool serdata_default_untyped_to_sample_cdr_nokey (const struct ddsi_sertype *sertype_common, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
 {
   (void)sertype_common; (void)sample; (void)bufptr; (void)buflim; (void)serdata_common;
   assert (serdata_common->type == NULL);
@@ -613,8 +613,8 @@ const struct ddsi_serdata_ops ddsi_serdata_ops_cdr = {
   .to_sample = serdata_default_to_sample_cdr,
   .to_ser_ref = serdata_default_to_ser_ref,
   .to_ser_unref = serdata_default_to_ser_unref,
-  .to_topicless = serdata_default_to_topicless,
-  .topicless_to_sample = serdata_default_topicless_to_sample_cdr,
+  .to_untyped = serdata_default_to_untyped,
+  .untyped_to_sample = serdata_default_untyped_to_sample_cdr,
   .print = serdata_default_print_cdr,
   .get_keyhash = serdata_default_get_keyhash
 };
@@ -631,8 +631,8 @@ const struct ddsi_serdata_ops ddsi_serdata_ops_cdr_nokey = {
   .to_sample = serdata_default_to_sample_cdr,
   .to_ser_ref = serdata_default_to_ser_ref,
   .to_ser_unref = serdata_default_to_ser_unref,
-  .to_topicless = serdata_default_to_topicless,
-  .topicless_to_sample = serdata_default_topicless_to_sample_cdr_nokey,
+  .to_untyped = serdata_default_to_untyped,
+  .untyped_to_sample = serdata_default_untyped_to_sample_cdr_nokey,
   .print = serdata_default_print_cdr,
   .get_keyhash = serdata_default_get_keyhash
 };

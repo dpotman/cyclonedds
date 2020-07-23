@@ -28,7 +28,8 @@ typedef int64_t seqno_t;
 
 #define PGUIDPREFIX(gp) (gp).u[0], (gp).u[1], (gp).u[2]
 #define PGUID(g) PGUIDPREFIX ((g).prefix), (g).entityid.u
-#define PGUIDFMT "%" PRIx32 ":%" PRIx32 ":%" PRIx32 ":%" PRIx32
+#define PGUIDPREFIXFMT "%" PRIx32 ":%" PRIx32 ":%" PRIx32
+#define PGUIDFMT PGUIDPREFIXFMT ":%" PRIx32
 
 /* predefined entity ids; here viewed as an unsigned int, on the
    network as four bytes corresponding to the integer in network byte

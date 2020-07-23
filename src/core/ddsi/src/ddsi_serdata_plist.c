@@ -162,7 +162,7 @@ static struct ddsi_serdata *serdata_plist_from_keyhash (const struct ddsi_sertyp
   return serdata_plist_from_ser_iov (tpcmn, SDK_KEY, 1, &iov, sizeof (in) - 4);
 }
 
-static bool serdata_plist_topicless_to_sample (const struct ddsi_sertype *tpcmn, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
+static bool serdata_plist_untyped_to_sample (const struct ddsi_sertype *tpcmn, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
 {
   const struct ddsi_serdata_plist *d = (const struct ddsi_serdata_plist *)serdata_common;
   const struct ddsi_sertype_plist *tp = (const struct ddsi_sertype_plist *)tpcmn;
@@ -188,7 +188,7 @@ static bool serdata_plist_topicless_to_sample (const struct ddsi_sertype *tpcmn,
 static bool serdata_plist_to_sample (const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
 {
   /* the "plist" topics only differ in the parameter that is used as the key value */
-  return serdata_plist_topicless_to_sample (serdata_common->type, serdata_common, sample, bufptr, buflim);
+  return serdata_plist_untyped_to_sample (serdata_common->type, serdata_common, sample, bufptr, buflim);
 }
 
 static void serdata_plist_to_ser (const struct ddsi_serdata *serdata_common, size_t off, size_t sz, void *buf)
@@ -242,7 +242,7 @@ static struct ddsi_serdata *serdata_plist_from_sample (const struct ddsi_sertype
   return d;
 }
 
-static struct ddsi_serdata *serdata_plist_to_topicless (const struct ddsi_serdata *serdata_common)
+static struct ddsi_serdata *serdata_plist_to_untyped (const struct ddsi_serdata *serdata_common)
 {
   const struct ddsi_serdata_plist *d = (const struct ddsi_serdata_plist *) serdata_common;
   const struct ddsi_sertype_plist *tp = (const struct ddsi_sertype_plist *) d->c.type;
@@ -304,8 +304,8 @@ const struct ddsi_serdata_ops ddsi_serdata_ops_plist = {
   .to_sample = serdata_plist_to_sample,
   .to_ser_ref = serdata_plist_to_ser_ref,
   .to_ser_unref = serdata_plist_to_ser_unref,
-  .to_topicless = serdata_plist_to_topicless,
-  .topicless_to_sample = serdata_plist_topicless_to_sample,
+  .to_untyped = serdata_plist_to_untyped,
+  .untyped_to_sample = serdata_plist_untyped_to_sample,
   .print = serdata_plist_print_plist,
   .get_keyhash = serdata_plist_get_keyhash
 };

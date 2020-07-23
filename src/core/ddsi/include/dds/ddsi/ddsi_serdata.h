@@ -73,15 +73,15 @@ typedef struct ddsi_serdata * (*ddsi_serdata_from_keyhash_t) (const struct ddsi_
      unless additional application knowledge is available */
 typedef struct ddsi_serdata * (*ddsi_serdata_from_sample_t) (const struct ddsi_sertype *type, enum ddsi_serdata_kind kind, const void *sample);
 
-/* Construct a topic-less serdata with just a keyvalue given a normal serdata (either key or data)
+/* Construct a untyped serdata with just a keyvalue given a normal serdata (either key or data)
    - used for mapping key values to instance ids in tkmap
    - two reasons: size (keys are typically smaller than samples), and data in tkmap
      is shared across topics
-   - whether a serdata is topicless or not is known from the context, and the topic
-     field may have any value for a topicless serdata (so in some cases, one can
+   - whether a serdata is untyped or not is known from the context, and the topic
+     field may have any value for a untyped serdata (so in some cases, one can
      simply do "return ddsi_serdata_ref(d);"
  */
-typedef struct ddsi_serdata * (*ddsi_serdata_to_topicless_t) (const struct ddsi_serdata *d);
+typedef struct ddsi_serdata * (*ddsi_serdata_to_untyped_t) (const struct ddsi_serdata *d);
 
 /* Fill buffer with 'size' bytes of serialised data, starting from 'off'
    - 0 <= off < off+sz <= alignup4(size(d))
@@ -114,9 +114,9 @@ typedef void (*ddsi_serdata_to_ser_unref_t) (struct ddsi_serdata *d, const ddsrt
    by the caller.) */
 typedef bool (*ddsi_serdata_to_sample_t) (const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim);
 
-/* Create a sample from a topicless serdata, as returned by serdata_to_topicless.  This sample
+/* Create a sample from a untyped serdata, as returned by serdata_to_untyped.  This sample
    obviously has just the key fields filled in and is used for generating invalid samples. */
-typedef bool (*ddsi_serdata_topicless_to_sample_t) (const struct ddsi_sertype *type, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim);
+typedef bool (*ddsi_serdata_untyped_to_sample_t) (const struct ddsi_sertype *type, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim);
 
 /* Test key values of two serdatas for equality.  The two will have the same ddsi_serdata_ops,
    but are not necessarily of the same topic (one can decide to never consider them equal if they
@@ -126,7 +126,7 @@ typedef bool (*ddsi_serdata_topicless_to_sample_t) (const struct ddsi_sertype *t
 typedef bool (*ddsi_serdata_eqkey_t) (const struct ddsi_serdata *a, const struct ddsi_serdata *b);
 
 /* Print a serdata into the provided buffer (truncating as necessary)
-   - topic is present for supporting printing of "topicless" samples
+   - topic is present for supporting printing of "untyped" samples
    - buf != NULL, bufsize > 0 on input
    - buf must always be terminated with a nul character on return
    - returns the number of characters (excluding the terminating 0) needed to print it
@@ -150,8 +150,8 @@ struct ddsi_serdata_ops {
   ddsi_serdata_to_ser_ref_t to_ser_ref;
   ddsi_serdata_to_ser_unref_t to_ser_unref;
   ddsi_serdata_to_sample_t to_sample;
-  ddsi_serdata_to_topicless_t to_topicless;
-  ddsi_serdata_topicless_to_sample_t topicless_to_sample;
+  ddsi_serdata_to_untyped_t to_untyped;
+  ddsi_serdata_untyped_to_sample_t untyped_to_sample;
   ddsi_serdata_free_t free;
   ddsi_serdata_print_t print;
   ddsi_serdata_get_keyhash_t get_keyhash;
@@ -210,8 +210,8 @@ DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_from_sample (const struct dd
   return type->serdata_ops->from_sample (type, kind, sample);
 }
 
-DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_to_topicless (const struct ddsi_serdata *d) {
-  return d->ops->to_topicless (d);
+DDS_EXPORT inline struct ddsi_serdata *ddsi_serdata_to_untyped (const struct ddsi_serdata *d) {
+  return d->ops->to_untyped (d);
 }
 
 DDS_EXPORT inline void ddsi_serdata_to_ser (const struct ddsi_serdata *d, size_t off, size_t sz, void *buf) {
@@ -230,8 +230,8 @@ DDS_EXPORT inline bool ddsi_serdata_to_sample (const struct ddsi_serdata *d, voi
   return d->ops->to_sample (d, sample, bufptr, buflim);
 }
 
-DDS_EXPORT inline bool ddsi_serdata_topicless_to_sample (const struct ddsi_sertype *type, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim) {
-  return d->ops->topicless_to_sample (type, d, sample, bufptr, buflim);
+DDS_EXPORT inline bool ddsi_serdata_untyped_to_sample (const struct ddsi_sertype *type, const struct ddsi_serdata *d, void *sample, void **bufptr, void *buflim) {
+  return d->ops->untyped_to_sample (type, d, sample, bufptr, buflim);
 }
 
 DDS_EXPORT inline bool ddsi_serdata_eqkey (const struct ddsi_serdata *a, const struct ddsi_serdata *b) {
@@ -242,7 +242,7 @@ DDS_EXPORT inline bool ddsi_serdata_print (const struct ddsi_serdata *d, char *b
   return d->ops->print (d->type, d, buf, size);
 }
 
-DDS_EXPORT inline bool ddsi_serdata_print_topicless (const struct ddsi_sertype *type, const struct ddsi_serdata *d, char *buf, size_t size) {
+DDS_EXPORT inline bool ddsi_serdata_print_untyped (const struct ddsi_sertype *type, const struct ddsi_serdata *d, char *buf, size_t size) {
   if (d->ops->print)
     return d->ops->print (type, d, buf, size);
   else

@@ -223,7 +223,7 @@ static struct ddsi_serdata *serdata_pserop_from_sample (const struct ddsi_sertyp
   }
 }
 
-static struct ddsi_serdata *serdata_pserop_to_topicless (const struct ddsi_serdata *serdata_common)
+static struct ddsi_serdata *serdata_pserop_to_untyped (const struct ddsi_serdata *serdata_common)
 {
   const struct ddsi_serdata_pserop *d = (const struct ddsi_serdata_pserop *)serdata_common;
   const struct ddsi_sertype_pserop *tp = (const struct ddsi_sertype_pserop *)d->c.type;
@@ -234,7 +234,7 @@ static struct ddsi_serdata *serdata_pserop_to_topicless (const struct ddsi_serda
   return dcmn_tl;
 }
 
-static bool serdata_pserop_topicless_to_sample (const struct ddsi_sertype *type_common, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
+static bool serdata_pserop_untyped_to_sample (const struct ddsi_sertype *type_common, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
 {
   const struct ddsi_serdata_pserop *d = (const struct ddsi_serdata_pserop *)serdata_common;
   const struct ddsi_sertype_pserop *tp = (const struct ddsi_sertype_pserop *)type_common;
@@ -291,8 +291,8 @@ const struct ddsi_serdata_ops ddsi_serdata_ops_pserop = {
   .to_sample = serdata_pserop_to_sample,
   .to_ser_ref = serdata_pserop_to_ser_ref,
   .to_ser_unref = serdata_pserop_to_ser_unref,
-  .to_topicless = serdata_pserop_to_topicless,
-  .topicless_to_sample = serdata_pserop_topicless_to_sample,
+  .to_untyped = serdata_pserop_to_untyped,
+  .untyped_to_sample = serdata_pserop_untyped_to_sample,
   .print = serdata_pserop_print_pserop,
   .get_keyhash = serdata_pserop_get_keyhash
 };

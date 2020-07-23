@@ -140,9 +140,9 @@ static dds_builtintopic_endpoint_t *make_builtintopic_endpoint (const ddsi_guid_
   ep->topic_name = dds_string_dup (qos->topic_name);
   ep->type_name = dds_string_dup (qos->type_name);
 
-  ep->type_identifier_sz = TYPEID_HASH_LENGTH;
+  ep->type_identifier_sz = sizeof (*type_id);
   ep->type_identifier = ddsrt_malloc (ep->type_identifier_sz);
-  memcpy (ep->type_identifier, &type_id->hash, ep->type_identifier_sz);
+  memcpy (ep->type_identifier, &type_id, ep->type_identifier_sz);
 
   return ep;
 }

@@ -212,7 +212,7 @@ static uint32_t get_type_size (enum dds_stream_typecode type)
 
 static size_t dds_stream_check_optimize1 (const struct ddsi_sertype_default_desc * __restrict desc)
 {
-  const uint32_t *ops = desc->m_ops;
+  const uint32_t *ops = desc->ops.ops;
   uint32_t insn;
   while ((insn = *ops) != DDS_OP_RTS)
   {
@@ -248,7 +248,7 @@ static size_t dds_stream_check_optimize1 (const struct ddsi_sertype_default_desc
     }
   }
 
-  return desc->m_size;
+  return desc->size;
 }
 
 size_t dds_stream_check_optimize (const struct ddsi_sertype_default_desc * __restrict desc)
@@ -1173,9 +1173,9 @@ static bool stream_normalize (char * __restrict data, uint32_t * __restrict off,
 static bool stream_normalize_key (void * __restrict data, uint32_t size, bool bswap, const struct ddsi_sertype_default_desc * __restrict desc)
 {
   uint32_t off = 0;
-  for (uint32_t i = 0; i < desc->m_nkeys; i++)
+  for (uint32_t i = 0; i < desc->keys.nkeys; i++)
   {
-    const uint32_t *op = desc->m_ops + desc->m_keys[i];
+    const uint32_t *op = desc->ops.ops + desc->keys.keys[i];
     assert (insn_key_ok_p (*op));
     switch (DDS_OP_TYPE (*op))
     {
@@ -1203,7 +1203,7 @@ bool dds_stream_normalize (void * __restrict data, uint32_t size, bool bswap, co
   else
   {
     uint32_t off = 0;
-    return stream_normalize (data, &off, size, bswap, topic->type.m_ops);
+    return stream_normalize (data, &off, size, bswap, topic->type.ops.ops);
   }
 }
 
@@ -1414,10 +1414,10 @@ void dds_stream_read_sample (dds_istream_t * __restrict is, void * __restrict da
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
   if (type->opt_size)
-    dds_is_get_bytes (is, data, desc->m_size, 1);
+    dds_is_get_bytes (is, data, desc->size, 1);
   else
   {
-    if (desc->m_flagset & DDS_TOPIC_CONTAINS_UNION)
+    if (desc->flagset & DDS_TOPIC_CONTAINS_UNION)
     {
       /* Switching union cases causes big trouble if some cases have sequences or strings,
          and other cases have other things mapped to those addresses.  So, pretend to be
@@ -1425,28 +1425,28 @@ void dds_stream_read_sample (dds_istream_t * __restrict is, void * __restrict da
          make any preallocated buffers go to waste, but it does allow reusing the message
          from read-to-read, at the somewhat reasonable price of a slower deserialization
          and not being able to use preallocated sequences in topics containing unions. */
-      dds_stream_free_sample (data, desc->m_ops);
-      memset (data, 0, desc->m_size);
+      dds_stream_free_sample (data, desc->ops.ops);
+      memset (data, 0, desc->size);
     }
-    dds_stream_read (is, data, desc->m_ops);
+    dds_stream_read (is, data, desc->ops.ops);
   }
 }
 
 void dds_stream_write_sample (dds_ostream_t * __restrict os, const void * __restrict data, const struct ddsi_sertype_default * __restrict type)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
-  if (type->opt_size && desc->m_align && (os->m_index % desc->m_align) == 0)
-    dds_os_put_bytes (os, data, desc->m_size);
+  if (type->opt_size && desc->align && (os->m_index % desc->align) == 0)
+    dds_os_put_bytes (os, data, desc->size);
   else
-    dds_stream_write (os, data, desc->m_ops);
+    dds_stream_write (os, data, desc->ops.ops);
 }
 
 void dds_stream_read_key (dds_istream_t * __restrict is, char * __restrict sample, const struct ddsi_sertype_default * __restrict type)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
-  for (uint32_t i = 0; i < desc->m_nkeys; i++)
+  for (uint32_t i = 0; i < desc->keys.nkeys; i++)
   {
-    const uint32_t *op = desc->m_ops + desc->m_keys[i];
+    const uint32_t *op = desc->ops.ops + desc->keys.keys[i];
     char *dst = sample + op[1];
     assert (insn_key_ok_p (*op));
     switch (DDS_OP_TYPE (*op))
@@ -1470,9 +1470,9 @@ void dds_stream_read_key (dds_istream_t * __restrict is, char * __restrict sampl
 void dds_stream_write_key (dds_ostream_t * __restrict os, const char * __restrict sample, const struct ddsi_sertype_default * __restrict type)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
-  for (uint32_t i = 0; i < desc->m_nkeys; i++)
+  for (uint32_t i = 0; i < desc->keys.nkeys; i++)
   {
-    const uint32_t *insnp = desc->m_ops + desc->m_keys[i];
+    const uint32_t *insnp = desc->ops.ops + desc->keys.keys[i];
     const void *src = sample + insnp[1];
     assert (insn_key_ok_p (*insnp));
     switch (DDS_OP_TYPE (*insnp))
@@ -1530,9 +1530,9 @@ static void dds_stream_swap_insitu (void * __restrict vbuf, uint32_t size, uint3
 void dds_stream_write_keyBE (dds_ostreamBE_t * __restrict os, const char * __restrict sample, const struct ddsi_sertype_default * __restrict type)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
-  for (uint32_t i = 0; i < desc->m_nkeys; i++)
+  for (uint32_t i = 0; i < desc->keys.nkeys; i++)
   {
-    const uint32_t *insnp = desc->m_ops + desc->m_keys[i];
+    const uint32_t *insnp = desc->ops.ops + desc->keys.keys[i];
     const void *src = sample + insnp[1];
     assert (insn_key_ok_p (*insnp));
     switch (DDS_OP_TYPE (*insnp))
@@ -1691,9 +1691,9 @@ static void dds_stream_extract_keyBE_from_key_prim_op (dds_istream_t * __restric
 static void dds_stream_extract_keyBE_from_key (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const struct ddsi_sertype_default * __restrict type)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
-  for (uint32_t i = 0; i < desc->m_nkeys; i++)
+  for (uint32_t i = 0; i < desc->keys.nkeys; i++)
   {
-    uint32_t const * const op = desc->m_ops + desc->m_keys[i];
+    uint32_t const * const op = desc->ops.ops + desc->keys.keys[i];
     dds_stream_extract_keyBE_from_key_prim_op (is, os, op);
   }
 }
@@ -1894,27 +1894,27 @@ static void dds_stream_extract_keyBE_from_data1 (dds_istream_t * __restrict is, 
 void dds_stream_extract_key_from_data (dds_istream_t * __restrict is, dds_ostream_t * __restrict os, const struct ddsi_sertype_default * __restrict type)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
-  uint32_t keys_remaining = desc->m_nkeys;
-  dds_stream_extract_key_from_data1 (is, os, desc->m_ops, &keys_remaining);
+  uint32_t keys_remaining = desc->keys.nkeys;
+  dds_stream_extract_key_from_data1 (is, os, desc->ops.ops, &keys_remaining);
 }
 
 void dds_stream_extract_keyBE_from_data (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const struct ddsi_sertype_default * __restrict type)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
-  uint32_t keys_remaining = desc->m_nkeys;
-  dds_stream_extract_keyBE_from_data1 (is, os, desc->m_ops, &keys_remaining);
+  uint32_t keys_remaining = desc->keys.nkeys;
+  dds_stream_extract_keyBE_from_data1 (is, os, desc->ops.ops, &keys_remaining);
 }
 
 void dds_stream_extract_keyhash (dds_istream_t * __restrict is, dds_keyhash_t * __restrict kh, const struct ddsi_sertype_default * __restrict type, const bool just_key)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
   kh->m_set = 1;
-  if (desc->m_nkeys == 0)
+  if (desc->keys.nkeys == 0)
   {
     kh->m_iskey = 1;
     kh->m_keysize = 0;
   }
-  else if (desc->m_flagset & DDS_TOPIC_FIXED_KEY)
+  else if (desc->flagset & DDS_TOPIC_FIXED_KEY)
   {
     dds_ostreamBE_t os;
     kh->m_iskey = 1;
@@ -2230,7 +2230,7 @@ static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restric
 
 size_t dds_stream_print_sample (dds_istream_t * __restrict is, const struct ddsi_sertype_default * __restrict type, char * __restrict buf, size_t bufsize)
 {
-  (void) dds_stream_print_sample1 (&buf, &bufsize, is, type->type.m_ops, true);
+  (void) dds_stream_print_sample1 (&buf, &bufsize, is, type->type.ops.ops, true);
   return bufsize;
 }
 
@@ -2238,9 +2238,9 @@ size_t dds_stream_print_key (dds_istream_t * __restrict is, const struct ddsi_se
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
   bool cont = prtf (&buf, &bufsize, ":k:{");
-  for (uint32_t i = 0; cont && i < desc->m_nkeys; i++)
+  for (uint32_t i = 0; cont && i < desc->keys.nkeys; i++)
   {
-    const uint32_t *op = desc->m_ops + desc->m_keys[i];
+    const uint32_t *op = desc->ops.ops + desc->keys.keys[i];
     assert (insn_key_ok_p (*op));
     switch (DDS_OP_TYPE (*op))
     {
