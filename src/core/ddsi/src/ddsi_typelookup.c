@@ -318,12 +318,11 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, const ddsi_guid_prefix_t 
 void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample_common)
 {
   struct generic_proxy_endpoint **gpe_match_upd = NULL;
-  uint32_t n_match_upd = 0;
+  uint32_t n = 0, n_match_upd = 0;
   assert (!(sample_common->statusinfo & (NN_STATUSINFO_DISPOSE | NN_STATUSINFO_UNREGISTER)));
   const struct ddsi_serdata_pserop *sample = (const struct ddsi_serdata_pserop *) sample_common;
   const type_lookup_reply_t *reply = sample->sample;
   struct ddsi_sertype_default *st = NULL;
-  uint32_t n = 0;
 
   GVTRACE ("handle-tl-reply wr "PGUIDFMT " seqnr %"PRIi64" ntypeids %"PRIu32, PGUID (reply->writer_guid), reply->sequence_number, reply->types.n);
   while (n < reply->types.n)
@@ -347,9 +346,9 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample
       ddsrt_mutex_unlock (&gv->sertypes_lock);
 
       tlm->state = TL_META_RESOLVED;
-      tlm->sertype = &st->c; // refcounted by register
+      tlm->sertype = &st->c; // refcounted by sertype_register
 
-      gpe_match_upd = ddsrt_malloc (tlm->n_endpoints * sizeof (*gpe_match_upd));
+      gpe_match_upd = ddsrt_realloc (gpe_match_upd, (n_match_upd + tlm->n_endpoints) * sizeof (*gpe_match_upd));
       for (uint32_t e = 0; e < tlm->n_endpoints; e++)
       {
         struct entity_common *ec = entidx_lookup_guid_untyped (gv->entity_index, &tlm->endpoints[e]);
