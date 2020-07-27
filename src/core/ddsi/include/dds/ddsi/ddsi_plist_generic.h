@@ -47,7 +47,7 @@ enum pserop {
 } ddsrt_attribute_packed;
 
 DDS_EXPORT void plist_fini_generic (void * __restrict dst, const enum pserop *desc, bool aliased);
-DDS_EXPORT size_t plist_ser_generic_size (const void *src, size_t srcoff, const enum pserop * __restrict desc);
+DDS_EXPORT void plist_ser_generic_size_embeddable (size_t *dstoff, const void *src, size_t srcoff, const enum pserop * __restrict desc);
 DDS_EXPORT dds_return_t plist_deser_generic (void * __restrict dst, const void * __restrict src, size_t srcsize, bool bswap, const enum pserop * __restrict desc);
 DDS_EXPORT dds_return_t plist_deser_generic_srcoff (void * __restrict dst, const void * __restrict src, size_t srcsize, size_t *srcoff, bool bswap, const enum pserop * __restrict desc);
 DDS_EXPORT dds_return_t plist_ser_generic_embeddable (char * const data, size_t *dstoff, const void *src, size_t srcoff, const enum pserop * __restrict desc, bool be);

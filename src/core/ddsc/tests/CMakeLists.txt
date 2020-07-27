@@ -49,6 +49,7 @@ set(ddsc_test_sources
     "time.c"
     "topic.c"
     "transientlocal.c"
+    "typelookup.c"
     "types.c"
     "unregister.c"
     "unsupported.c"

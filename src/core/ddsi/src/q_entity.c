@@ -3356,7 +3356,7 @@ static void endpoint_common_init (struct entity_common *e, struct endpoint_commo
   type_identifier_t * type_id = ddsi_typeid_from_sertype (type);
   assert (type_id != NULL);
   memcpy (&c->type_id, type_id, sizeof (c->type_id));
-  ddsi_tl_meta_ref (pp->e.gv, type_id, type, guid, &pp->e.guid.prefix);
+  ddsi_tl_meta_ref (pp->e.gv, type_id, type, NULL, &pp->e.guid.prefix);
   ddsrt_free (type_id);
 }
 
@@ -3948,7 +3948,7 @@ struct local_orphan_writer *new_local_orphan_writer (struct ddsi_domaingv *gv, d
   type_identifier_t * type_id = ddsi_typeid_from_sertype (type);
   assert (type_id != NULL);
   memcpy (&wr->c.type_id, type_id, sizeof (wr->c.type_id));
-  ddsi_tl_meta_ref (gv, type_id, type, &guid, NULL);
+  ddsi_tl_meta_ref (gv, type_id, type, NULL, NULL);
   ddsrt_free (type_id);
 
   new_writer_guid_common_init (wr, topic_name, type, xqos, whc, 0, NULL);

@@ -796,7 +796,7 @@ dds_return_t plist_deser_generic (void * __restrict dst, const void * __restrict
   return plist_deser_generic_srcoff (dst, src, srcsize, &srcoff, bswap, desc);
 }
 
-static void ser_generic_size_embeddable (size_t *dstoff, const void *src, size_t srcoff, const enum pserop * __restrict desc)
+void plist_ser_generic_size_embeddable (size_t *dstoff, const void *src, size_t srcoff, const enum pserop * __restrict desc)
 {
 #define COMPLEX(basecase_, type_, dstoff_update_) do {                  \
     type_ const *x = deser_generic_src (src, &srcoff, alignof (type_)); \
@@ -830,7 +830,7 @@ static void ser_generic_size_embeddable (size_t *dstoff, const void *src, size_t
         const size_t elem_size = ser_generic_srcsize (desc + 1);
         *dstoff = align4 (*dstoff) + 4;
         for (uint32_t i = 0; i < x->length; i++)
-          ser_generic_size_embeddable (dstoff, x->value, i * elem_size, desc + 1);
+          plist_ser_generic_size_embeddable (dstoff, x->value, i * elem_size, desc + 1);
       }); break;
       case Xopt: break;
     }
@@ -842,10 +842,10 @@ static void ser_generic_size_embeddable (size_t *dstoff, const void *src, size_t
 #undef COMPLEX
 }
 
-size_t plist_ser_generic_size (const void *src, size_t srcoff, const enum pserop * __restrict desc)
+static size_t ser_generic_size (const void *src, size_t srcoff, const enum pserop * __restrict desc)
 {
   size_t dstoff = 0;
-  ser_generic_size_embeddable (&dstoff, src, srcoff, desc);
+  plist_ser_generic_size_embeddable (&dstoff, src, srcoff, desc);
   return dstoff;
 }
 
@@ -1016,7 +1016,7 @@ dds_return_t plist_ser_generic_embeddable (char * const data, size_t *dstoff, co
 
 static dds_return_t ser_generic (struct nn_xmsg *xmsg, nn_parameterid_t pid, const void *src, size_t srcoff, const enum pserop * __restrict desc, bool be)
 {
-  char * const data = nn_xmsg_addpar_bo (xmsg, pid, plist_ser_generic_size (src, srcoff, desc), be);
+  char * const data = nn_xmsg_addpar_bo (xmsg, pid, ser_generic_size (src, srcoff, desc), be);
   size_t dstoff = 0;
   return plist_ser_generic_embeddable (data, &dstoff, src, srcoff, desc, be);
 }
@@ -1026,7 +1026,7 @@ dds_return_t plist_ser_generic (void **dst, size_t *dstsize, const void *src, co
   const size_t srcoff = 0;
   size_t dstoff = 0;
   dds_return_t ret;
-  *dstsize = plist_ser_generic_size (src, srcoff, desc);
+  *dstsize = ser_generic_size (src, srcoff, desc);
   if ((*dst = ddsrt_malloc (*dstsize == 0 ? 1 : *dstsize)) == NULL)
     return DDS_RETCODE_OUT_OF_RESOURCES;
   ret = plist_ser_generic_embeddable (*dst, &dstoff, src, srcoff, desc, false);
@@ -1039,7 +1039,7 @@ dds_return_t plist_ser_generic_be (void **dst, size_t *dstsize, const void *src,
   const size_t srcoff = 0;
   size_t dstoff = 0;
   dds_return_t ret;
-  *dstsize = plist_ser_generic_size (src, srcoff, desc);
+  *dstsize = ser_generic_size (src, srcoff, desc);
   if ((*dst = ddsrt_malloc (*dstsize == 0 ? 1 : *dstsize)) == NULL)
     return DDS_RETCODE_OUT_OF_RESOURCES;
   ret = plist_ser_generic_embeddable (*dst, &dstoff, src, srcoff, desc, true);

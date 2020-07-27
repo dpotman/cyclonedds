@@ -1225,6 +1225,8 @@ int rtps_init (struct ddsi_domaingv *gv)
   ddsrt_mutex_init (&gv->sertypes_lock);
   gv->sertypes = ddsrt_hh_new (1, ddsi_sertype_hash_wrap, ddsi_sertype_equal_wrap);
   ddsrt_mutex_init (&gv->tl_admin_lock);
+  ddsrt_mutex_init (&gv->tl_resolved_lock);
+  ddsrt_cond_init (&gv->tl_resolved_cond);
   gv->tl_admin = ddsrt_hh_new (1, ddsi_tl_meta_hash_wrap, ddsi_tl_meta_equal_wrap);
   make_special_types (gv);
 
@@ -1584,6 +1586,8 @@ err_unicast_sockets:
   ddsrt_mutex_destroy (&gv->sertypes_lock);
   ddsrt_hh_free (gv->tl_admin);
   ddsrt_mutex_destroy (&gv->tl_admin_lock);
+  ddsrt_mutex_destroy (&gv->tl_resolved_lock);
+  ddsrt_cond_destroy (&gv->tl_resolved_cond);
 #ifdef DDSI_INCLUDE_SECURITY
   q_omg_security_stop (gv); // should be a no-op as it starts lazily
   q_omg_security_deinit(gv->security_context);

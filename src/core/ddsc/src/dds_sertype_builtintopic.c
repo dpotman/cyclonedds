@@ -74,6 +74,7 @@ static void free_endpoint (void *vsample)
   dds_builtintopic_endpoint_t *sample = vsample;
   dds_free (sample->topic_name);
   dds_free (sample->type_name);
+  dds_free (sample->type_identifier);
   dds_delete_qos (sample->qos);
   sample->topic_name = sample->type_name = NULL;
   sample->qos = NULL;

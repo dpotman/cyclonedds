@@ -21,17 +21,23 @@
 extern "C" {
 #endif
 
+enum ddsi_sertype_builtintopic_entity_kind {
+  DSBT_PARTICIPANT,
+  DSBT_READER,
+  DSBT_WRITER
+};
+
 struct ddsi_serdata_builtintopic {
   struct ddsi_serdata c;
+  enum ddsi_sertype_builtintopic_entity_kind entity_kind;
   ddsi_guid_t key;
   dds_instance_handle_t pphandle;
   dds_qos_t xqos;
 };
 
-enum ddsi_sertype_builtintopic_entity_kind {
-  DSBT_PARTICIPANT,
-  DSBT_READER,
-  DSBT_WRITER
+struct ddsi_serdata_builtintopic_endpoint {
+  struct ddsi_serdata_builtintopic common;
+  type_identifier_t type_id;
 };
 
 struct ddsi_sertype_builtintopic {

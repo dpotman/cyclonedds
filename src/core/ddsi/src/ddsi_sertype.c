@@ -115,7 +115,9 @@ const enum pserop sertype_ser_ops[] = { XS, Xb, XSTOP };
 size_t ddsi_sertype_serialize_size (const struct ddsi_sertype *tp)
 {
   struct sertype_ser d = { tp->type_name, tp->typekind_no_key };
-  return plist_ser_generic_size (&d, 0, sertype_ser_ops);
+  size_t sz = 0;
+  plist_ser_generic_size_embeddable (&sz, &d, 0, sertype_ser_ops);
+  return sz;
 }
 
 bool ddsi_sertype_serialize (const struct ddsi_sertype *tp, size_t *dst_pos, unsigned char *dst_buf)

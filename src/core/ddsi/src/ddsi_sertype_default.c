@@ -141,7 +141,9 @@ static bool sertype_default_serialize (const struct ddsi_sertype *stc, size_t *d
   assert (dst_sz);
   assert (dst_buf);
   const struct ddsi_sertype_default *st = (const struct ddsi_sertype_default *) stc;
-  *dst_buf = ddsrt_malloc (ddsi_sertype_serialize_size (stc) + plist_ser_generic_size (&st->type, 0, ddsi_sertype_default_desc_ops));
+  size_t sz = ddsi_sertype_serialize_size (stc);
+  plist_ser_generic_size_embeddable (&sz, &st->type, 0, ddsi_sertype_default_desc_ops);
+  *dst_buf = ddsrt_malloc (sz);
   *dst_sz = 0;
   if (!ddsi_sertype_serialize (stc, dst_sz, *dst_buf))
     return false;

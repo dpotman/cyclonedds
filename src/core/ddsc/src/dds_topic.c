@@ -364,6 +364,7 @@ dds_entity_t dds_create_topic_impl (dds_entity_t participant, const char * name,
   *sertype = sertype_registered;
   ddsrt_mutex_unlock (&pp->m_entity.m_mutex);
   ddsi_tl_meta_ref (gv, NULL, sertype_registered, NULL, NULL);
+  ddsi_tl_meta_proxy_endpoint_ref (gv, sertype_registered);
   dds_entity_unpin (&pp->m_entity);
   GVTRACE ("dds_create_topic_generic: new topic %"PRId32"\n", hdl);
   return hdl;

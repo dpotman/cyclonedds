@@ -53,10 +53,10 @@ typedef struct type_identifier_type_object_pair_seq {
 } type_identifier_type_object_pair_seq_t;
 
 
-type_identifier_t * ddsi_typeid_from_sertype (const struct ddsi_sertype * type);
-type_identifier_t * ddsi_typeid_dup (const type_identifier_t *type_id);
-bool ddsi_typeid_equal (const type_identifier_t *a, const type_identifier_t *b);
-bool ddsi_typeid_none (const type_identifier_t *typeid);
+DDS_EXPORT type_identifier_t * ddsi_typeid_from_sertype (const struct ddsi_sertype * type);
+DDS_EXPORT type_identifier_t * ddsi_typeid_dup (const type_identifier_t *type_id);
+DDS_EXPORT bool ddsi_typeid_equal (const type_identifier_t *a, const type_identifier_t *b);
+DDS_EXPORT bool ddsi_typeid_none (const type_identifier_t *typeid);
 
 #if defined (__cplusplus)
 }

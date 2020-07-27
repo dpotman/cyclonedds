@@ -63,10 +63,11 @@ static void serdata_builtin_free(struct ddsi_serdata *dcmn)
   ddsrt_free (d);
 }
 
-static struct ddsi_serdata_builtintopic *serdata_builtin_new(const struct ddsi_sertype_builtintopic *tp, enum ddsi_serdata_kind kind)
+static struct ddsi_serdata_builtintopic *serdata_builtin_new(const struct ddsi_sertype_builtintopic *tp, enum ddsi_serdata_kind serdata_kind)
 {
-  struct ddsi_serdata_builtintopic *d = ddsrt_malloc(sizeof (*d));
-  ddsi_serdata_init (&d->c, &tp->c, kind);
+  size_t size = (tp->entity_kind == DSBT_PARTICIPANT) ? sizeof (struct ddsi_serdata_builtintopic) : sizeof (struct ddsi_serdata_builtintopic_endpoint);
+  struct ddsi_serdata_builtintopic *d = ddsrt_malloc(size);
+  ddsi_serdata_init (&d->c, &tp->c, serdata_kind);
   return d;
 }
 
@@ -82,28 +83,31 @@ static void from_entity_proxypp (struct ddsi_serdata_builtintopic *d, const stru
   d->pphandle = proxypp->e.iid;
 }
 
-static void from_endpoint_qos (struct ddsi_serdata_builtintopic *d, const dds_qos_t *xqos)
+static void from_endpoint_qos (struct ddsi_serdata_builtintopic_endpoint *d, const dds_qos_t *xqos)
 {
-  ddsi_xqos_copy (&d->xqos, xqos);
-  assert (d->xqos.present & QP_TOPIC_NAME);
-  assert (d->xqos.present & QP_TYPE_NAME);
+  ddsi_xqos_copy (&d->common.xqos, xqos);
+  assert (d->common.xqos.present & QP_TOPIC_NAME);
+  assert (d->common.xqos.present & QP_TYPE_NAME);
 }
 
-static void from_entity_rd (struct ddsi_serdata_builtintopic *d, const struct reader *rd)
+static void from_entity_rd (struct ddsi_serdata_builtintopic_endpoint *d, const struct reader *rd)
 {
-  d->pphandle = rd->c.pp->e.iid;
+  d->common.pphandle = rd->c.pp->e.iid;
+  d->type_id = rd->c.type_id;
   from_endpoint_qos (d, rd->xqos);
 }
 
-static void from_entity_wr (struct ddsi_serdata_builtintopic *d, const struct writer *wr)
+static void from_entity_wr (struct ddsi_serdata_builtintopic_endpoint *d, const struct writer *wr)
 {
-  d->pphandle = wr->c.pp->e.iid;
+  d->common.pphandle = wr->c.pp->e.iid;
+  d->type_id = wr->c.type_id;
   from_endpoint_qos (d, wr->xqos);
 }
 
-static void from_entity_pe (struct ddsi_serdata_builtintopic *d, const struct proxy_endpoint_common *pec)
+static void from_entity_pe (struct ddsi_serdata_builtintopic_endpoint *d, const struct proxy_endpoint_common *pec)
 {
-  d->pphandle = pec->proxypp->e.iid;
+  d->common.pphandle = pec->proxypp->e.iid;
+  d->type_id = pec->type_id;
   from_endpoint_qos (d, pec->xqos);
 }
 
@@ -115,7 +119,7 @@ static struct ddsi_serdata *ddsi_serdata_builtin_from_keyhash (const struct ddsi
   x.keyhash = *keyhash;
   x.guid = nn_ntoh_guid (x.guid);
   struct entity_common *entity = entidx_lookup_guid_untyped (tp->c.gv->entity_index, &x.guid);
-  struct ddsi_serdata_builtintopic *d = serdata_builtin_new (tp, entity ? SDK_DATA : SDK_KEY);
+  struct ddsi_serdata_builtintopic *d = serdata_builtin_new (tp, entity != NULL ? SDK_DATA : SDK_KEY);
   d->key = x.guid;
   if (entity)
   {
@@ -128,11 +132,11 @@ static struct ddsi_serdata *ddsi_serdata_builtin_from_keyhash (const struct ddsi
         break;
       case EK_READER:
         assert (tp->entity_kind == DSBT_READER);
-        from_entity_rd (d, (const struct reader *) entity);
+        from_entity_rd ((struct ddsi_serdata_builtintopic_endpoint *) d, (const struct reader *) entity);
         break;
       case EK_WRITER:
         assert (tp->entity_kind == DSBT_WRITER);
-        from_entity_wr (d, (const struct writer *) entity);
+        from_entity_wr ((struct ddsi_serdata_builtintopic_endpoint *) d, (const struct writer *) entity);
         break;
       case EK_PROXY_PARTICIPANT:
         assert (tp->entity_kind == DSBT_PARTICIPANT);
@@ -140,11 +144,11 @@ static struct ddsi_serdata *ddsi_serdata_builtin_from_keyhash (const struct ddsi
         break;
       case EK_PROXY_READER:
         assert (tp->entity_kind == DSBT_READER);
-        from_entity_pe (d, &((const struct proxy_reader *) entity)->c);
+        from_entity_pe ((struct ddsi_serdata_builtintopic_endpoint *) d, &((const struct proxy_reader *) entity)->c);
         break;
       case EK_PROXY_WRITER:
         assert (tp->entity_kind == DSBT_WRITER);
-        from_entity_pe (d, &((const struct proxy_writer *) entity)->c);
+        from_entity_pe ((struct ddsi_serdata_builtintopic_endpoint *) d, &((const struct proxy_writer *) entity)->c);
         break;
     }
     ddsrt_mutex_unlock (&entity->qos_lock);
@@ -220,6 +224,12 @@ static dds_qos_t *dds_qos_from_xqos_reuse (dds_qos_t *old, const dds_qos_t *src)
   return old;
 }
 
+static void *dds_mem_dup_reuse (void *old, const void *src, size_t size)
+{
+  void *new = dds_realloc (old, size);
+  return memcpy (new, src, size);
+}
+
 static bool to_sample_pp (const struct ddsi_serdata_builtintopic *d, struct dds_builtintopic_participant *sample)
 {
   convkey (&sample->key, &d->key);
@@ -230,21 +240,23 @@ static bool to_sample_pp (const struct ddsi_serdata_builtintopic *d, struct dds_
   return true;
 }
 
-static bool to_sample_endpoint (const struct ddsi_serdata_builtintopic *d, struct dds_builtintopic_endpoint *sample)
+static bool to_sample_endpoint (const struct ddsi_serdata_builtintopic_endpoint *dep, struct dds_builtintopic_endpoint *sample)
 {
   ddsi_guid_t ppguid;
-  convkey (&sample->key, &d->key);
-  ppguid = d->key;
+  convkey (&sample->key, &dep->common.key);
+  ppguid = dep->common.key;
   ppguid.entityid.u = NN_ENTITYID_PARTICIPANT;
   convkey (&sample->participant_key, &ppguid);
-  sample->participant_instance_handle = d->pphandle;
-  if (d->c.kind == SDK_DATA)
+  sample->participant_instance_handle = dep->common.pphandle;
+  if (dep->common.c.kind == SDK_DATA)
   {
-    assert (d->xqos.present & QP_TOPIC_NAME);
-    assert (d->xqos.present & QP_TYPE_NAME);
-    sample->topic_name = dds_string_dup_reuse (sample->topic_name, d->xqos.topic_name);
-    sample->type_name = dds_string_dup_reuse (sample->type_name, d->xqos.type_name);
-    sample->qos = dds_qos_from_xqos_reuse (sample->qos, &d->xqos);
+    assert (dep->common.xqos.present & QP_TOPIC_NAME);
+    assert (dep->common.xqos.present & QP_TYPE_NAME);
+    sample->topic_name = dds_string_dup_reuse (sample->topic_name, dep->common.xqos.topic_name);
+    sample->type_name = dds_string_dup_reuse (sample->type_name, dep->common.xqos.type_name);
+    sample->qos = dds_qos_from_xqos_reuse (sample->qos, &dep->common.xqos);
+    sample->type_identifier_sz = sizeof (dep->type_id);
+    sample->type_identifier = dds_mem_dup_reuse (sample->type_identifier, &dep->type_id, sample->type_identifier_sz);
   }
   return true;
 }
@@ -252,6 +264,7 @@ static bool to_sample_endpoint (const struct ddsi_serdata_builtintopic *d, struc
 static bool serdata_builtin_untyped_to_sample (const struct ddsi_sertype *type, const struct ddsi_serdata *serdata_common, void *sample, void **bufptr, void *buflim)
 {
   const struct ddsi_serdata_builtintopic *d = (const struct ddsi_serdata_builtintopic *)serdata_common;
+  struct ddsi_serdata_builtintopic_endpoint *dep;
   const struct ddsi_sertype_builtintopic *tp = (const struct ddsi_sertype_builtintopic *)type;
   if (bufptr) abort(); else { (void)buflim; } /* FIXME: haven't implemented that bit yet! */
   /* FIXME: completing builtin topic support along these lines requires subscribers, publishers and topics to also become DDSI entities - which is probably a good thing anyway */
@@ -261,7 +274,8 @@ static bool serdata_builtin_untyped_to_sample (const struct ddsi_sertype *type, 
       return to_sample_pp (d, sample);
     case DSBT_READER:
     case DSBT_WRITER:
-      return to_sample_endpoint (d, sample);
+      dep = (struct ddsi_serdata_builtintopic_endpoint *)d;
+      return to_sample_endpoint (dep, sample);
   }
   assert (0);
   return false;
