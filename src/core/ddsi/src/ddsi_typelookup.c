@@ -280,9 +280,11 @@ bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const type_identifie
   GVTRACE ("tl-req ");
   if (tlm->state != TL_META_NEW)
   {
+    // type lookup is pending or the type is already resolved, so we'll return true
+    // to indicate that the type request is done (or not required)
     GVTRACE ("state not-new (%u) for "PTYPEIDFMT"\n", tlm->state, PTYPEID (*type_id));
     ddsrt_mutex_unlock (&gv->tl_admin_lock);
-    return false;
+    return true;
   }
 
   struct writer *wr = get_typelookup_writer (gv, &tlm->dst_prefix, NN_ENTITYID_TL_SVC_BUILTIN_REQUEST_WRITER);
