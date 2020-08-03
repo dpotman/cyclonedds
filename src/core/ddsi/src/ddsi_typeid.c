@@ -18,7 +18,7 @@
 type_identifier_t * ddsi_typeid_from_sertype (const struct ddsi_sertype *type)
 {
   assert (type != NULL);
-  type_identifier_t *type_id = malloc (sizeof (*type_id));
+  type_identifier_t *type_id = ddsrt_malloc (sizeof (*type_id));
   type->ops->typeid_hash (type, type_id->hash);
   return type_id;
 }
