@@ -418,7 +418,7 @@ dds_return_t dds_domain_resolve_type (dds_entity_t entity, unsigned char *type_i
     ddsrt_mutex_unlock (&gv->tl_resolved_lock);
     if (*sertype == NULL)
     {
-      rc = DDS_RETCODE_NO_DATA;
+      rc = DDS_RETCODE_TIMEOUT;
       goto failed;
     }
   }
