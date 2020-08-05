@@ -3517,6 +3517,12 @@ dds_domain_set_deafmute (
  * @param[in]   timeout             Timeout for waiting for requested type information to be available
  * @param[out]  sertype             The type information, or NULL if the type could not be resolved
  *
+ * @remark The resulting type from the sertype out parameter is
+ * refcounted and needs to be dereferenced at some point. This
+ * can be done by creating a topic using dds_create_topic_generic,
+ * which takes over the ownership of the type or alternatively by
+ * using ddsi_sertype_unref to release the reference.
+ *
  * @returns A dds_return_t indicating success or failure.
  *
  * @retval DDS_RETCODE_OK
