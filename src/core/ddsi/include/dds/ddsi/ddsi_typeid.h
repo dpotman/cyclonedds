@@ -11,6 +11,7 @@
  */
 #ifndef DDSI_TYPEID_H
 #define DDSI_TYPEID_H
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
 
 #include <stdint.h>
 #include "dds/ddsi/ddsi_sertype.h"
@@ -61,4 +62,5 @@ DDS_EXPORT bool ddsi_typeid_none (const type_identifier_t *typeid);
 #if defined (__cplusplus)
 }
 #endif
+#endif /* DDSI_INCLUDE_TYPE_DISCOVERY */
 #endif /* DDSI_TYPEID_H */

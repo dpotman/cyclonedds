@@ -37,7 +37,9 @@ struct ddsi_serdata_builtintopic {
 
 struct ddsi_serdata_builtintopic_endpoint {
   struct ddsi_serdata_builtintopic common;
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
   type_identifier_t type_id;
+#endif
 };
 
 struct ddsi_sertype_builtintopic {

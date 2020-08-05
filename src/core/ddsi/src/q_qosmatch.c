@@ -66,6 +66,8 @@ int partitions_match_p (const dds_qos_t *a, const dds_qos_t *b)
   }
 }
 
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+
 static bool check_assignability (struct tl_meta *rd_tlm, struct tl_meta *wr_tlm)
 {
   assert (rd_tlm->sertype != NULL);
@@ -94,7 +96,21 @@ static bool check_endpoint_typeid (struct ddsi_domaingv *gv, const type_identifi
   return true;
 }
 
-bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const type_identifier_t *rd_typeid, const dds_qos_t *wr_qos, const type_identifier_t *wr_typeid, uint64_t mask, dds_qos_policy_id_t *reason, bool *rd_typeid_req_lookup, bool *wr_typeid_req_lookup)
+#endif /* DDSI_INCLUDE_TYPE_DISCOVERY */
+
+bool qos_match_mask_p (
+    struct ddsi_domaingv *gv,
+    const dds_qos_t *rd_qos,
+    const dds_qos_t *wr_qos,
+    uint64_t mask,
+    dds_qos_policy_id_t *reason
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+    , const type_identifier_t *rd_typeid
+    , const type_identifier_t *wr_typeid
+    , bool *rd_typeid_req_lookup
+    , bool *wr_typeid_req_lookup
+#endif
+)
 {
   DDSRT_UNUSED_ARG (gv);
 #ifndef NDEBUG
@@ -102,10 +118,6 @@ bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const 
   assert ((rd_qos->present & musthave) == musthave);
   assert ((wr_qos->present & musthave) == musthave);
 #endif
-  if (rd_typeid_req_lookup != NULL)
-    *rd_typeid_req_lookup = false;
-  if (wr_typeid_req_lookup != NULL)
-    *wr_typeid_req_lookup = false;
 
   mask &= rd_qos->present & wr_qos->present;
   *reason = DDS_INVALID_QOS_POLICY_ID;
@@ -113,6 +125,12 @@ bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const 
     return false;
   if ((mask & QP_TYPE_NAME) && strcmp (rd_qos->type_name, wr_qos->type_name) != 0)
     return false;
+
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+  if (rd_typeid_req_lookup != NULL)
+    *rd_typeid_req_lookup = false;
+  if (wr_typeid_req_lookup != NULL)
+    *wr_typeid_req_lookup = false;
 
   if ((rd_typeid == NULL || wr_typeid == NULL) && rd_qos->type_consistency.force_type_validation)
   {
@@ -130,6 +148,7 @@ bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const 
     *reason = DDS_TYPE_CONSISTENCY_ENFORCEMENT_QOS_POLICY_ID;
     return false;
   }
+#endif
 
   if ((mask & QP_RELIABILITY) && rd_qos->reliability.kind > wr_qos->reliability.kind) {
     *reason = DDS_RELIABILITY_QOS_POLICY_ID;
@@ -182,8 +201,23 @@ bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const 
   return true;
 }
 
-bool qos_match_p (struct ddsi_domaingv *gv, const dds_qos_t *rd_qos, const type_identifier_t *rd_typeid, const dds_qos_t *wr_qos, const type_identifier_t *wr_typeid, dds_qos_policy_id_t *reason, bool *rd_typeid_req_lookup, bool *wr_typeid_req_lookup)
+bool qos_match_p (
+    struct ddsi_domaingv *gv,
+    const dds_qos_t *rd_qos,
+    const dds_qos_t *wr_qos,
+    dds_qos_policy_id_t *reason
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+    , const type_identifier_t *rd_typeid
+    , const type_identifier_t *wr_typeid
+    , bool *rd_typeid_req_lookup
+    , bool *wr_typeid_req_lookup
+#endif
+)
 {
   dds_qos_policy_id_t dummy;
-  return qos_match_mask_p (gv, rd_qos, rd_typeid, wr_qos, wr_typeid, ~(uint64_t)0, reason ? reason : &dummy, rd_typeid_req_lookup, wr_typeid_req_lookup);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+  return qos_match_mask_p (gv, rd_qos, wr_qos, ~(uint64_t)0, reason ? reason : &dummy, rd_typeid, wr_typeid, rd_typeid_req_lookup, wr_typeid_req_lookup);
+#else
+  return qos_match_mask_p (gv, rd_qos, wr_qos, ~(uint64_t)0, reason ? reason : &dummy);
+#endif
 }

@@ -211,8 +211,10 @@ typedef struct dds_builtintopic_endpoint
   dds_instance_handle_t participant_instance_handle;
   char *topic_name;
   char *type_name;
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
   unsigned char *type_identifier;
   size_t type_identifier_sz;
+#endif
   dds_qos_t *qos;
 }
 dds_builtintopic_endpoint_t;
@@ -3501,6 +3503,9 @@ dds_domain_set_deafmute (
   bool mute,
   dds_duration_t reset_after);
 
+
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+
 /**
  * @brief This function resolves the type information for the provided
  * type identifier.
@@ -3531,6 +3536,8 @@ dds_domain_resolve_type (
   size_t type_identifier_sz,
   dds_duration_t timeout,
   struct ddsi_sertype **sertype);
+
+#endif /* DDSI_INCLUDE_TYPE_DISCOVERY */
 
 #if defined (__cplusplus)
 }

@@ -168,6 +168,7 @@ static bool sertype_default_deserialize (struct ddsi_domaingv *gv, struct ddsi_s
   return true;
 }
 
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
 static bool sertype_default_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)
 {
   struct ddsi_sertype_default *a = (struct ddsi_sertype_default *) type_a;
@@ -185,6 +186,7 @@ static bool sertype_default_assignable_from (const struct ddsi_sertype *type_a, 
   ddsrt_free (typeid_b);
   return assignable;
 }
+#endif
 
 const struct ddsi_sertype_ops ddsi_sertype_ops_default = {
   .equal = sertype_default_equal,
@@ -195,6 +197,8 @@ const struct ddsi_sertype_ops ddsi_sertype_ops_default = {
   .realloc_samples = sertype_default_realloc_samples,
   .free_samples = sertype_default_free_samples,
   .serialize = sertype_default_serialize,
-  .deserialize = sertype_default_deserialize,
-  .assignable_from = sertype_default_assignable_from
+  .deserialize = sertype_default_deserialize
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+  , .assignable_from = sertype_default_assignable_from
+#endif
 };

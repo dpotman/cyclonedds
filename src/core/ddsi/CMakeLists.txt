@@ -43,8 +43,6 @@ PREPEND(srcs_ddsi "${CMAKE_CURRENT_LIST_DIR}/src"
     ddsi_cdrstream.c
     ddsi_time.c
     ddsi_ownip.c
-    ddsi_typeid.c
-    ddsi_typelookup.c
     q_addrset.c
     q_bitset_inlines.c
     q_bswap.c
@@ -74,9 +72,13 @@ PREPEND(srcs_ddsi "${CMAKE_CURRENT_LIST_DIR}/src"
 if(ENABLE_LIFESPAN)
   list(APPEND srcs_ddsi "${CMAKE_CURRENT_LIST_DIR}/src/ddsi_lifespan.c")
 endif()
-
 if(ENABLE_DEADLINE_MISSED)
   list(APPEND srcs_ddsi "${CMAKE_CURRENT_LIST_DIR}/src/ddsi_deadline.c")
+endif()
+if(ENABLE_TYPE_DISCOVERY)
+  list(APPEND srcs_ddsi
+  "${CMAKE_CURRENT_LIST_DIR}/src/ddsi_typeid.c"
+  "${CMAKE_CURRENT_LIST_DIR}/src/ddsi_typelookup.c")
 endif()
 
 # The includes should reside close to the code. As long as that's not the case,
@@ -118,8 +120,6 @@ PREPEND(hdrs_private_ddsi "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi"
     ddsi_ownip.h
     ddsi_cfgunits.h
     ddsi_cfgelems.h
-    ddsi_typeid.h
-    ddsi_typelookup.h
     q_addrset.h
     q_bitset.h
     q_bswap.h
@@ -156,6 +156,11 @@ if(ENABLE_LIFESPAN)
 endif()
 if(ENABLE_DEADLINE_MISSED)
   list(APPEND hdrs_private_ddsi "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_deadline.h")
+endif()
+if(ENABLE_TYPE_DISCOVERY)
+  list(APPEND hdrs_private_ddsi
+    "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_typeid.h"
+    "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_typelookup.h")
 endif()
 
 target_sources(ddsc

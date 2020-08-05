@@ -135,7 +135,11 @@ bool dds__validate_builtin_reader_qos (const dds_domain *dom, dds_entity_t topic
        should be addressed one day. */
     const uint64_t qmask = ~(QP_TOPIC_NAME | QP_TYPE_NAME);
     dds_qos_policy_id_t dummy;
-    return qos_match_mask_p (bwr->wr.e.gv, qos, NULL, bwr->wr.xqos, NULL, qmask, &dummy, NULL, NULL) && !qos_has_resource_limits (qos);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+    return qos_match_mask_p (bwr->wr.e.gv, qos, bwr->wr.xqos, qmask, &dummy, NULL, NULL, NULL, NULL) && !qos_has_resource_limits (qos);
+#else
+    return qos_match_mask_p (bwr->wr.e.gv, qos, bwr->wr.xqos, qmask, &dummy) && !qos_has_resource_limits (qos);
+#endif
   }
 }
 

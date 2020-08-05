@@ -21,4 +21,7 @@
 /* Whether or not support for generating "deadline missed" events is included */
 #cmakedefine DDS_HAS_DEADLINE_MISSED @DDS_HAS_DEADLINE_MISSED@
 
+/* Whether or not support for type discovery is included */
+#cmakedefine DDS_HAS_TYPE_DISCOVERY @DDS_HAS_TYPE_DISCOVERY@
+
 #endif

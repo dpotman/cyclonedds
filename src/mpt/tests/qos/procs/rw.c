@@ -282,7 +282,9 @@ MPT_ProcessEntry (rw_publisher,
           dds_delete_qos (ep->qos);
           dds_free (ep->topic_name);
           dds_free (ep->type_name);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
           dds_free (ep->type_identifier);
+#endif
           dds_free (ep);
           chk[i][j] = true;
           nchk++;
@@ -434,7 +436,9 @@ MPT_ProcessEntry (rw_subscriber,
           dds_delete_qos (ep->qos);
           dds_free (ep->topic_name);
           dds_free (ep->type_name);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
           dds_free (ep->type_identifier);
+#endif
           dds_free (ep);
           chk[i][j] = true;
           nchk++;

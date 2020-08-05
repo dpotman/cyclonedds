@@ -63,7 +63,9 @@ extern "C" {
 #define PP_IDENTITY_STATUS_TOKEN                ((uint64_t)1 << 36)
 #define PP_DATA_TAGS                            ((uint64_t)1 << 37)
 
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
 #define PP_CYCLONE_TYPE_INFORMATION             ((uint64_t)1 << 38)
+#endif
 
 /* Set for unrecognized parameters that are in the reserved space or
    in our own vendor-specific space that have the
@@ -216,7 +218,9 @@ typedef struct ddsi_plist {
   ddsi_keyhash_t keyhash;
   uint32_t statusinfo;
   nn_adlink_participant_version_info_t adlink_participant_version_info;
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
   type_identifier_t type_information;
+#endif
   char *type_description;
   nn_sequence_number_t coherent_set_seqno;
 #ifdef DDSI_INCLUDE_SECURITY

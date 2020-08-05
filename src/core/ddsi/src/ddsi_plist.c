@@ -1647,7 +1647,9 @@ static const struct piddesc piddesc_eclipse[] = {
     { .desc = { XE2, XSTOP } }, 0 },
   PP  (ADLINK_PARTICIPANT_VERSION_INFO,  adlink_participant_version_info, Xux5, XS),
   PP  (ADLINK_TYPE_DESCRIPTION,          type_description, XS),
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
   PP  (CYCLONE_TYPE_INFORMATION,         type_information, XK),
+#endif
   { PID_SENTINEL, 0, 0, NULL, 0, 0, { .desc = { XSTOP } }, 0 }
 };
 
@@ -1718,7 +1720,11 @@ struct piddesc_index {
 #endif
 
 static const struct piddesc *piddesc_omg_index[DEFAULT_OMG_PIDS_ARRAY_SIZE + SECURITY_OMG_PIDS_ARRAY_SIZE];
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
 static const struct piddesc *piddesc_eclipse_index[26];
+#else
+static const struct piddesc *piddesc_eclipse_index[19];
+#endif
 static const struct piddesc *piddesc_adlink_index[19];
 
 #define INDEX_ANY(vendorid_, tab_) [vendorid_] = { \

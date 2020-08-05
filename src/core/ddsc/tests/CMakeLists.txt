@@ -49,7 +49,6 @@ set(ddsc_test_sources
     "time.c"
     "topic.c"
     "transientlocal.c"
-    "typelookup.c"
     "types.c"
     "unregister.c"
     "unsupported.c"
@@ -71,6 +70,11 @@ endif()
 if(ENABLE_DEADLINE_MISSED)
   list(APPEND ddsc_test_sources "deadline.c")
 endif()
+
+if(ENABLE_TYPE_DISCOVERY)
+  list(APPEND ddsc_test_sources "typelookup.c")
+endif()
+
 
 add_cunit_executable(cunit_ddsc ${ddsc_test_sources})
 target_include_directories(

@@ -879,8 +879,11 @@ static int sedp_write_endpoint
 (
    struct writer *wr, int alive, const ddsi_guid_t *epguid,
    const struct entity_common *common, const struct endpoint_common *epcommon,
-   const dds_qos_t *xqos, struct addrset *as, nn_security_info_t *security,
-   type_identifier_t *type_id)
+   const dds_qos_t *xqos, struct addrset *as, nn_security_info_t *security
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+   , type_identifier_t *type_id
+#endif
+)
 {
   struct ddsi_domaingv * const gv = wr->e.gv;
   const dds_qos_t *defqos = is_writer_entityid (epguid->entityid) ? &gv->default_xqos_wr : &gv->default_xqos_rd;
@@ -959,8 +962,10 @@ static int sedp_write_endpoint
       addrset_forall (as, add_locator_to_ps, &arg);
     }
 
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
     memcpy (&ps.type_information, type_id, sizeof (ps.type_information) );
     ps.present |= PP_CYCLONE_TYPE_INFORMATION;
+#endif
   }
 
   if (xqos)
@@ -995,9 +1000,13 @@ int sedp_write_writer (struct writer *wr)
       security = &tmp;
     }
 #endif
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
     type_identifier_t *type_id = ddsi_typeid_from_sertype (wr->type);
     int res = sedp_write_endpoint (sedp_wr, 1, &wr->e.guid, &wr->e, &wr->c, wr->xqos, as, security, type_id);
     ddsrt_free (type_id);
+#else
+    int res = sedp_write_endpoint (sedp_wr, 1, &wr->e.guid, &wr->e, &wr->c, wr->xqos, as, security);
+#endif
     return res;
   }
   return 0;
@@ -1022,9 +1031,13 @@ int sedp_write_reader (struct reader *rd)
       security = &tmp;
     }
 #endif
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
     type_identifier_t *type_id = ddsi_typeid_from_sertype (rd->type);
     int res = sedp_write_endpoint (sedp_wr, 1, &rd->e.guid, &rd->e, &rd->c, rd->xqos, as, security, type_id);
     ddsrt_free (type_id);
+#else
+    int res = sedp_write_endpoint (sedp_wr, 1, &rd->e.guid, &rd->e, &rd->c, rd->xqos, as, security);
+#endif
     return res;
   }
   return 0;
@@ -1036,7 +1049,11 @@ int sedp_dispose_unregister_writer (struct writer *wr)
   {
     unsigned entityid = determine_publication_writer(wr);
     struct writer *sedp_wr = get_sedp_writer (wr->c.pp, entityid);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
     return sedp_write_endpoint (sedp_wr, 0, &wr->e.guid, NULL, NULL, NULL, NULL, NULL, NULL);
+#else
+    return sedp_write_endpoint (sedp_wr, 0, &wr->e.guid, NULL, NULL, NULL, NULL, NULL);
+#endif
   }
   return 0;
 }
@@ -1047,7 +1064,11 @@ int sedp_dispose_unregister_reader (struct reader *rd)
   {
     unsigned entityid = determine_subscription_writer(rd);
     struct writer *sedp_wr = get_sedp_writer (rd->c.pp, entityid);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
     return sedp_write_endpoint (sedp_wr, 0, &rd->e.guid, NULL, NULL, NULL, NULL, NULL, NULL);
+#else
+    return sedp_write_endpoint (sedp_wr, 0, &rd->e.guid, NULL, NULL, NULL, NULL, NULL);
+#endif
   }
   return 0;
 }
@@ -1213,8 +1234,10 @@ static void handle_SEDP_alive (const struct receiver_state *rst, seqno_t seq, dd
               ? "(default)" : xqos->partition.strs[0]),
              ((xqos->present & QP_PARTITION) && xqos->partition.n > 1) ? "+" : "",
              xqos->topic_name, xqos->type_name);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
   if (vendor_is_eclipse (vendorid) && datap->present & PP_CYCLONE_TYPE_INFORMATION)
     GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(datap->type_information));
+#endif
 
   if (! is_writer && (datap->present & PP_EXPECTS_INLINE_QOS) && datap->expects_inline_qos)
   {
@@ -1254,8 +1277,10 @@ static void handle_SEDP_alive (const struct receiver_state *rst, seqno_t seq, dd
   else
   {
     GVLOGDISC (" NEW");
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
     if (vendor_is_eclipse (vendorid) && datap->present & PP_CYCLONE_TYPE_INFORMATION)
       ddsi_tl_meta_ref (gv, &datap->type_information, NULL, &datap->endpoint_guid, &rst->dst_guid_prefix);
+#endif
   }
 
   {
@@ -1382,6 +1407,7 @@ static void handle_SEDP (const struct receiver_state *rst, seqno_t seq, struct d
   }
 }
 
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
 static void handle_typelookup (const struct receiver_state *rst, ddsi_entityid_t wr_entity_id, struct ddsi_serdata *serdata)
 {
   if (!(serdata->statusinfo & (NN_STATUSINFO_DISPOSE | NN_STATUSINFO_UNREGISTER)))
@@ -1395,6 +1421,7 @@ static void handle_typelookup (const struct receiver_state *rst, ddsi_entityid_t
       assert (false);
   }
 }
+#endif
 
 /******************************************************************************
  *****************************************************************************/
@@ -1499,12 +1526,14 @@ int builtins_dqueue_handler (const struct nn_rsample_info *sampleinfo, const str
     case NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_WRITER:
       type = gv->pmd_type;
       break;
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
     case NN_ENTITYID_TL_SVC_BUILTIN_REQUEST_WRITER:
       type = gv->tl_svc_request_type;
       break;
     case NN_ENTITYID_TL_SVC_BUILTIN_REPLY_WRITER:
       type = gv->tl_svc_reply_type;
       break;
+#endif
 #ifdef DDSI_INCLUDE_SECURITY
     case NN_ENTITYID_SPDP_RELIABLE_BUILTIN_PARTICIPANT_SECURE_WRITER:
       type = gv->spdp_secure_type;
@@ -1600,10 +1629,12 @@ int builtins_dqueue_handler (const struct nn_rsample_info *sampleinfo, const str
     case NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_MESSAGE_SECURE_WRITER:
       handle_pmd_message (sampleinfo->rst, d);
       break;
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
     case NN_ENTITYID_TL_SVC_BUILTIN_REQUEST_WRITER:
     case NN_ENTITYID_TL_SVC_BUILTIN_REPLY_WRITER:
       handle_typelookup (sampleinfo->rst, srcguid.entityid, d);
       break;
+#endif
 #ifdef DDSI_INCLUDE_SECURITY
     case NN_ENTITYID_P2P_BUILTIN_PARTICIPANT_STATELESS_MESSAGE_WRITER:
       handle_auth_handshake_message(sampleinfo->rst, srcguid.entityid, d);

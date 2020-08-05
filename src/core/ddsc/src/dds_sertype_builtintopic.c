@@ -74,7 +74,9 @@ static void free_endpoint (void *vsample)
   dds_builtintopic_endpoint_t *sample = vsample;
   dds_free (sample->topic_name);
   dds_free (sample->type_name);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
   dds_free (sample->type_identifier);
+#endif
   dds_delete_qos (sample->qos);
   sample->topic_name = sample->type_name = NULL;
   sample->qos = NULL;
@@ -170,12 +172,14 @@ static bool sertype_builtin_deserialize (struct ddsi_domaingv *gv, struct ddsi_s
   return false;
 }
 
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
 static bool sertype_builtin_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)
 {
   (void) type_a;
   (void) type_b;
   return true;
 }
+#endif
 
 const struct ddsi_sertype_ops ddsi_sertype_ops_builtintopic = {
   .equal = sertype_builtin_equal,
@@ -186,6 +190,8 @@ const struct ddsi_sertype_ops ddsi_sertype_ops_builtintopic = {
   .realloc_samples = sertype_builtin_realloc_samples,
   .free_samples = sertype_builtin_free_samples,
   .serialize = sertype_builtin_serialize,
-  .deserialize = sertype_builtin_deserialize,
-  .assignable_from = sertype_builtin_assignable_from
+  .deserialize = sertype_builtin_deserialize
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+  , .assignable_from = sertype_builtin_assignable_from
+#endif
 };

@@ -32,8 +32,32 @@ int partitions_match_p (const struct dds_qos *a, const struct dds_qos *b);
    rd/wr_type_unknown is set to true in case the matching cannot be completed
    because of missing type information. A type-lookup request is required to get the
    details of the type to do the qos matching (e.g. check assignability) */
-bool qos_match_mask_p (struct ddsi_domaingv *gv, const dds_qos_t *rd, const type_identifier_t *rd_typeid, const dds_qos_t *wr, const type_identifier_t *wr_typeid, uint64_t mask, dds_qos_policy_id_t *reason, bool *rd_typeid_req_lookup, bool *wr_typeid_req_lookup) ddsrt_nonnull ((2, 4, 7));
-bool qos_match_p (struct ddsi_domaingv *gv, const dds_qos_t *rd, const type_identifier_t *rd_typeid, const dds_qos_t *wr, const type_identifier_t *wr_typeid, dds_qos_policy_id_t *reason, bool *rd_typeid_req_lookup, bool *wr_typeid_req_lookup) ddsrt_nonnull ((2, 4));
+bool qos_match_mask_p (
+    struct ddsi_domaingv *gv,
+    const dds_qos_t *rd_qos,
+    const dds_qos_t *wr_qos,
+    uint64_t mask,
+    dds_qos_policy_id_t *reason
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+    , const type_identifier_t *rd_typeid
+    , const type_identifier_t *wr_typeid
+    , bool *rd_typeid_req_lookup
+    , bool *wr_typeid_req_lookup
+#endif
+);
+
+bool qos_match_p (
+    struct ddsi_domaingv *gv,
+    const dds_qos_t *rd_qos,
+    const dds_qos_t *wr_qos,
+    dds_qos_policy_id_t *reason
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+    , const type_identifier_t *rd_typeid
+    , const type_identifier_t *wr_typeid
+    , bool *rd_typeid_req_lookup
+    , bool *wr_typeid_req_lookup
+#endif
+);
 
 #if defined (__cplusplus)
 }

@@ -198,4 +198,6 @@ extern inline void ddsi_sertype_zero_sample (const struct ddsi_sertype *tp, void
 extern inline void ddsi_sertype_free_sample (const struct ddsi_sertype *tp, void *sample, dds_free_op_t op);
 extern inline void *ddsi_sertype_alloc_sample (const struct ddsi_sertype *tp);
 extern inline void ddsi_sertype_typeid_hash (const struct ddsi_sertype *tp, unsigned char *buf);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
 extern inline bool ddsi_sertype_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b);
+#endif

@@ -11,6 +11,7 @@
  */
 #ifndef DDSI_TYPELOOKUP_H
 #define DDSI_TYPELOOKUP_H
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
 
 #include <stdint.h>
 #include "dds/ddsrt/time.h"
@@ -88,4 +89,5 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample
 #if defined (__cplusplus)
 }
 #endif
+#endif /* DDSI_INCLUDE_TYPE_DISCOVERY */
 #endif /* DDSI_TYPELOOKUP_H */

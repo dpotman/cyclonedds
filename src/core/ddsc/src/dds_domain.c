@@ -366,6 +366,8 @@ void dds_write_set_batch (bool enable)
   dds_entity_unpin_and_drop_ref (&dds_global.m_entity);
 }
 
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+
 dds_return_t dds_domain_resolve_type (dds_entity_t entity, unsigned char *type_identifier, size_t type_identifier_sz, dds_duration_t timeout, struct ddsi_sertype **sertype)
 {
   struct dds_entity *e;
@@ -436,3 +438,4 @@ failed:
   assert (rc != DDS_RETCODE_OK);
   return rc;
 }
+#endif /* DDSI_INCLUDE_TYPE_DISCOVERY */

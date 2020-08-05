@@ -93,21 +93,27 @@ static void from_endpoint_qos (struct ddsi_serdata_builtintopic_endpoint *d, con
 static void from_entity_rd (struct ddsi_serdata_builtintopic_endpoint *d, const struct reader *rd)
 {
   d->common.pphandle = rd->c.pp->e.iid;
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
   d->type_id = rd->c.type_id;
+#endif
   from_endpoint_qos (d, rd->xqos);
 }
 
 static void from_entity_wr (struct ddsi_serdata_builtintopic_endpoint *d, const struct writer *wr)
 {
   d->common.pphandle = wr->c.pp->e.iid;
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
   d->type_id = wr->c.type_id;
+#endif
   from_endpoint_qos (d, wr->xqos);
 }
 
 static void from_entity_pe (struct ddsi_serdata_builtintopic_endpoint *d, const struct proxy_endpoint_common *pec)
 {
   d->common.pphandle = pec->proxypp->e.iid;
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
   d->type_id = pec->type_id;
+#endif
   from_endpoint_qos (d, pec->xqos);
 }
 
@@ -224,11 +230,13 @@ static dds_qos_t *dds_qos_from_xqos_reuse (dds_qos_t *old, const dds_qos_t *src)
   return old;
 }
 
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
 static void *dds_mem_dup_reuse (void *old, const void *src, size_t size)
 {
   void *new = dds_realloc (old, size);
   return memcpy (new, src, size);
 }
+#endif
 
 static bool to_sample_pp (const struct ddsi_serdata_builtintopic *d, struct dds_builtintopic_participant *sample)
 {
@@ -255,8 +263,10 @@ static bool to_sample_endpoint (const struct ddsi_serdata_builtintopic_endpoint 
     sample->topic_name = dds_string_dup_reuse (sample->topic_name, dep->common.xqos.topic_name);
     sample->type_name = dds_string_dup_reuse (sample->type_name, dep->common.xqos.type_name);
     sample->qos = dds_qos_from_xqos_reuse (sample->qos, &dep->common.xqos);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
     sample->type_identifier_sz = sizeof (dep->type_id);
     sample->type_identifier = dds_mem_dup_reuse (sample->type_identifier, &dep->type_id, sample->type_identifier_sz);
+#endif
   }
   return true;
 }
