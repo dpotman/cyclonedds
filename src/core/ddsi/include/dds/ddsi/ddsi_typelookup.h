@@ -64,7 +64,6 @@ struct tl_meta {
   type_identifier_t type_id;            /* type identifier for this record */
   const struct ddsi_sertype *sertype;   /* sertype associated with the type identifier, NULL if type is unresolved */
   enum tl_meta_state state;             /* state of this record */
-  ddsi_guid_prefix_t dst_prefix;        /* destination prefix of the message the type_id was received in, used to find an appropriate typelookup_request_writer */
   seqno_t request_seqno;                /* sequence number of the last type lookup request message */
   struct tl_meta_endpoints proxy_endpoints;    /* administration for proxy endpoints that are using this type */
   uint32_t refc;                        /* refcount for this record */
@@ -75,16 +74,92 @@ extern size_t typelookup_service_request_nops;
 extern const enum pserop typelookup_service_reply_ops[];
 extern size_t typelookup_service_reply_nops;
 
-int ddsi_tl_meta_equal (const struct tl_meta *a, const struct tl_meta *b);
-uint32_t ddsi_tl_meta_hash (const struct tl_meta *tl_meta);
-void ddsi_tl_meta_ref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const struct ddsi_sertype *type, const ddsi_guid_t *proxy_ep_guid, const ddsi_guid_prefix_t *dst);
+/**
+ * Reference the type lookup meta object identified by the provided type identifier
+ * and register the proxy endpoint with this entry.
+ */
+void ddsi_tl_meta_proxy_ref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const ddsi_guid_t *proxy_ep_guid);
+
+/**
+ * Reference the type lookup meta object identifier by the provided type identifier
+ * or the provided type object. In case a type object is provided and the type was not
+ * yet registered with the type lookup meta object, this field will be set in the meta
+ * object.
+ */
+void ddsi_tl_meta_local_ref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const struct ddsi_sertype *type);
+
+/**
+ * Dereference the type lookup meta object identified by the provided type identifier.
+ * The proxy endpoint will be deregistered for this entry.
+ */
+void ddsi_tl_meta_proxy_unref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const ddsi_guid_t *proxy_ep_guid);
+
+/**
+ * Dereference the type lookup meta object identifier by the provided type identifier
+ * or the provided type object.
+ */
+void ddsi_tl_meta_local_unref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const struct ddsi_sertype *type);
+
+/**
+ * Returns the type lookup meta object for the provided type identifier.
+ * The caller of this functions needs to have locked gv->tl_admin_lock
+ *
+ * @remark The returned object from this function is not refcounted,
+ *   its lifetime is at lease the lifetime of the (proxy) endpoints
+ *   that are referring to it.
+ */
 struct tl_meta * ddsi_tl_meta_lookup_locked (struct ddsi_domaingv *gv, const type_identifier_t *type_id);
+
+/**
+ * Returns the type lookup meta object for the provided type identifier
+ *
+ * @remark The returned object from this function is not refcounted,
+ *   its lifetime is at lease the lifetime of the (proxy) endpoints
+ *   that are referring to it.
+ */
 struct tl_meta * ddsi_tl_meta_lookup (struct ddsi_domaingv *gv, const type_identifier_t *type_id);
-void ddsi_tl_meta_unref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const struct ddsi_sertype *type, const ddsi_guid_t *proxy_ep_guid);
-void ddsi_tl_meta_proxy_endpoint_ref (struct ddsi_domaingv *gv, const struct ddsi_sertype *type);
+
+/**
+ * For all proxy endpoints registered with the type lookup meta object that is
+ * associated with the provided type, this function references the sertype
+ * for these endpoints.
+ */
+void ddsi_tl_meta_register_with_proxy_endpoints (struct ddsi_domaingv *gv, const struct ddsi_sertype *type);
+
+/**
+ * Send a type lookup request message in order to request type information for the
+ * provided type identifier.
+ */
 bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const type_identifier_t *type_id);
-void ddsi_tl_handle_request (struct ddsi_domaingv *gv, const ddsi_guid_prefix_t *guid_prefix, struct ddsi_serdata *sample_common);
+
+/**
+ * Handle an incoming type lookup request message. For all types requested
+ * that are known in this node, the serialized sertype is send in a type
+ * lookup reply message. In case none of the requested types is known,
+ * an empty reply message will be sent.
+ */
+void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *sample_common);
+
+/**
+ * Handle an incoming type lookup reply message. The sertypes from this
+ * reply are registered in the local type administation and referenced
+ * from the corresponding proxy endpoints.
+ */
 void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample_common);
+
+/**
+ * Compares the provided type lookup meta objects.
+ *
+ * @returns true iff the meta objects are equal, i.e. they represent the same type
+ */
+bool ddsi_tl_meta_equal (const struct tl_meta *a, const struct tl_meta *b);
+
+/**
+ * Hashing function for type lookup meta objects.
+ *
+ * @returns a 32 bits hash value
+ */
+uint32_t ddsi_tl_meta_hash (const struct tl_meta *tl_meta);
 
 #if defined (__cplusplus)
 }
