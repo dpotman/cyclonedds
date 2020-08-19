@@ -265,3 +265,20 @@ dds_builtintopic_endpoint_t *dds_get_matched_publication_data (dds_entity_t read
     return ret;
   }
 }
+
+void dds_builtintopic_free_endpoint (dds_builtintopic_endpoint_t * builtintopic_endpoint)
+{
+  dds_delete_qos (builtintopic_endpoint->qos);
+  ddsrt_free (builtintopic_endpoint->topic_name);
+  ddsrt_free (builtintopic_endpoint->type_name);
+#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
+  ddsrt_free (builtintopic_endpoint->type_identifier);
+#endif
+  ddsrt_free (builtintopic_endpoint);
+}
+
+void dds_builtintopic_free_participant (dds_builtintopic_participant_t * builtintopic_participant)
+{
+  dds_delete_qos (builtintopic_participant->qos);
+  ddsrt_free (builtintopic_participant);
+}

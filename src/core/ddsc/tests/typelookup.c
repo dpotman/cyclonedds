@@ -107,8 +107,6 @@ static void print_ep (const dds_guid_t *key)
 typedef struct endpoint_info {
   char *topic_name;
   char *type_name;
-  unsigned char *type_identifier;
-  size_t type_identifier_sz;
 } endpoint_info_t;
 
 static endpoint_info_t * find_typeid_match (dds_entity_t participant, dds_entity_t topic, type_identifier_t *type_id, const char * match_topic)
@@ -136,11 +134,10 @@ static endpoint_info_t * find_typeid_match (dds_entity_t participant, dds_entity
         if (ddsi_typeid_equal (&t, type_id) && !strcmp (data->topic_name, match_topic))
         {
           printf(" match");
+          // copy data from sample to our own struct
           result = ddsrt_malloc (sizeof (*result));
           result->topic_name = ddsrt_strdup (data->topic_name);
           result->type_name = ddsrt_strdup (data->type_name);
-          result->type_identifier_sz = data->type_identifier_sz;
-          result->type_identifier = ddsrt_memdup (data->type_identifier, data->type_identifier_sz);
         }
         printf("\n");
       }
@@ -159,8 +156,6 @@ static endpoint_info_t * find_typeid_match (dds_entity_t participant, dds_entity
       dds_sleepfor (DDS_MSECS (20));
   }
   while (result == NULL && dds_time () - t_start <= timeout);
-  CU_ASSERT_FATAL (result != NULL);
-
   return result;
 }
 
@@ -168,7 +163,6 @@ static void endpoint_info_free (endpoint_info_t *ep_info)
 {
   ddsrt_free (ep_info->topic_name);
   ddsrt_free (ep_info->type_name);
-  ddsrt_free (ep_info->type_identifier);
   ddsrt_free (ep_info);
 }
 
@@ -211,7 +205,8 @@ CU_Test(ddsc_typelookup, basic, .init = typelookup_init, .fini = typelookup_fini
   /* check that reader and writer (with correct type id) are discovered in domain 2 */
   endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, wr_type_id, topic_name_wr);
   endpoint_info_t *reader_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSSUBSCRIPTION, rd_type_id, topic_name_rd);
-
+  CU_ASSERT_FATAL (writer_ep != NULL);
+  CU_ASSERT_FATAL (reader_ep != NULL);
   endpoint_info_free (writer_ep);
   endpoint_info_free (reader_ep);
   dds_free (wr_type_id);
@@ -246,6 +241,7 @@ CU_Test(ddsc_typelookup, api_resolve, .init = typelookup_init, .fini = typelooku
 
   /* wait for DCPSPublication to be received */
   endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, type_id, name);
+  CU_ASSERT_FATAL (writer_ep != NULL);
 
   /* check if type can be resolved */
   ret = dds_domain_resolve_type (g_participant2, type_id->hash, sizeof (type_id->hash), DDS_SECS (15), &sertype);
@@ -294,6 +290,7 @@ CU_Test(ddsc_typelookup, api_resolve_invalid, .init = typelookup_init, .fini = t
 
   /* wait for DCPSPublication to be received */
   endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, type_id, name);
+  CU_ASSERT_FATAL (writer_ep != NULL);
 
   /* confirm that invalid type id cannot be resolved */
   type_id->hash[0]++;

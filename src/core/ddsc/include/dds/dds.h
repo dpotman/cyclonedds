@@ -3355,7 +3355,7 @@ dds_get_matched_subscriptions (
  * readers matched with the specified writer, returning a freshly
  * allocated sample of the DCPSSubscription built-in topic if found,
  * and NULL if not.  The caller is responsible for freeing the
- * memory allocated.
+ * memory allocated, e.g. using dds_builtintopic_free_endpoint.
  *
  * This operation is similar to performing a read of the given
  * instance handle on a reader of the DCPSSubscription built-in
@@ -3422,7 +3422,7 @@ dds_get_matched_publications (
  * writers matched with the specified reader, returning a freshly
  * allocated sample of the DCPSPublication built-in topic if found,
  * and NULL if not.  The caller is responsible for freeing the
- * memory allocated.
+ * memory allocated, e.g. using dds_builtintopic_free_endpoint.
  *
  * This operation is similar to performing a read of the given
  * instance handle on a reader of the DCPSPublication built-in
@@ -3445,6 +3445,33 @@ DDS_EXPORT dds_builtintopic_endpoint_t *
 dds_get_matched_publication_data (
   dds_entity_t reader,
   dds_instance_handle_t ih);
+
+/**
+ * @brief Free the endpoint information that was retrieved by
+ * dds_get_matched_subscription_data or dds_get_matched_publication_data
+ *
+ * This operation deallocates the memory of the fields in a
+ * dds_builtintopic_endpoint_t struct and deallocates the
+ * struct itself.
+ *
+ * @param[in] builtintopic_endpoint  The builtintopic endpoint struct
+ */
+DDS_EXPORT void
+dds_builtintopic_free_endpoint (
+  dds_builtintopic_endpoint_t * builtintopic_endpoint);
+
+/**
+ * @brief Free the provided participant information
+ *
+ * This operation deallocates the memory of the fields in a
+ * dds_builtintopic_participant_t struct and deallocates the
+ * struct itself.
+ *
+ * @param[in] builtintopic_participant  The builtintopic participant struct
+ */
+DDS_EXPORT void
+dds_builtintopic_free_participant (
+  dds_builtintopic_participant_t * builtintopic_participant);
 
 /**
  * @brief This operation manually asserts the liveliness of a writer
