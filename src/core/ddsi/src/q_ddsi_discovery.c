@@ -1002,13 +1002,10 @@ int sedp_write_writer (struct writer *wr)
     }
 #endif
 #ifdef DDSI_INCLUDE_TYPE_DISCOVERY
-    type_identifier_t *type_id = ddsi_typeid_from_sertype (wr->type);
-    int res = sedp_write_endpoint (sedp_wr, 1, &wr->e.guid, &wr->e, &wr->c, wr->xqos, as, security, type_id);
-    ddsrt_free (type_id);
+    return sedp_write_endpoint (sedp_wr, 1, &wr->e.guid, &wr->e, &wr->c, wr->xqos, as, security, &wr->c.type_id);
 #else
-    int res = sedp_write_endpoint (sedp_wr, 1, &wr->e.guid, &wr->e, &wr->c, wr->xqos, as, security);
+    return sedp_write_endpoint (sedp_wr, 1, &wr->e.guid, &wr->e, &wr->c, wr->xqos, as, security);
 #endif
-    return res;
   }
   return 0;
 }
@@ -1033,13 +1030,10 @@ int sedp_write_reader (struct reader *rd)
     }
 #endif
 #ifdef DDSI_INCLUDE_TYPE_DISCOVERY
-    type_identifier_t *type_id = ddsi_typeid_from_sertype (rd->type);
-    int res = sedp_write_endpoint (sedp_wr, 1, &rd->e.guid, &rd->e, &rd->c, rd->xqos, as, security, type_id);
-    ddsrt_free (type_id);
+    return sedp_write_endpoint (sedp_wr, 1, &rd->e.guid, &rd->e, &rd->c, rd->xqos, as, security, &rd->c.type_id);
 #else
-    int res = sedp_write_endpoint (sedp_wr, 1, &rd->e.guid, &rd->e, &rd->c, rd->xqos, as, security);
+    return sedp_write_endpoint (sedp_wr, 1, &rd->e.guid, &rd->e, &rd->c, rd->xqos, as, security);
 #endif
-    return res;
   }
   return 0;
 }
@@ -1236,8 +1230,13 @@ static void handle_SEDP_alive (const struct receiver_state *rst, seqno_t seq, dd
              ((xqos->present & QP_PARTITION) && xqos->partition.n > 1) ? "+" : "",
              xqos->topic_name, xqos->type_name);
 #ifdef DDSI_INCLUDE_TYPE_DISCOVERY
-  if (vendor_is_eclipse (vendorid) && xqos->present & QP_CYCLONE_TYPE_INFORMATION)
-    GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(datap->type_information));
+  if (vendor_is_eclipse (vendorid) && (xqos->present & QP_CYCLONE_TYPE_INFORMATION))
+  {
+    type_identifier_t type_id;
+    assert (xqos->type_information.length == sizeof (type_id.hash));
+    memcpy (type_id.hash, xqos->type_information.value, sizeof (type_id));
+    GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(type_id));
+  }
 #endif
 
   if (! is_writer && (datap->present & PP_EXPECTS_INLINE_QOS) && datap->expects_inline_qos)
@@ -1278,15 +1277,6 @@ static void handle_SEDP_alive (const struct receiver_state *rst, seqno_t seq, dd
   else
   {
     GVLOGDISC (" NEW");
-#ifdef DDSI_INCLUDE_TYPE_DISCOVERY
-    if (vendor_is_eclipse (vendorid) && xqos->present & QP_CYCLONE_TYPE_INFORMATION)
-    {
-      type_identifier_t type_id;
-      assert (xqos->type_information.length == sizeof (type_id.hash));
-      memcpy (type_id.hash, xqos->type_information.value, sizeof (type_id));
-      ddsi_tl_meta_proxy_ref (gv, &type_id, &datap->endpoint_guid);
-    }
-#endif
   }
 
   {

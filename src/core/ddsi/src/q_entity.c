@@ -5523,6 +5523,7 @@ static int proxy_endpoint_common_init (struct entity_common *e, struct proxy_end
   {
     assert (plist->qos.type_information.length == sizeof (c->type_id));
     memcpy (&c->type_id, plist->qos.type_information.value, sizeof (c->type_id));
+    ddsi_tl_meta_proxy_ref (proxypp->e.gv, &c->type_id, guid);
   }
   else
     memset (&c->type_id, 0, sizeof (c->type_id));
