@@ -130,7 +130,7 @@ uint32_t ddsi_tl_meta_hash (const struct tl_meta *tl_meta)
 {
   // As the type id is the key in the hash table and the type id currently only
   // consists of a hash value, we'll use the first 32 bits of that hash for now
-  return (uint32_t) *tl_meta->type_id.hash;
+  return *(uint32_t *) tl_meta->type_id.hash;
 }
 
 static void tlm_fini (struct tl_meta *tlm)

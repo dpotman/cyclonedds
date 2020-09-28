@@ -75,7 +75,7 @@ static uint32_t sertype_default_hash (const struct ddsi_sertype *tpcmn)
 {
   unsigned char buf[16];
   sertype_default_typeid_hash (tpcmn, buf);
-  return (uint32_t) *buf;
+  return *(uint32_t *) buf;
 }
 
 static void sertype_default_free (struct ddsi_sertype *tpcmn)

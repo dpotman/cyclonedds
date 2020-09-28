@@ -65,7 +65,7 @@ static uint32_t sertype_pserop_hash (const struct ddsi_sertype *tpcmn)
 {
   unsigned char buf[16];
   sertype_pserop_typeid_hash (tpcmn, buf);
-  return (uint32_t) *buf;
+  return *(uint32_t *) buf;
 }
 
 static void sertype_pserop_free (struct ddsi_sertype *tpcmn)
