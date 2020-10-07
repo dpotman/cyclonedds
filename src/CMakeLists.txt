@@ -89,10 +89,6 @@ endif()
 
 configure_file(features.h.in "${CMAKE_CURRENT_BINARY_DIR}/core/include/dds/features.h")
 
-if(ENABLE_TOPIC_DISCOVERY)
-  add_definitions(-DDDSI_INCLUDE_TOPIC_DISCOVERY)
-endif()
-
 add_subdirectory(ddsrt)
 
 # some of the tests in the core rely on preprocessing IDL, so idlc has to

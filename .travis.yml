@@ -261,11 +261,8 @@ script:
           -DENABLE_LIFESPAN=${LIFESPAN}
           -DENABLE_DEADLINE_MISSED=${DEADLINE}
           -DENABLE_TYPE_DISCOVERY=${TYPE_DISCOVERY}
-<<<<<<< HEAD
-          -DENABLE_COVERAGE=${CODECOV}
-=======
           -DENABLE_TOPIC_DISCOVERY=${TOPIC_DISCOVERY}
->>>>>>> 02b8ecee... Add build option for topic discovery
+          -DENABLE_COVERAGE=${CODECOV}
           -DBUILD_TESTING=on
           -DWERROR=on
           -G "${GENERATOR}" ..
