@@ -153,6 +153,8 @@ static bool bwhc_sample_iter_borrow_next (struct whc_sample_iter *opaque_it, str
       if (whc->entity_kind == DSBT_TOPIC)
       {
         struct proxy_topic *proxytp = NULL;
+
+        /* If not first proxypp: get lock and get next topic from this proxypp */
         if (it->cur_proxypp != NULL)
         {
           ddsrt_mutex_lock (&it->cur_proxypp->e.lock);
@@ -160,22 +162,23 @@ static bool bwhc_sample_iter_borrow_next (struct whc_sample_iter *opaque_it, str
         }
         while (proxytp == NULL)
         {
+          /* no next topic available for this proxypp: if not first proxypp, return lock */
           if (it->cur_proxypp != NULL)
             ddsrt_mutex_unlock (&it->cur_proxypp->e.lock);
+
+          /* enum next proxypp (if available) and get lock */
           if ((it->cur_proxypp = (struct proxy_participant *) entidx_enum_next (&it->it)) == NULL)
             return false;
           ddsrt_mutex_lock (&it->cur_proxypp->e.lock);
+
+          /* get first topic for this proxypp */
           proxytp = proxy_topic_list_iter_first (&it->cur_proxypp->topics, &it->proxytp_it);
         }
-        if (proxytp != NULL)
-        {
-          sample->serdata = dds__builtin_make_sample_topic (proxytp->definition, proxytp->tupdate, true);
-          it->have_sample = true;
-          ddsrt_mutex_unlock (&it->cur_proxypp->e.lock);
-          return true;
-        }
+        /* next topic found, make sample and release proxypp lock */
+        sample->serdata = dds__builtin_make_sample_topic (proxytp->definition, proxytp->tupdate, true);
+        it->have_sample = true;
         ddsrt_mutex_unlock (&it->cur_proxypp->e.lock);
-        return false;
+        return true;
       }
       else
 #endif
