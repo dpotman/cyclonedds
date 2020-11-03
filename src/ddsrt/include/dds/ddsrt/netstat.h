@@ -17,7 +17,7 @@
 #include "dds/export.h"
 #include "dds/ddsrt/retcode.h"
 
-#if defined (__linux) || defined (__APPLE__) || defined (_WIN32)
+#if (defined (__linux) || defined (__APPLE__) || defined (_WIN32)) && !DDSRT_WITH_FREERTOS
 #define DDSRT_HAVE_NETSTAT (1)
 #else
 #define DDSRT_HAVE_NETSTAT (0)
