@@ -360,7 +360,12 @@ static void dds_stream_countops1 (const uint32_t * __restrict ops, const uint32_
           case DDS_OP_VAL_SEQ: ops = dds_stream_countops_seq (ops, insn, ops_end); break;
           case DDS_OP_VAL_ARR: ops = dds_stream_countops_arr (ops, insn, ops_end); break;
           case DDS_OP_VAL_UNI: ops = dds_stream_countops_uni (ops, ops_end); break;
-          case DDS_OP_VAL_STU: abort (); break;
+          case DDS_OP_VAL_STU: {
+            if (DDS_OP_JUMP (insn) > 0)
+              dds_stream_countops1 (ops + DDS_OP_JUMP (insn), ops_end);
+            ops += 2;
+            break;
+          }
         }
         break;
       }
@@ -657,7 +662,7 @@ static void dds_stream_write (dds_ostream_t * __restrict os, const char * __rest
           case DDS_OP_VAL_SEQ: ops = dds_stream_write_seq (os, addr, ops, insn); break;
           case DDS_OP_VAL_ARR: ops = dds_stream_write_arr (os, addr, ops, insn); break;
           case DDS_OP_VAL_UNI: ops = dds_stream_write_uni (os, addr, data, ops, insn); break;
-          case DDS_OP_VAL_STU: abort (); break;
+          case DDS_OP_VAL_STU: dds_stream_write (os, addr, ops + DDS_OP_JUMP (insn)); ops += 2; break;
         }
         break;
       }
@@ -847,7 +852,7 @@ static void dds_stream_read (dds_istream_t * __restrict is, char * __restrict da
           case DDS_OP_VAL_SEQ: ops = dds_stream_read_seq (is, addr, ops, insn); break;
           case DDS_OP_VAL_ARR: ops = dds_stream_read_arr (is, addr, ops, insn); break;
           case DDS_OP_VAL_UNI: ops = dds_stream_read_uni (is, addr, data, ops, insn); break;
-          case DDS_OP_VAL_STU: abort (); break;
+          case DDS_OP_VAL_STU: dds_stream_read (is, addr, ops + DDS_OP_JUMP (insn)); ops += 2; break;
         }
         break;
       }
@@ -1152,7 +1157,7 @@ static bool stream_normalize (char * __restrict data, uint32_t * __restrict off,
           case DDS_OP_VAL_SEQ: ops = normalize_seq (data, off, size, bswap, ops, insn); if (!ops) return false; break;
           case DDS_OP_VAL_ARR: ops = normalize_arr (data, off, size, bswap, ops, insn); if (!ops) return false; break;
           case DDS_OP_VAL_UNI: ops = normalize_uni (data, off, size, bswap, ops, insn); if (!ops) return false; break;
-          case DDS_OP_VAL_STU: abort (); break;
+          case DDS_OP_VAL_STU: if (!stream_normalize (data, off, size, bswap, ops + DDS_OP_JUMP (insn))) return false; ops += 2; break;
         }
         break;
       }
@@ -2208,7 +2213,8 @@ static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restric
             ops = prtf_uni (buf, bufsize, is, ops, insn);
             break;
           case DDS_OP_VAL_STU:
-            abort ();
+            cont = dds_stream_print_sample1 (buf, bufsize, is, ops + DDS_OP_JUMP (insn), true);
+            ops++;
             break;
         }
         break;
