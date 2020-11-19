@@ -416,7 +416,7 @@ static dds_return_t unalias_locator (void * __restrict dst, size_t * __restrict 
 static dds_return_t fini_locator (void * __restrict dst, size_t * __restrict dstoff, struct flagset *flagset, uint64_t flag)
 {
   nn_locators_t * const x = deser_generic_dst (dst, dstoff, alignof (nn_locators_t));
-  if (!(*flagset->aliased &flag))
+  if (!(*flagset->aliased & flag))
   {
     while (x->first)
     {
@@ -1571,6 +1571,7 @@ static const struct piddesc piddesc_omg[] = {
   QP  (TIME_BASED_FILTER,                   time_based_filter, XD),
   QP  (TRANSPORT_PRIORITY,                  transport_priority, Xi),
   QP  (TYPE_CONSISTENCY_ENFORCEMENT,        type_consistency, XE1, Xbx5),
+  QP  (DATA_REPRESENTATION,                 data_representation, XQ, XE2, XSTOP),
   PP  (PROTOCOL_VERSION,                    protocol_version, Xox2),
   PP  (VENDORID,                            vendorid, Xox2),
   PP  (EXPECTS_INLINE_QOS,                  expects_inline_qos, Xb),
@@ -1753,11 +1754,11 @@ static const struct piddesc_index piddesc_vendor_index[] = {
    initialized by ddsi_plist_init_tables; will assert when
    table too small or too large */
 #ifdef DDS_HAS_TYPE_DISCOVERY
+static const struct piddesc *piddesc_unalias[20 + SECURITY_PROC_ARRAY_SIZE];
+static const struct piddesc *piddesc_fini[20 + SECURITY_PROC_ARRAY_SIZE];
+#else
 static const struct piddesc *piddesc_unalias[19 + SECURITY_PROC_ARRAY_SIZE];
 static const struct piddesc *piddesc_fini[19 + SECURITY_PROC_ARRAY_SIZE];
-#else
-static const struct piddesc *piddesc_unalias[18 + SECURITY_PROC_ARRAY_SIZE];
-static const struct piddesc *piddesc_fini[18 + SECURITY_PROC_ARRAY_SIZE];
 #endif
 static uint64_t plist_fini_mask, qos_fini_mask;
 static ddsrt_once_t table_init_control = DDSRT_ONCE_INIT;
@@ -3127,6 +3128,10 @@ static void ddsi_xqos_init_default_endpoint (dds_qos_t *xqos)
   xqos->present |= QP_PARTITION;
   xqos->partition.n = 0;
   xqos->partition.strs = NULL;
+
+  xqos->present |= QP_DATA_REPRESENTATION;
+  xqos->data_representation.value.n = 0;
+  xqos->data_representation.value.ids = NULL;
 }
 
 void ddsi_xqos_init_default_reader (dds_qos_t *xqos)
