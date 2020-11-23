@@ -130,14 +130,17 @@ enum dds_stream_opcode {
      [ADR, nBY,   0, k] [offset]
      [ADR, STR,   0, k] [offset]
      [ADR, BST,   0, k] [offset] [bound]
+     [ADR, BSP,   0, k] [offset] [bound]
      [ADR, SEQ, nBY, 0] [offset]
      [ADR, SEQ, STR, 0] [offset]
      [ADR, SEQ, BST, 0] [offset] [bound]
+     [ADR, SEQ, BSP, 0] [offset] [bound]
      [ADR, SEQ,   s, 0] [offset] [elem-size] [next-insn, elem-insn]
        where s = {SEQ,ARR,UNI,STU}
      [ADR, ARR, nBY, k] [offset] [alen]
      [ADR, ARR, STR, 0] [offset] [alen]
      [ADR, ARR, BST, 0] [offset] [alen] [0] [bound]
+     [ADR, ARR, BSP, 0] [offset] [alen] [0] [bound]
      [ADR, ARR,   s, 0] [offset] [alen] [next-insn, elem-insn] [elem-size]
          where s = {SEQ,ARR,UNI,STU}
      [ADR, UNI,   d, z] [offset] [alen] [next-insn, cases]
@@ -146,7 +149,7 @@ enum dds_stream_opcode {
          z = default present/not present (DDS_OP_FLAG_DEF)
          offset = discriminant offset
        followed by alen case labels: in JEQ format
-     note: [ADR, STU, ...] is illegal
+     [ADR, STU, elem-insn] [offset]
    where
      s            = subtype
      k            = key/not key (DDS_OP_FLAG_KEY)
@@ -188,7 +191,8 @@ enum dds_stream_typecode {
   DDS_OP_VAL_SEQ = 0x07, /* sequence */
   DDS_OP_VAL_ARR = 0x08, /* array */
   DDS_OP_VAL_UNI = 0x09, /* union */
-  DDS_OP_VAL_STU = 0x0a  /* struct */
+  DDS_OP_VAL_STU = 0x0a, /* struct */
+  DDS_OP_VAL_BSP = 0x0b  /* bounded string mapped to char * */
 };
 
 /* primary type code for DDS_OP_ADR, DDS_OP_JEQ */
@@ -202,7 +206,8 @@ enum dds_stream_typecode_primary {
   DDS_OP_TYPE_SEQ = DDS_OP_VAL_SEQ << 16,
   DDS_OP_TYPE_ARR = DDS_OP_VAL_ARR << 16,
   DDS_OP_TYPE_UNI = DDS_OP_VAL_UNI << 16,
-  DDS_OP_TYPE_STU = DDS_OP_VAL_STU << 16
+  DDS_OP_TYPE_STU = DDS_OP_VAL_STU << 16,
+  DDS_OP_TYPE_BSP = DDS_OP_VAL_BSP << 16
 };
 #define DDS_OP_TYPE_BOO DDS_OP_TYPE_1BY
 
@@ -219,7 +224,8 @@ enum dds_stream_typecode_subtype {
   DDS_OP_SUBTYPE_SEQ = DDS_OP_VAL_SEQ << 8,
   DDS_OP_SUBTYPE_ARR = DDS_OP_VAL_ARR << 8,
   DDS_OP_SUBTYPE_UNI = DDS_OP_VAL_UNI << 8,
-  DDS_OP_SUBTYPE_STU = DDS_OP_VAL_STU << 8
+  DDS_OP_SUBTYPE_STU = DDS_OP_VAL_STU << 8,
+  DDS_OP_SUBTYPE_BSP = DDS_OP_VAL_BSP << 8
 };
 #define DDS_OP_SUBTYPE_BOO DDS_OP_SUBTYPE_1BY
 
