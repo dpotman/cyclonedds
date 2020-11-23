@@ -19,25 +19,31 @@ $Data::Dumper::Useqq = 1;
 my $outfn = "xxx";
 local $nextident = "a0000";
 
-my @types = qw(u0 u1 u2 u3 u4 seq ary str uni);
+my @types = qw(u0 u1 u2 u3 u4 bstr seq ary str uni);
 my @idltype = ("octet", "unsigned short", "unsigned long", "unsigned long long", "string");
 # unions cannot have an octet as a discriminator ...
 my @idltype_unidisc = ("char", "unsigned short", "unsigned long", "unsigned long long", "string");
 my @ctype = ("uint8_t", "uint16_t", "uint32_t", "uint64_t", "char *");
 my @probs = do {
-  my @ps = qw(0.3 0.3 0.3 0.3 0.3 1 1 1 1);
+  my @ps = qw(0.3 0.3 0.3 0.3 0.3 0.3 1 1 1 1);
+  my (@xs, $sum);
+  for (@ps) { $sum += $_; push @xs, $sum; }
+  @xs;
+};
+my @noseqprobs = do {
+  my @ps = qw(0.3 0.3 0.3 0.3 0.3 0 1 1 1 1);
   my (@xs, $sum);
   for (@ps) { $sum += $_; push @xs, $sum; }
   @xs;
 };
 my @noaryprobs = do {
-  my @ps = qw(0.3 0.3 0.3 0.3 0.3 1 0 1 1);
+  my @ps = qw(0.3 0.3 0.3 0.3 0.3 0 1 0 1 1);
   my (@xs, $sum);
   for (@ps) { $sum += $_; push @xs, $sum; }
   @xs;
 };
 my @unicaseprobs = do {
-  my @ps = qw(0.3 0.3 0.3 0.3 0.3 1 0 1 0);
+  my @ps = qw(0.3 0.3 0.3 0.3 0.3 0 1 0 1 0);
   my (@xs, $sum);
   for (@ps) { $sum += $_; push @xs, $sum; }
   @xs;
@@ -198,6 +204,8 @@ sub geninit1 {
     return int (rand (10));
   } elsif ($t->[0] eq "u4") {
     return "\"".("x"x(int (rand (8))))."\"";
+  } elsif ($t->[0] eq "bstr") {
+    return "\"".("x"x(int ($t->[1] - 1)))."\"";
   } elsif ($t->[0] eq "seq") {
     my $len = int (rand (10));
     my $bufref;
@@ -206,7 +214,14 @@ sub geninit1 {
     } else {
       my $buf = "vb$t->[1]_$idxsuf";
       $bufref = "$buf";
-      my $ctype = ($t->[2]->[0] =~ /^u(\d+)$/) ? $ctype[$1] : $t->[2]->[1];
+      my $ctype;
+      if ($t->[2]->[0] =~ /^u(\d+)$/) {
+        $ctype = $ctype[$1];
+      } elsif ($t->[2]->[0] eq "bstr") {
+        $ctype = "char *";
+      } else {
+        $ctype = $t->[2]->[1];
+      }
       my $tmp = "  $ctype $buf\[\] = {";
       for (1..$len) {
         $tmp .= geninit1 ("$ind", $out, $t->[2], "${idxsuf}_$_");
@@ -256,6 +271,8 @@ sub gencmp1 {
   if ($t->[0] =~ /^u([0-3])$/) {
     return "  if ($toplevel.$path != b->$path) abort ();\n";
   } elsif ($t->[0] eq "u4") {
+    return "  if (strcmp ($toplevel.$path, b->$path) != 0) abort ();\n";
+  } elsif ($t->[0] eq "bstr") {
     return "  if (strcmp ($toplevel.$path, b->$path) != 0) abort ();\n";
   } elsif ($t->[0] eq "seq") {
     my $idx = "i".length $path;
@@ -308,12 +325,16 @@ sub genidl1 {
   my $res = "";
   if ($t->[0] =~ /^u(\d+)$/) {
     $res = "${ind}$idltype[$1] $name;\n";
+  } elsif ($t->[0] eq "bstr") {
+    $res = "${ind}string<$t->[1]> $name;\n";
   } elsif ($t->[0] eq "seq") {
     push @$out, genidl1td ("", $out, $t);
     $res = "${ind}$t->[1] $name;\n";
   } elsif ($t->[0] eq "ary") {
     if ($t->[2]->[0] =~ /^u(\d+)$/) {
       $res = "${ind}$idltype[$1] ${name}[$t->[3]];\n";
+    } elsif ($t->[2]->[0] eq "bstr") {
+      $res = "${ind}string<$t->[2]->[1]> ${name}[$t->[3]];\n";
     } else {
       push @$out, genidl1td ("", $out, $t->[2]);
       $res = "${ind}$t->[2]->[1] ${name}[$t->[3]];\n";
@@ -335,6 +356,8 @@ sub genidl1td {
   if ($t->[0] eq "seq") {
     if ($t->[2]->[0] =~ /^u(\d+)$/) {
       return "${ind}typedef sequence<$idltype[$1]> $t->[1];\n";
+    } elsif ($t->[2]->[0] eq "bstr") {
+      return "${ind}typedef sequence<string<$t->[2]->[1]>> $t->[1];\n";
     } else {
       push @$out, genidl1td ("", $out, $t->[2]);
       return "${ind}typedef sequence<$t->[2]->[1]> $t->[1];\n";
@@ -342,6 +365,8 @@ sub genidl1td {
   } elsif ($t->[0] eq "ary") {
     if ($t->[2]->[0] =~ /^u(\d+)$/) {
       return "${ind}typedef ${idltype[$1]} $t->[1]"."[$t->[3]];\n";
+    } elsif ($t->[2]->[0] eq "bstr") {
+      return "${ind}typedef string<$t->[2]->[1]> $t->[1]"."[$t->[3]];\n";
     } else {
       push @$out, genidl1td ("", $out, $t->[2]);
       return "${ind}typedef $t->[2]->[1] $t->[1]"."[$t->[3]];\n";
@@ -375,7 +400,8 @@ sub genu1 { return ["u1"]; }
 sub genu2 { return ["u2"]; }
 sub genu3 { return ["u3"]; }
 sub genu4 { return ["u4"]; }
-sub genseq { return ["seq", nextident (), gentype ($_[0] + 1, @probs)]; }
+sub genbstr { return ["bstr", 2 + int (rand (20))]; }
+sub genseq { return ["seq", nextident (), gentype ($_[0] + 1, @noseqprobs)]; }
 sub genary { return ["ary", nextident (), gentype ($_[0] + 1, @noaryprobs), 1 + int (rand (4))]; }
 sub genstr {
   my @ts = ("str", nextident ());
