@@ -1242,213 +1242,153 @@ bool dds_stream_normalize (void * __restrict data, uint32_t size, bool bswap, co
  **
  *******************************************************************************************/
 
-//#define OP_DEBUG_FREE 1
-void dds_stream_free_sample (void *vdata, const uint32_t * ops)
+static const uint32_t *dds_stream_free_sample_seq (char * __restrict addr, const uint32_t * __restrict ops, uint32_t insn)
 {
-#if defined OP_DEBUG_FREE
-  static const char *stream_op_type[11] = {
-    NULL, "1Byte", "2Byte", "4Byte", "8Byte", "String", "BString", "Sequence", "Array", "Union", "Struct"
-  };
-#endif
-  char *data = vdata;
-  uint32_t op;
-  uint32_t type;
-  uint32_t num;
-  uint32_t subtype;
-  char *addr;
-  while ((op = *ops) != DDS_OP_RTS)
+  dds_sequence_t * const seq = (dds_sequence_t *) addr;
+  uint32_t num = (seq->_maximum > seq->_length) ? seq->_maximum : seq->_length;
+  const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  ops += 2;
+  if ((seq->_release && num) || subtype > DDS_OP_VAL_STR)
   {
-    switch (DDS_OP_MASK & op)
+    switch (subtype)
     {
-      case DDS_OP_ADR:
-      {
-        type = DDS_OP_TYPE (op);
-#ifdef OP_DEBUG_FREE
-        DDS_TRACE("F-ADR: %s offset %d\n", stream_op_type[type], ops[1]);
-#endif
-        addr = data + ops[1];
-        switch (type)
+      case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: break;
+      case DDS_OP_VAL_BST: ops++; break;
+      case DDS_OP_VAL_BSP: ops++; /* fall through */
+      case DDS_OP_VAL_STR: {
+        char **ptr = (char **) seq->_buffer;
+        while (num--)
+          dds_free (*ptr++);
+        break;
+      }
+      case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
+        const uint32_t elem_size = *ops++;
+        const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (*ops) - 3;
+        const uint32_t jmp = DDS_OP_ADR_JMP (*ops);
+        char *ptr = (char *) seq->_buffer;
+        while (num--)
         {
-          case DDS_OP_VAL_1BY:
-          case DDS_OP_VAL_2BY:
-          case DDS_OP_VAL_4BY:
-          case DDS_OP_VAL_8BY:
-            ops += 2;
-            break;
-          case DDS_OP_VAL_STR:
-#ifdef OP_DEBUG_FREE
-            DDS_TRACE("F-STR: @ %p %s\n", addr, *((char **) addr));
-#endif
-            ops += 2;
+          dds_stream_free_sample (ptr, jsr_ops);
+          ptr += elem_size;
+        }
+        ops += jmp ? (jmp - 3) : 1;
+        break;
+      }
+    }
+  }
+  if (seq->_release)
+  {
+    dds_free (seq->_buffer);
+    seq->_maximum = 0;
+    seq->_length = 0;
+    seq->_buffer = NULL;
+  }
+  return ops;
+}
+
+static const uint32_t *dds_stream_free_sample_arr (char * __restrict addr, const uint32_t * __restrict ops, uint32_t insn)
+{
+  ops += 2;
+  const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  uint32_t num = *ops++;
+  switch (subtype)
+  {
+    case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: break;
+    case DDS_OP_VAL_BST: ops += 2; break;
+    case DDS_OP_VAL_BSP: ops += 2; /* fall through */
+    case DDS_OP_VAL_STR: {
+      char **ptr = (char **) addr;
+      while (num--)
+        dds_free (*ptr++);
+      break;
+    }
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
+      const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (*ops) - 3;
+      const uint32_t jmp = DDS_OP_ADR_JMP (*ops);
+      const uint32_t elem_size = ops[1];
+      while (num--)
+      {
+        dds_stream_free_sample (addr, jsr_ops);
+        addr += elem_size;
+      }
+      ops += jmp ? (jmp - 3) : 2;
+      break;
+    }
+  }
+  return ops;
+}
+
+static const uint32_t *dds_stream_free_sample_uni (char * __restrict discaddr, char * __restrict baseaddr, const uint32_t * __restrict ops, uint32_t insn)
+{
+  uint32_t disc = 0;
+  switch (DDS_OP_SUBTYPE (insn))
+  {
+    case DDS_OP_VAL_1BY: disc = *((uint8_t *) discaddr); break;
+    case DDS_OP_VAL_2BY: disc = *((uint16_t *) discaddr); break;
+    case DDS_OP_VAL_4BY: disc = *((uint32_t *) discaddr); break;
+    default: abort(); break;
+  }
+  uint32_t const * const jeq_op = find_union_case (ops, disc);
+  ops += DDS_OP_ADR_JMP (ops[3]);
+  if (jeq_op)
+  {
+    const enum dds_stream_typecode subtype = DDS_JEQ_TYPE (jeq_op[0]);
+    void *valaddr = baseaddr + jeq_op[2];
+    switch (subtype)
+    {
+      case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: case DDS_OP_VAL_BST: break;
+      case DDS_OP_VAL_BSP: case DDS_OP_VAL_STR: {
+        dds_free (*((char **) valaddr));
+        *((char **) valaddr) = NULL;
+        break;
+      }
+      case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
+        dds_stream_free_sample (valaddr, jeq_op + DDS_OP_ADR_JSR (jeq_op[0]));
+        break;
+      }
+    }
+  }
+  return ops;
+}
+
+void dds_stream_free_sample (void * __restrict data, const uint32_t * __restrict ops)
+{
+  uint32_t insn;
+  while ((insn = *ops) != DDS_OP_RTS)
+  {
+    switch (DDS_OP (insn))
+    {
+      case DDS_OP_ADR: {
+        void *addr = (char *) data + ops[1];
+        switch (DDS_OP_TYPE (insn))
+        {
+          case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: ops += 2; break;
+          case DDS_OP_VAL_BSP: ops++; /* fall through */
+          case DDS_OP_VAL_STR: {
             dds_free (*((char **) addr));
             *((char **) addr) = NULL;
-            break;
-          case DDS_OP_VAL_SEQ: {
-            dds_sequence_t * seq = (dds_sequence_t *) addr;
             ops += 2;
-            subtype = DDS_OP_SUBTYPE (op);
-            num = (seq->_maximum > seq->_length) ? seq->_maximum : seq->_length;
-#ifdef OP_DEBUG_FREE
-            DDS_TRACE("F-SEQ: of %s\n", stream_op_type[subtype]);
-#endif
-            if ((seq->_release && num) || (subtype > DDS_OP_VAL_STR))
-            {
-              switch (subtype)
-              {
-                case DDS_OP_VAL_1BY:
-                case DDS_OP_VAL_2BY:
-                case DDS_OP_VAL_4BY:
-                case DDS_OP_VAL_8BY:
-                  break;
-                case DDS_OP_VAL_BST:
-                  ops++;
-                  break;
-                case DDS_OP_VAL_BSP: {
-                  ops++;
-                  char **ptr = (char **) seq->_buffer;
-                  while (num--)
-                    dds_free (*ptr++);
-                  break;
-                }
-                case DDS_OP_VAL_STR: {
-                  char **ptr = (char **) seq->_buffer;
-                  while (num--)
-                    dds_free (*ptr++);
-                  break;
-                }
-                default: {
-                  const uint32_t elem_size = *ops++;
-                  const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (*ops) - 3;
-                  const uint32_t jmp = DDS_OP_ADR_JMP (*ops);
-                  char *ptr = (char *) seq->_buffer;
-                  while (num--)
-                  {
-                    dds_stream_free_sample (ptr, jsr_ops);
-                    ptr += elem_size;
-                  }
-                  ops += jmp ? (jmp - 3) : 1;
-                  break;
-                }
-              }
-            }
-            if (seq->_release)
-            {
-              dds_free (seq->_buffer);
-              seq->_maximum = 0;
-              seq->_length = 0;
-              seq->_buffer = NULL;
-            }
             break;
           }
-          case DDS_OP_VAL_ARR: {
-            ops += 2;
-            subtype = DDS_OP_SUBTYPE (op);
-            num = *ops++;
-#ifdef OP_DEBUG_FREE
-            DDS_TRACE("F-ARR: of %s size %d\n", stream_op_type[subtype], num);
-#endif
-            switch (subtype)
-            {
-              case DDS_OP_VAL_1BY:
-              case DDS_OP_VAL_2BY:
-              case DDS_OP_VAL_4BY:
-              case DDS_OP_VAL_8BY:
-                break;
-              case DDS_OP_VAL_STR: {
-                char **ptr = (char **) addr;
-                while (num--)
-                  dds_free (*ptr++);
-                break;
-              }
-              case DDS_OP_VAL_BSP: {
-                ops += 2;
-                char **ptr = (char **) addr;
-                while (num--)
-                  dds_free (*ptr++);
-                break;
-              }
-              case DDS_OP_VAL_BST:
-                ops += 2;
-                break;
-              default: {
-                const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (*ops) - 3;
-                const uint32_t jmp = DDS_OP_ADR_JMP (*ops);
-                const uint32_t elem_size = ops[1];
-                while (num--)
-                {
-                  dds_stream_free_sample (addr, jsr_ops);
-                  addr += elem_size;
-                }
-                ops += jmp ? (jmp - 3) : 2;
-                break;
-              }
-            }
-            break;
-          }
-          case DDS_OP_VAL_UNI: {
-#ifdef OP_DEBUG_FREE
-            DDS_TRACE("F-UNI: switch %s\n", stream_op_type[subtype]);
-#endif
-            /* Get discriminant */
-            uint32_t disc = 0;
-            switch (DDS_OP_SUBTYPE (op))
-            {
-              case DDS_OP_VAL_1BY: disc = *((uint8_t *) addr); break;
-              case DDS_OP_VAL_2BY: disc = *((uint16_t *) addr); break;
-              case DDS_OP_VAL_4BY: disc = *((uint32_t *) addr); break;
-              default: assert (0);
-            }
-            uint32_t const * const jeq_op = find_union_case (ops, disc);
-            ops += DDS_OP_ADR_JMP (ops[3]);
-            if (jeq_op)
-            {
-              subtype = DDS_JEQ_TYPE (jeq_op[0]);
-              addr = data + jeq_op[2];
-              switch (subtype)
-              {
-                case DDS_OP_VAL_1BY:
-                case DDS_OP_VAL_2BY:
-                case DDS_OP_VAL_4BY:
-                case DDS_OP_VAL_8BY:
-                case DDS_OP_VAL_BST:
-                  break;
-                case DDS_OP_VAL_BSP:
-                case DDS_OP_VAL_STR: {
-                  dds_free (*((char **) addr));
-                  *((char **) addr) = NULL;
-                  break;
-                }
-                default:
-                  dds_stream_free_sample (addr, jeq_op + DDS_OP_ADR_JSR (jeq_op[0]));
-                  break;
-              }
-            }
-            break;
-          }
-          case DDS_OP_VAL_BST:
-          case DDS_OP_VAL_BSP: {
-            ops += 3;
-            break;
-          }
-          default:
-            assert (0);
+          case DDS_OP_VAL_BST: ops += 3; break;
+          case DDS_OP_VAL_SEQ: ops = dds_stream_free_sample_seq (addr, ops, insn); break;
+          case DDS_OP_VAL_ARR: ops = dds_stream_free_sample_arr (addr, ops, insn); break;
+          case DDS_OP_VAL_UNI: ops = dds_stream_free_sample_uni (addr, data, ops, insn); break;
+          case DDS_OP_VAL_STU: dds_stream_free_sample (addr, ops + DDS_OP_JUMP (insn)); ops += 2; break;
         }
         break;
       }
-      case DDS_OP_JSR: /* Implies nested type */
-#ifdef OP_DEBUG_FREE
-        DDS_TRACE("F-JSR: %d\n", DDS_OP_JUMP (op));
-#endif
-        dds_stream_free_sample (data, ops + DDS_OP_JUMP (op));
+      case DDS_OP_JSR: {
+        dds_stream_free_sample (data, ops + DDS_OP_JUMP (insn));
         ops++;
         break;
-      default:
-        assert (0);
+      }
+      case DDS_OP_RTS: case DDS_OP_JEQ: {
+        abort ();
+        break;
+      }
     }
   }
-#ifdef OP_DEBUG_FREE
-  DDS_TRACE("F-RTS:\n");
-#endif
 }
 
 /*******************************************************************************************

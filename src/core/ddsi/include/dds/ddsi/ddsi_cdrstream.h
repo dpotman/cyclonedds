@@ -44,7 +44,7 @@ bool dds_stream_normalize (void * __restrict data, uint32_t size, bool bswap, co
 
 void dds_stream_write_sample (dds_ostream_t * __restrict os, const void * __restrict data, const struct ddsi_sertype_default * __restrict type);
 void dds_stream_read_sample (dds_istream_t * __restrict is, void * __restrict data, const struct ddsi_sertype_default * __restrict type);
-void dds_stream_free_sample (void *data, const uint32_t * ops);
+void dds_stream_free_sample (void * __restrict data, const uint32_t * __restrict ops);
 
 uint32_t dds_stream_countops (const uint32_t * __restrict ops);
 size_t dds_stream_check_optimize (const struct ddsi_sertype_default_desc * __restrict desc);
