@@ -128,26 +128,31 @@ enum dds_stream_opcode {
   DDS_OP_RTS = 0x00 << 24,
   /* data field
      [ADR, nBY,   0, k] [offset]
+     [ADR, ENU,   0, k] [offset] [max]
      [ADR, STR,   0, k] [offset]
      [ADR, BST,   0, k] [offset] [bound]
      [ADR, BSP,   0, k] [offset] [bound]
      [ADR, SEQ, nBY, 0] [offset]
+     [ADR, SEQ, ENU, 0] [offset] [max]
      [ADR, SEQ, STR, 0] [offset]
      [ADR, SEQ, BST, 0] [offset] [bound]
      [ADR, SEQ, BSP, 0] [offset] [bound]
      [ADR, SEQ,   s, 0] [offset] [elem-size] [next-insn, elem-insn]
        where s = {SEQ,ARR,UNI,STU}
      [ADR, ARR, nBY, k] [offset] [alen]
+     [ADR, ARR, ENU, k] [offset] [alen] [max]
      [ADR, ARR, STR, 0] [offset] [alen]
      [ADR, ARR, BST, 0] [offset] [alen] [0] [bound]
      [ADR, ARR, BSP, 0] [offset] [alen] [0] [bound]
      [ADR, ARR,   s, 0] [offset] [alen] [next-insn, elem-insn] [elem-size]
          where s = {SEQ,ARR,UNI,STU}
      [ADR, UNI,   d, z] [offset] [alen] [next-insn, cases]
+     [ADR, UNI, ENU, z] [offset] [alen] [next-insn, cases] [max]
        where
-         d = discriminant type of {1BY,2BY,4BY}
+         d = discriminant type of {1BY,2BY,4BY,ENU}
          z = default present/not present (DDS_OP_FLAG_DEF)
          offset = discriminant offset
+         max = max enum value
        followed by alen case labels: in JEQ format
      [ADR, STU, elem-insn] [offset]
    where
@@ -156,6 +161,7 @@ enum dds_stream_opcode {
      [offset]     = field offset from start of element in memory
      [elem-size]  = element size in memory
      [bound]      = string bound + 1
+     [max]        = max enum value
      [alen]       = array length, number of cases
      [next-insn]  = (unsigned 16 bits) offset to instruction for next field, from start of insn
      [elem-insn]  = (unsigned 16 bits) offset to first instruction for element, from start of insn
@@ -172,9 +178,10 @@ enum dds_stream_opcode {
   /* union case
      [JEQ, nBY, 0] [disc] [offset]
      [JEQ, STR, 0] [disc] [offset]
+     [JEQ, ENU, 0] [disc] [offset] [max]
      [JEQ,   s, e] [disc] [offset]
        where
-         s  = subtype other than {nBY,STR}
+         s  = subtype other than {nBY,STR,ENU}
          e  = (unsigned 16 bits) offset to first instruction for case, from start of insn
               instruction sequence must end in RTS, at which point executes continues
               at the next field's instruction as specified by the union */
@@ -192,7 +199,8 @@ enum dds_stream_typecode {
   DDS_OP_VAL_ARR = 0x08, /* array */
   DDS_OP_VAL_UNI = 0x09, /* union */
   DDS_OP_VAL_STU = 0x0a, /* struct */
-  DDS_OP_VAL_BSP = 0x0b  /* bounded string mapped to char * */
+  DDS_OP_VAL_BSP = 0x0b, /* bounded string mapped to char * */
+  DDS_OP_VAL_ENU = 0x0c  /* enumerated value (long) */
 };
 
 /* primary type code for DDS_OP_ADR, DDS_OP_JEQ */
@@ -207,7 +215,8 @@ enum dds_stream_typecode_primary {
   DDS_OP_TYPE_ARR = DDS_OP_VAL_ARR << 16,
   DDS_OP_TYPE_UNI = DDS_OP_VAL_UNI << 16,
   DDS_OP_TYPE_STU = DDS_OP_VAL_STU << 16,
-  DDS_OP_TYPE_BSP = DDS_OP_VAL_BSP << 16
+  DDS_OP_TYPE_BSP = DDS_OP_VAL_BSP << 16,
+  DDS_OP_TYPE_ENU = DDS_OP_VAL_ENU << 16,
 };
 #define DDS_OP_TYPE_BOO DDS_OP_TYPE_1BY
 
@@ -225,7 +234,8 @@ enum dds_stream_typecode_subtype {
   DDS_OP_SUBTYPE_ARR = DDS_OP_VAL_ARR << 8,
   DDS_OP_SUBTYPE_UNI = DDS_OP_VAL_UNI << 8,
   DDS_OP_SUBTYPE_STU = DDS_OP_VAL_STU << 8,
-  DDS_OP_SUBTYPE_BSP = DDS_OP_VAL_BSP << 8
+  DDS_OP_SUBTYPE_BSP = DDS_OP_VAL_BSP << 8,
+  DDS_OP_SUBTYPE_ENU = DDS_OP_VAL_ENU << 8
 };
 #define DDS_OP_SUBTYPE_BOO DDS_OP_SUBTYPE_1BY
 
