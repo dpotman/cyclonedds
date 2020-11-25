@@ -1737,7 +1737,7 @@ static const uint32_t *dds_stream_extract_key_from_data_skip_sequence (dds_istre
   const uint32_t subtype = DDS_OP_SUBTYPE (op);
   const uint32_t num = dds_is_get4 (is);
   if (num == 0)
-    return ops + 2 + (type == DDS_OP_VAL_BST || type == DDS_OP_VAL_BSP || type == DDS_OP_VAL_ARR);
+    return ops + 2 + (subtype == DDS_OP_VAL_BST || subtype == DDS_OP_VAL_BSP || subtype == DDS_OP_VAL_ARR);
   else if (subtype > DDS_OP_VAL_BST && subtype != DDS_OP_VAL_BSP)
   {
     const uint32_t * jsr_ops = ops + DDS_OP_ADR_JSR (ops[3]);
@@ -1748,7 +1748,7 @@ static const uint32_t *dds_stream_extract_key_from_data_skip_sequence (dds_istre
   else
   {
     dds_stream_extract_key_from_data_skip_subtype (is, num, subtype, NULL);
-    return ops + 2 + (type == DDS_OP_VAL_BST || type == DDS_OP_VAL_BSP || type == DDS_OP_VAL_ARR);
+    return ops + 2 + (subtype == DDS_OP_VAL_BST || subtype == DDS_OP_VAL_BSP || subtype == DDS_OP_VAL_ARR);
   }
 }
 
