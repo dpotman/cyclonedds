@@ -2257,7 +2257,7 @@ static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restric
             break;
           case DDS_OP_VAL_STU:
             cont = dds_stream_print_sample1 (buf, bufsize, is, ops + DDS_OP_JUMP (insn), true);
-            ops++;
+            ops += 2;
             break;
         }
         break;
