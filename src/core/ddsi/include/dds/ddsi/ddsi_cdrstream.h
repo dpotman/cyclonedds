@@ -35,14 +35,24 @@ typedef struct dds_ostreamBE {
   dds_ostream_t x;
 } dds_ostreamBE_t;
 
+typedef struct dds_ostreamLE {
+  dds_ostream_t x;
+} dds_ostreamLE_t;
+
+DDSRT_STATIC_ASSERT (offsetof (dds_ostreamLE_t, x) == 0);
+DDSRT_STATIC_ASSERT (offsetof (dds_ostreamBE_t, x) == 0);
+
 DDS_EXPORT void dds_ostream_init (dds_ostream_t * __restrict st, uint32_t size);
 DDS_EXPORT void dds_ostream_fini (dds_ostream_t * __restrict st);
+DDS_EXPORT void dds_ostreamLE_init (dds_ostreamLE_t * __restrict st, uint32_t size);
+DDS_EXPORT void dds_ostreamLE_fini (dds_ostreamLE_t * __restrict st);
 DDS_EXPORT void dds_ostreamBE_init (dds_ostreamBE_t * __restrict st, uint32_t size);
 DDS_EXPORT void dds_ostreamBE_fini (dds_ostreamBE_t * __restrict st);
 
 bool dds_stream_normalize (void * __restrict data, uint32_t size, bool bswap, const struct ddsi_sertype_default * __restrict type, bool just_key);
 
 void dds_stream_write_sample (dds_ostream_t * __restrict os, const void * __restrict data, const struct ddsi_sertype_default * __restrict type);
+void dds_stream_write_sampleLE (dds_ostreamLE_t * __restrict os, const void * __restrict data, const struct ddsi_sertype_default * __restrict type);
 void dds_stream_read_sample (dds_istream_t * __restrict is, void * __restrict data, const struct ddsi_sertype_default * __restrict type);
 void dds_stream_free_sample (void * __restrict data, const uint32_t * __restrict ops);
 
