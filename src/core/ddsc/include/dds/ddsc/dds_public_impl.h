@@ -154,6 +154,7 @@ enum dds_stream_opcode {
          offset = discriminant offset
          max = max enum value
        followed by alen case labels: in JEQ format
+     [ADR, UNE, elem-insn] [offset]
      [ADR, STU, elem-insn] [offset]
    where
      s            = subtype
@@ -168,7 +169,7 @@ enum dds_stream_opcode {
      [cases]      = (unsigned 16 bits) offset to first case label, from start of insn
    */
   DDS_OP_ADR = 0x01 << 24,
-  /* jump-to-subroutine (apparently not used at the moment)
+  /* jump-to-subroutine (e.g. used for recursive types and appendable unions)
      [JSR,   0, e]
        where
          e = (signed 16 bits) offset to first instruction in subroutine, from start of insn
@@ -185,7 +186,10 @@ enum dds_stream_opcode {
          e  = (unsigned 16 bits) offset to first instruction for case, from start of insn
               instruction sequence must end in RTS, at which point executes continues
               at the next field's instruction as specified by the union */
-  DDS_OP_JEQ = 0x03 << 24
+  DDS_OP_JEQ = 0x03 << 24,
+
+  /* XCDR2 delimiter header (DHEADER) */
+  DDS_OP_XCDR2_DLH = 0x04 << 24,
 };
 
 enum dds_stream_typecode {
@@ -200,7 +204,8 @@ enum dds_stream_typecode {
   DDS_OP_VAL_UNI = 0x09, /* union */
   DDS_OP_VAL_STU = 0x0a, /* struct */
   DDS_OP_VAL_BSP = 0x0b, /* bounded string mapped to char * */
-  DDS_OP_VAL_ENU = 0x0c  /* enumerated value (long) */
+  DDS_OP_VAL_ENU = 0x0c, /* enumerated value (long) */
+  DDS_OP_VAL_UNE = 0x0d  /* union with external definition */
 };
 
 /* primary type code for DDS_OP_ADR, DDS_OP_JEQ */
@@ -217,6 +222,7 @@ enum dds_stream_typecode_primary {
   DDS_OP_TYPE_STU = DDS_OP_VAL_STU << 16,
   DDS_OP_TYPE_BSP = DDS_OP_VAL_BSP << 16,
   DDS_OP_TYPE_ENU = DDS_OP_VAL_ENU << 16,
+  DDS_OP_TYPE_UNE = DDS_OP_VAL_UNE << 16
 };
 #define DDS_OP_TYPE_BOO DDS_OP_TYPE_1BY
 
@@ -235,7 +241,8 @@ enum dds_stream_typecode_subtype {
   DDS_OP_SUBTYPE_UNI = DDS_OP_VAL_UNI << 8,
   DDS_OP_SUBTYPE_STU = DDS_OP_VAL_STU << 8,
   DDS_OP_SUBTYPE_BSP = DDS_OP_VAL_BSP << 8,
-  DDS_OP_SUBTYPE_ENU = DDS_OP_VAL_ENU << 8
+  DDS_OP_SUBTYPE_ENU = DDS_OP_VAL_ENU << 8,
+  DDS_OP_SUBTYPE_UNE = DDS_OP_VAL_UNE << 8
 };
 #define DDS_OP_SUBTYPE_BOO DDS_OP_SUBTYPE_1BY
 
