@@ -56,7 +56,7 @@ void dds_stream_write_sampleLE (dds_ostreamLE_t * __restrict os, const void * __
 void dds_stream_read_sample (dds_istream_t * __restrict is, void * __restrict data, const struct ddsi_sertype_default * __restrict type);
 void dds_stream_free_sample (void * __restrict data, const uint32_t * __restrict ops);
 
-uint32_t dds_stream_countops (const uint32_t * __restrict ops);
+uint32_t dds_stream_countops (const uint32_t * __restrict ops, uint32_t nkeys, const dds_key_descriptor_t * __restrict keys);
 size_t dds_stream_check_optimize (const struct ddsi_sertype_default_desc * __restrict desc);
 void dds_istream_from_serdata_default (dds_istream_t * __restrict s, const struct ddsi_serdata_default * __restrict d);
 void dds_ostream_from_serdata_default (dds_ostream_t * __restrict s, struct ddsi_serdata_default * __restrict d);
@@ -90,6 +90,7 @@ size_t dds_stream_print_sample (dds_istream_t * __restrict is, const struct ddsi
 #define DDS_OP_SUBTYPE(o) ((enum dds_stream_typecode) (((o) & DDS_OP_SUBTYPE_MASK) >> 8))
 #define DDS_OP_FLAGS(o)   ((o) & DDS_OP_FLAGS_MASK)
 #define DDS_OP_ADR_JSR(o) ((o) & DDS_OP_JMP_MASK)
+#define DDS_OP_LENGTH(o)  ((uint16_t) ((o) & DDS_OP_JMP_MASK))
 #define DDS_OP_JUMP(o)    ((int16_t) ((o) & DDS_OP_JMP_MASK))
 #define DDS_OP_ADR_JMP(o) ((o) >> 16)
 #define DDS_JEQ_TYPE(o)   ((enum dds_stream_typecode) (((o) & DDS_JEQ_TYPE_MASK) >> 16))
