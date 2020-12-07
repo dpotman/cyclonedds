@@ -132,6 +132,7 @@ enum dds_stream_opcode {
      [ADR, STR,   0, k] [offset]
      [ADR, BST,   0, k] [offset] [bound]
      [ADR, BSP,   0, k] [offset] [bound]
+
      [ADR, SEQ, nBY, 0] [offset]
      [ADR, SEQ, ENU, 0] [offset] [max]
      [ADR, SEQ, STR, 0] [offset]
@@ -139,6 +140,8 @@ enum dds_stream_opcode {
      [ADR, SEQ, BSP, 0] [offset] [bound]
      [ADR, SEQ,   s, 0] [offset] [elem-size] [next-insn, elem-insn]
        where s = {SEQ,ARR,UNI,STU}
+     [ADR, SEQ, EXT, k] *** not supported
+
      [ADR, ARR, nBY, k] [offset] [alen]
      [ADR, ARR, ENU, k] [offset] [alen] [max]
      [ADR, ARR, STR, 0] [offset] [alen]
@@ -146,16 +149,20 @@ enum dds_stream_opcode {
      [ADR, ARR, BSP, 0] [offset] [alen] [0] [bound]
      [ADR, ARR,   s, 0] [offset] [alen] [next-insn, elem-insn] [elem-size]
          where s = {SEQ,ARR,UNI,STU}
+     [ADR, ARR, EXT, k] *** not supported
+
      [ADR, UNI,   d, z] [offset] [alen] [next-insn, cases]
      [ADR, UNI, ENU, z] [offset] [alen] [next-insn, cases] [max]
+     [ADR, UNI, EXT, k] *** not supported
        where
          d = discriminant type of {1BY,2BY,4BY,ENU}
          z = default present/not present (DDS_OP_FLAG_DEF)
          offset = discriminant offset
          max = max enum value
        followed by alen case labels: in JEQ format
-     [ADR, UNE, elem-insn] [offset]
-     [ADR, STU, elem-insn] [offset]
+
+     [ADR, EXT,   0, k] [offset] [next-insn, elem-insn]
+     [ADR, STU,   0, k] *** not supported
    where
      s            = subtype
      k            = key/not key (DDS_OP_FLAG_KEY)
@@ -180,9 +187,10 @@ enum dds_stream_opcode {
      [JEQ, nBY, 0] [disc] [offset]
      [JEQ, STR, 0] [disc] [offset]
      [JEQ, ENU, 0] [disc] [offset] [max]
+     [JEQ, EXT, 0] *** not supported
      [JEQ,   s, e] [disc] [offset]
        where
-         s  = subtype other than {nBY,STR,ENU}
+         s  = subtype other than {nBY,STR,ENU,EXT}
          e  = (unsigned 16 bits) offset to first instruction for case, from start of insn
               instruction sequence must end in RTS, at which point executes continues
               at the next field's instruction as specified by the union */
@@ -190,6 +198,15 @@ enum dds_stream_opcode {
 
   /* XCDR2 delimiter header (DHEADER) */
   DDS_OP_XCDR2_DLH = 0x04 << 24,
+
+  /* Key offset list
+     [KOF, 0, n] [offset-1] ... [offset-n]
+       where
+        n      = number of key offsets in following ops
+        offset = offset of the key field, relative to the previous offset
+                  (repeated n times, e.g. when key in nested struct)
+  */
+  DDS_OP_KOF = 0x05 << 24,
 };
 
 enum dds_stream_typecode {
@@ -205,7 +222,7 @@ enum dds_stream_typecode {
   DDS_OP_VAL_STU = 0x0a, /* struct */
   DDS_OP_VAL_BSP = 0x0b, /* bounded string mapped to char * */
   DDS_OP_VAL_ENU = 0x0c, /* enumerated value (long) */
-  DDS_OP_VAL_UNE = 0x0d  /* union with external definition */
+  DDS_OP_VAL_EXT = 0x0d  /* field with external definition */
 };
 
 /* primary type code for DDS_OP_ADR, DDS_OP_JEQ */
@@ -222,7 +239,7 @@ enum dds_stream_typecode_primary {
   DDS_OP_TYPE_STU = DDS_OP_VAL_STU << 16,
   DDS_OP_TYPE_BSP = DDS_OP_VAL_BSP << 16,
   DDS_OP_TYPE_ENU = DDS_OP_VAL_ENU << 16,
-  DDS_OP_TYPE_UNE = DDS_OP_VAL_UNE << 16
+  DDS_OP_TYPE_EXT = DDS_OP_VAL_EXT << 16
 };
 #define DDS_OP_TYPE_BOO DDS_OP_TYPE_1BY
 
@@ -241,12 +258,15 @@ enum dds_stream_typecode_subtype {
   DDS_OP_SUBTYPE_UNI = DDS_OP_VAL_UNI << 8,
   DDS_OP_SUBTYPE_STU = DDS_OP_VAL_STU << 8,
   DDS_OP_SUBTYPE_BSP = DDS_OP_VAL_BSP << 8,
-  DDS_OP_SUBTYPE_ENU = DDS_OP_VAL_ENU << 8,
-  DDS_OP_SUBTYPE_UNE = DDS_OP_VAL_UNE << 8
+  DDS_OP_SUBTYPE_ENU = DDS_OP_VAL_ENU << 8
 };
 #define DDS_OP_SUBTYPE_BOO DDS_OP_SUBTYPE_1BY
 
-#define DDS_OP_FLAG_KEY 0x01 /* key field: applicable to {1,2,4,8}BY, STR, BST, ARR-of-{1,2,4,8}BY */
+/* key field: applicable to {1,2,4,8}BY, STR, BST, ARR-of-{1,2,4,8}BY.
+   Note that when using a field of a struct member of the top-level struct
+   in the key, the top-level STU field should also get the key flag. */
+#define DDS_OP_FLAG_KEY 0x01
+
 #define DDS_OP_FLAG_DEF 0x02 /* union has a default case (for DDS_OP_ADR | DDS_OP_TYPE_UNI) */
 
 /* For a union: (1) the discriminator may be a key field; (2) there may be a default value;

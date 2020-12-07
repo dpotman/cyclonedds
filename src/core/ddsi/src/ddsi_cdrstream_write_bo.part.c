@@ -78,9 +78,8 @@ static const uint32_t *dds_stream_write_seq (dds_ostream_t * __restrict os, cons
         (void) dds_stream_write (os, ptr + i * elem_size, jsr_ops);
       return ops + (jmp ? jmp : 4); /* FIXME: why would jmp be 0? */
     }
-    case DDS_OP_VAL_UNE: {
-      /* not supported, use UNI instead */
-      abort ();
+    case DDS_OP_VAL_EXT: {
+      abort (); /* op type EXT as sequence subtype not supported */
       break;
     }
   }
@@ -123,9 +122,8 @@ static const uint32_t *dds_stream_write_arr (dds_ostream_t * __restrict os, cons
         (void) dds_stream_write (os, addr + i * elem_size, jsr_ops);
       return ops + (jmp ? jmp : 5);
     }
-    case DDS_OP_VAL_UNE: {
-      /* not supported, use UNI instead */
-      abort ();
+    case DDS_OP_VAL_EXT: {
+      abort (); /* op type EXT as array subtype not supported */
       break;
     }
   }
@@ -164,9 +162,8 @@ static const uint32_t *dds_stream_write_uni (dds_ostream_t * __restrict os, cons
       case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
         (void) dds_stream_write (os, valaddr, jeq_op + DDS_OP_ADR_JSR (jeq_op[0]));
         break;
-      case DDS_OP_VAL_UNE: {
-        /* not supported, use UNI instead */
-        abort ();
+      case DDS_OP_VAL_EXT: {
+        abort (); /* op type EXT as union subtype not supported */
         break;
       }
     }
@@ -195,8 +192,15 @@ static const uint32_t *dds_stream_write (dds_ostream_t * __restrict os, const ch
           case DDS_OP_VAL_SEQ: ops = dds_stream_write_seq (os, addr, ops, insn); break;
           case DDS_OP_VAL_ARR: ops = dds_stream_write_arr (os, addr, ops, insn); break;
           case DDS_OP_VAL_UNI: ops = dds_stream_write_uni (os, addr, data, ops, insn); break;
-          case DDS_OP_VAL_UNE: case DDS_OP_VAL_STU: (void) dds_stream_write (os, addr, ops + DDS_OP_JUMP (insn)); ops += 2; break;
           case DDS_OP_VAL_ENU: dds_os_put4 (os, *((const uint32_t *) addr)); ops += 3; break;
+          case DDS_OP_VAL_EXT: {
+            const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
+            const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
+            (void) dds_stream_write (os, addr, jsr_ops);
+            ops += jmp ? jmp : 3;
+            break;
+          }
+          case DDS_OP_VAL_STU: abort (); break; /* op type STU only supported as subtype */
         }
         break;
       }
@@ -205,7 +209,7 @@ static const uint32_t *dds_stream_write (dds_ostream_t * __restrict os, const ch
         ops++;
         break;
       }
-      case DDS_OP_RTS: case DDS_OP_JEQ: {
+      case DDS_OP_RTS: case DDS_OP_JEQ: case DDS_OP_KOF: {
         abort ();
         break;
       }
