@@ -455,7 +455,7 @@ static void dds_stream_countops_keyoffset (const uint32_t * __restrict ops, cons
 {
   assert (key);
   assert (*ops_end);
-  if (key->m_index >= ops - *ops_end)
+  if (key->m_index >= *ops_end - ops)
   {
     assert (DDS_OP (ops[key->m_index]) == DDS_OP_KOF);
     *ops_end = ops + key->m_index + 1 + DDS_OP_LENGTH (ops[key->m_index]);
