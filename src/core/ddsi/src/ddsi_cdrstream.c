@@ -806,12 +806,141 @@ static const uint32_t *dds_stream_read_uni (dds_istream_t * __restrict is, char 
   return ops;
 }
 
+static inline const uint32_t *dds_stream_read_adr (uint32_t insn, dds_istream_t * __restrict is, char * __restrict data, const uint32_t * __restrict ops)
+{
+  void *addr = data + ops[1];
+  switch (DDS_OP_TYPE (insn))
+  {
+    case DDS_OP_VAL_1BY: *((uint8_t *) addr) = dds_is_get1 (is); ops += 2; break;
+    case DDS_OP_VAL_2BY: *((uint16_t *) addr) = dds_is_get2 (is); ops += 2; break;
+    case DDS_OP_VAL_4BY: *((uint32_t *) addr) = dds_is_get4 (is); ops += 2; break;
+    case DDS_OP_VAL_8BY: *((uint64_t *) addr) = dds_is_get8 (is); ops += 2; break;
+    case DDS_OP_VAL_STR: *((char **) addr) = dds_stream_reuse_string (is, *((char **) addr)); ops += 2; break;
+    case DDS_OP_VAL_BST: (void) dds_stream_reuse_string_bound (is, (char *) addr, ops[2], false); ops += 3; break;
+    case DDS_OP_VAL_BSP: *((char **) addr) = dds_stream_reuse_string_bound (is, *((char **) addr), ops[2], true); ops += 3; break;
+    case DDS_OP_VAL_SEQ: ops = dds_stream_read_seq (is, addr, ops, insn); break;
+    case DDS_OP_VAL_ARR: ops = dds_stream_read_arr (is, addr, ops, insn); break;
+    case DDS_OP_VAL_UNI: ops = dds_stream_read_uni (is, addr, data, ops, insn); break;
+    case DDS_OP_VAL_ENU: *((uint32_t *) addr) = dds_is_get4 (is); ops += 3; break;
+    case DDS_OP_VAL_EXT: {
+      const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
+      const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
+      (void) dds_stream_read (is, addr, jsr_ops);
+      ops += jmp ? jmp : 3;
+      break;
+    }
+    case DDS_OP_VAL_STU: abort(); break; /* op type STU only supported as subtype */
+  }
+  return ops;
+}
+
+static const uint32_t *dds_stream_skip_op_seq (uint32_t insn, const uint32_t * __restrict ops)
+{
+  const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  switch (subtype)
+  {
+    case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
+    case DDS_OP_VAL_STR:
+      return ops + 2;
+    case DDS_OP_VAL_BST:
+    case DDS_OP_VAL_BSP:
+    case DDS_OP_VAL_ENU:
+      return ops + 3;
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
+      const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
+      return ops + (jmp ? jmp : 4);
+    }
+    case DDS_OP_VAL_EXT: {
+      abort (); /* not supported */
+      break;
+    }
+  }
+  return NULL;
+}
+
+static const uint32_t *dds_stream_skip_op_arr (uint32_t insn, const uint32_t * __restrict ops)
+{
+  const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  switch (subtype)
+  {
+    case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
+    case DDS_OP_VAL_STR:
+      return ops + 3;
+    case DDS_OP_VAL_ENU:
+      return ops + 4;
+    case DDS_OP_VAL_BST:
+      return ops + 5;
+    case DDS_OP_VAL_BSP:
+      return ops + 5;
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
+      const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
+      return ops + (jmp ? jmp : 5);
+    }
+    case DDS_OP_VAL_EXT: {
+      abort (); /* not supported */
+      break;
+    }
+  }
+  return NULL;
+}
+
+static const uint32_t *dds_stream_skip_op (uint32_t insn, const uint32_t * __restrict ops)
+{
+  switch (DDS_OP_TYPE (insn))
+  {
+    case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
+    case DDS_OP_VAL_STR:
+      return ops + 2;
+    case DDS_OP_VAL_BST: case DDS_OP_VAL_BSP: case DDS_OP_VAL_ENU:
+      return ops + 3;
+    case DDS_OP_VAL_SEQ:
+      return dds_stream_skip_op_seq (insn, ops);
+    case DDS_OP_VAL_ARR:
+      return dds_stream_skip_op_arr (insn, ops);
+    case DDS_OP_VAL_UNI: {
+      const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
+      return ops + (jmp ? jmp : 4);
+    }
+    case DDS_OP_VAL_EXT: {
+      const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
+      return ops + (jmp ? jmp : 3);
+    }
+    case DDS_OP_VAL_STU: {
+      abort(); /* op type STU only supported as subtype */
+      break;
+    }
+  }
+  return NULL;
+}
+
 static const uint32_t *dds_stream_read_delimited (dds_istream_t * __restrict is, char * __restrict data, const uint32_t * __restrict ops)
 {
-  uint32_t delimited_sz = dds_is_get4 (is);
-  /* FIXME: use delimited_sz when reading data */
-  (void) delimited_sz;
-  ops = dds_stream_read (is, data, ops + 1);
+  uint32_t delimited_sz = dds_is_get4 (is), delimited_offs = is->m_index, insn;
+  ops++;
+  while ((insn = *ops) != DDS_OP_RTS)
+  {
+    switch (DDS_OP (insn))
+    {
+      case DDS_OP_ADR: {
+        /* skip fields that are not in serialized data for appendable type */
+        ops = (is->m_index - delimited_offs < delimited_sz) ? dds_stream_read_adr (insn, is, data, ops) : dds_stream_skip_op (insn, ops);
+        break;
+      }
+      case DDS_OP_JSR: {
+        /* FIXME: is jsr target part of current appendable type, or a new type that could start with delimited header? */
+        (void) dds_stream_read (is, data, ops + DDS_OP_JUMP (insn));
+        ops++;
+        break;
+      }
+      case DDS_OP_RTS: case DDS_OP_JEQ: case DDS_OP_KOF: case DDS_OP_XCDR2_DLH: {
+        abort ();
+        break;
+      }
+    }
+  }
+  /* Skip remainder of serialized data for this appendable type */
+  if (delimited_sz > is->m_index - delimited_offs)
+    is->m_index += delimited_sz - (is->m_index - delimited_offs);
   return ops;
 }
 
@@ -823,29 +952,7 @@ static const uint32_t *dds_stream_read (dds_istream_t * __restrict is, char * __
     switch (DDS_OP (insn))
     {
       case DDS_OP_ADR: {
-        void *addr = data + ops[1];
-        switch (DDS_OP_TYPE (insn))
-        {
-          case DDS_OP_VAL_1BY: *((uint8_t *) addr) = dds_is_get1 (is); ops += 2; break;
-          case DDS_OP_VAL_2BY: *((uint16_t *) addr) = dds_is_get2 (is); ops += 2; break;
-          case DDS_OP_VAL_4BY: *((uint32_t *) addr) = dds_is_get4 (is); ops += 2; break;
-          case DDS_OP_VAL_8BY: *((uint64_t *) addr) = dds_is_get8 (is); ops += 2; break;
-          case DDS_OP_VAL_STR: *((char **) addr) = dds_stream_reuse_string (is, *((char **) addr)); ops += 2; break;
-          case DDS_OP_VAL_BST: (void) dds_stream_reuse_string_bound (is, (char *) addr, ops[2], false); ops += 3; break;
-          case DDS_OP_VAL_BSP: *((char **) addr) = dds_stream_reuse_string_bound (is, *((char **) addr), ops[2], true); ops += 3; break;
-          case DDS_OP_VAL_SEQ: ops = dds_stream_read_seq (is, addr, ops, insn); break;
-          case DDS_OP_VAL_ARR: ops = dds_stream_read_arr (is, addr, ops, insn); break;
-          case DDS_OP_VAL_UNI: ops = dds_stream_read_uni (is, addr, data, ops, insn); break;
-          case DDS_OP_VAL_ENU: *((uint32_t *) addr) = dds_is_get4 (is); ops += 3; break;
-          case DDS_OP_VAL_EXT: {
-            const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
-            const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
-            (void) dds_stream_read (is, addr, jsr_ops);
-            ops += jmp ? jmp : 3;
-            break;
-          }
-          case DDS_OP_VAL_STU: abort(); break; /* op type STU only supported as subtype */
-        }
+        ops = dds_stream_read_adr (insn, is, data, ops);
         break;
       }
       case DDS_OP_JSR: {
@@ -1169,16 +1276,74 @@ static const uint32_t *normalize_uni (char * __restrict data, uint32_t * __restr
   return ops;
 }
 
+static const uint32_t *stream_normalize_adr (uint32_t insn, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, const uint32_t * __restrict ops)
+{
+  switch (DDS_OP_TYPE (insn))
+  {
+    case DDS_OP_VAL_1BY: if (!normalize_uint8 (off, size)) return NULL; ops += 2; break;
+    case DDS_OP_VAL_2BY: if (!normalize_uint16 (data, off, size, bswap)) return NULL; ops += 2; break;
+    case DDS_OP_VAL_4BY: if (!normalize_uint32 (data, off, size, bswap)) return NULL; ops += 2; break;
+    case DDS_OP_VAL_8BY: if (!normalize_uint64 (data, off, size, bswap)) return NULL; ops += 2; break;
+    case DDS_OP_VAL_STR: if (!normalize_string (data, off, size, bswap, SIZE_MAX)) return NULL; ops += 2; break;
+    case DDS_OP_VAL_BST: case DDS_OP_VAL_BSP: if (!normalize_string (data, off, size, bswap, ops[2])) return NULL; ops += 3; break;
+    case DDS_OP_VAL_SEQ: ops = normalize_seq (data, off, size, bswap, ops, insn); if (!ops) return NULL; break;
+    case DDS_OP_VAL_ARR: ops = normalize_arr (data, off, size, bswap, ops, insn); if (!ops) return NULL; break;
+    case DDS_OP_VAL_UNI: ops = normalize_uni (data, off, size, bswap, ops, insn); if (!ops) return NULL; break;
+    case DDS_OP_VAL_ENU: if (!normalize_enum (data, off, size, bswap, ops[2])) return NULL; ops += 3; break;
+    case DDS_OP_VAL_EXT: {
+      const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
+      const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
+      if (stream_normalize (data, off, size, bswap, jsr_ops) == NULL)
+        return NULL;
+      ops += jmp ? jmp : 3;
+      break;
+    }
+    case DDS_OP_VAL_STU:
+      abort (); /* op type STU only supported as subtype */
+      break;
+  }
+  return ops;
+}
+
 static const uint32_t *stream_normalize_delimited (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, const uint32_t * __restrict ops)
 {
   uint32_t delimited_sz;
   if (!read_and_normalize_uint32 (&delimited_sz, data, off, size, bswap))
     return NULL;
-  uint32_t delimited_offs = *off;
-  if ((ops = stream_normalize (data, off, size, bswap, ops)) == NULL)
-    return NULL;
-  if (*off - delimited_offs != delimited_sz)
-    return NULL;
+  uint32_t delimited_offs = *off, insn;
+
+  while ((insn = *ops) != DDS_OP_RTS)
+  {
+    switch (DDS_OP (insn))
+    {
+      case DDS_OP_ADR: {
+        if (*off - delimited_offs < delimited_sz)
+        {
+          if ((ops = stream_normalize_adr (insn, data, off, size, bswap, ops)) == NULL)
+            return NULL;
+        }
+        else
+        {
+          /* skip fields that are not in serialized data for appendable type */
+          ops = dds_stream_skip_op (insn, ops);
+        }
+        break;
+      }
+      case DDS_OP_JSR: {
+        if (stream_normalize (data, off, size, bswap, ops + DDS_OP_JUMP (insn)) == NULL)
+          return NULL;
+        ops++;
+        break;
+      }
+      case DDS_OP_RTS: case DDS_OP_JEQ: case DDS_OP_KOF: case DDS_OP_XCDR2_DLH: {
+        abort ();
+        break;
+      }
+    }
+  }
+  /* Skip remainder of serialized data for this appendable type */
+  if (delimited_sz > *off - delimited_offs)
+    *off += delimited_sz - (*off - delimited_offs);
   return ops;
 }
 
@@ -1190,30 +1355,8 @@ static const uint32_t *stream_normalize (char * __restrict data, uint32_t * __re
     switch (DDS_OP (insn))
     {
       case DDS_OP_ADR: {
-        switch (DDS_OP_TYPE (insn))
-        {
-          case DDS_OP_VAL_1BY: if (!normalize_uint8 (off, size)) return NULL; ops += 2; break;
-          case DDS_OP_VAL_2BY: if (!normalize_uint16 (data, off, size, bswap)) return NULL; ops += 2; break;
-          case DDS_OP_VAL_4BY: if (!normalize_uint32 (data, off, size, bswap)) return NULL; ops += 2; break;
-          case DDS_OP_VAL_8BY: if (!normalize_uint64 (data, off, size, bswap)) return NULL; ops += 2; break;
-          case DDS_OP_VAL_STR: if (!normalize_string (data, off, size, bswap, SIZE_MAX)) return NULL; ops += 2; break;
-          case DDS_OP_VAL_BST: case DDS_OP_VAL_BSP: if (!normalize_string (data, off, size, bswap, ops[2])) return NULL; ops += 3; break;
-          case DDS_OP_VAL_SEQ: ops = normalize_seq (data, off, size, bswap, ops, insn); if (!ops) return NULL; break;
-          case DDS_OP_VAL_ARR: ops = normalize_arr (data, off, size, bswap, ops, insn); if (!ops) return NULL; break;
-          case DDS_OP_VAL_UNI: ops = normalize_uni (data, off, size, bswap, ops, insn); if (!ops) return NULL; break;
-          case DDS_OP_VAL_ENU: if (!normalize_enum (data, off, size, bswap, ops[2])) return NULL; ops += 3; break;
-          case DDS_OP_VAL_EXT: {
-            const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
-            const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
-            if (stream_normalize (data, off, size, bswap, jsr_ops) == NULL)
-              return NULL;
-            ops += jmp ? jmp : 3;
-            break;
-          }
-          case DDS_OP_VAL_STU:
-            abort (); /* op type STU only supported as subtype */
-            break;
-        }
+        if ((ops = stream_normalize_adr (insn, data, off, size, bswap, ops)) == NULL)
+          return NULL;
         break;
       }
       case DDS_OP_JSR: {
@@ -1227,7 +1370,8 @@ static const uint32_t *stream_normalize (char * __restrict data, uint32_t * __re
         break;
       }
       case DDS_OP_XCDR2_DLH: {
-        ops = stream_normalize_delimited (data, off, size, bswap, ops + 1); if (!ops) return NULL; break;
+        if ((ops = stream_normalize_delimited (data, off, size, bswap, ops + 1)) == NULL)
+          return NULL;
         break;
       }
     }
@@ -2092,7 +2236,7 @@ static const uint32_t *prtf_uni (char * __restrict *buf, size_t *bufsize, dds_is
 
 static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restrict bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool add_braces)
 {
-  uint32_t insn;
+  uint32_t insn, delimited_sz = 0, delimited_offs = 0;
   bool cont = true;
   bool needs_comma = false;
   if (add_braces)
@@ -2105,36 +2249,44 @@ static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restric
     switch (DDS_OP (insn))
     {
       case DDS_OP_ADR: {
-        switch (DDS_OP_TYPE (insn))
+        if (!delimited_sz || (is->m_index - delimited_offs < delimited_sz))
         {
-          case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
-          case DDS_OP_VAL_STR:
-            cont = prtf_simple (buf, bufsize, is, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn));
-            ops += 2;
-            break;
-          case DDS_OP_VAL_BST: case DDS_OP_VAL_BSP: case DDS_OP_VAL_ENU:
-            cont = prtf_simple (buf, bufsize, is, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn));
-            ops += 3;
-            break;
-          case DDS_OP_VAL_SEQ:
-            ops = prtf_seq (buf, bufsize, is, ops, insn);
-            break;
-          case DDS_OP_VAL_ARR:
-            ops = prtf_arr (buf, bufsize, is, ops, insn);
-            break;
-          case DDS_OP_VAL_UNI:
-            ops = prtf_uni (buf, bufsize, is, ops, insn);
-            break;
-          case DDS_OP_VAL_EXT: {
-            const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
-            const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
-            cont = dds_stream_print_sample1 (buf, bufsize, is, jsr_ops, true);
-            ops += jmp ? jmp : 3;
-            break;
+          switch (DDS_OP_TYPE (insn))
+          {
+            case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
+            case DDS_OP_VAL_STR:
+              cont = prtf_simple (buf, bufsize, is, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn));
+              ops += 2;
+              break;
+            case DDS_OP_VAL_BST: case DDS_OP_VAL_BSP: case DDS_OP_VAL_ENU:
+              cont = prtf_simple (buf, bufsize, is, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn));
+              ops += 3;
+              break;
+            case DDS_OP_VAL_SEQ:
+              ops = prtf_seq (buf, bufsize, is, ops, insn);
+              break;
+            case DDS_OP_VAL_ARR:
+              ops = prtf_arr (buf, bufsize, is, ops, insn);
+              break;
+            case DDS_OP_VAL_UNI:
+              ops = prtf_uni (buf, bufsize, is, ops, insn);
+              break;
+            case DDS_OP_VAL_EXT: {
+              const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
+              const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
+              cont = dds_stream_print_sample1 (buf, bufsize, is, jsr_ops, true);
+              ops += jmp ? jmp : 3;
+              break;
+            }
+            case DDS_OP_VAL_STU:
+              abort (); /* op type STU only supported as subtype */
+              break;
           }
-          case DDS_OP_VAL_STU:
-            abort (); /* op type STU only supported as subtype */
-            break;
+        }
+        else
+        {
+          /* skip fields that are not in serialized data for appendable type */
+          ops = dds_stream_skip_op (insn, ops);
         }
         break;
       }
@@ -2150,12 +2302,19 @@ static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restric
       case DDS_OP_XCDR2_DLH: {
         cont = prtf (buf, bufsize, "dlh:");
         if (cont)
+        {
+          dds_cdr_alignto (is, 4);
+          delimited_sz = * ((uint32_t *) (is->m_buffer + is->m_index));
           cont = prtf_simple (buf, bufsize, is, DDS_OP_VAL_4BY, 0);
+        }
         ops++;
         break;
       }
     }
   }
+  /* Skip remainder of serialized data for this appendable type */
+  if (delimited_sz && (delimited_sz > is->m_index - delimited_offs))
+    is->m_index += delimited_sz - (is->m_index - delimited_offs);
   if (add_braces)
     (void) prtf (buf, bufsize, "}");
   return cont;
