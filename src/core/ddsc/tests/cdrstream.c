@@ -530,6 +530,136 @@ static void sample_free_keysnested (void *s)
   dds_free (s);
 }
 
+/**********************************************
+ * Arrays
+ **********************************************/
+typedef struct TestIdl_SubMsgArr
+{
+  int32_t field1;
+  int32_t field2;
+} TestIdl_SubMsgArr;
+
+typedef struct TestIdl_UnionArr
+{
+  int32_t _d;
+  union
+  {
+    int32_t union_field1;
+    uint32_t union_field2;
+  } _u;
+} TestIdl_UnionArr;
+
+typedef struct TestIdl_MsgArr
+{
+   int32_t msg_field1[2];
+   TestIdl_SubMsgArr msg_field2[2];
+   TestIdl_UnionArr msg_field3[2];
+} TestIdl_MsgArr;
+
+static const uint32_t TestIdl_MsgArr_ops [] =
+{
+  /* TestIdl_MsgArr */
+  DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_4BY, offsetof (TestIdl_MsgArr, msg_field1), 2u,
+  DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_STU, offsetof (TestIdl_MsgArr, msg_field2), 2u, (5u << 16) + 11u, sizeof (TestIdl_SubMsgArr),
+  DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_UNI, offsetof (TestIdl_MsgArr, msg_field3), 2u, (5u << 16) + 11u, sizeof (TestIdl_UnionArr),
+  DDS_OP_RTS,
+
+  /* TestIdl_SubMsgArr */
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgArr, field1),
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgArr, field2),
+  DDS_OP_RTS,
+
+  /* TestIdl_UnionArr */
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_4BY | DDS_OP_FLAG_SGN, offsetof (TestIdl_UnionArr, _d), 2u, (10u << 16) + 4u,
+    DDS_OP_JEQ | DDS_OP_TYPE_4BY | DDS_OP_FLAG_SGN | 0, 0, offsetof (TestIdl_UnionArr, _u.union_field1),
+    DDS_OP_JEQ | DDS_OP_TYPE_4BY | 0, 1, offsetof (TestIdl_UnionArr, _u.union_field2),
+  DDS_OP_RTS
+};
+
+const dds_topic_descriptor_t TestIdl_MsgArr_desc = { sizeof (TestIdl_MsgArr), sizeof (char *), DDS_TOPIC_NO_OPTIMIZE, 0u, "TestIdl::MsgArr", NULL, 6, TestIdl_MsgArr_ops, "" };
+
+static void * sample_init_arr ()
+{
+  TestIdl_MsgArr msg = {
+    .msg_field1 = { 1, 2 },
+    .msg_field2 = { { .field1 = 111, .field2 = 222 }, { .field1 = 333, .field2 = 444 } },
+    .msg_field3 = { { ._d = 0, ._u.union_field1 = 1 }, { ._d = 1, ._u.union_field2 = 2 } }
+  };
+  return ddsrt_memdup (&msg, sizeof (TestIdl_MsgArr));
+}
+
+static bool sample_equal_arr (void *s1, void *s2)
+{
+  TestIdl_MsgArr *msg1 = s1, *msg2 = s2;
+  return !memcmp (msg1, msg2, sizeof (TestIdl_MsgArr));
+}
+
+static void sample_free_arr (void *s)
+{
+  TestIdl_MsgArr *msg = s;
+  dds_free (msg);
+}
+
+/**********************************************
+ * Appendable types (different for rd and wr)
+ **********************************************/
+
+// /* @appendable */
+// typedef struct TestIdl_MsgAppendWr
+// {
+//   unsigned msg_field1;
+//   unsigned msg_field2;
+// } TestIdl_MsgAppendWr;
+
+// /* @appendable */
+// typedef struct TestIdl_MsgAppendRd
+// {
+//   unsigned msg_field1;
+//   unsigned msg_field2;
+//   unsigned msg_field3;
+// } TestIdl_MsgAppendRd;
+
+// static const uint32_t TestIdl_MsgAppendWr_ops [] =
+// {
+//   // Msg2
+//   DDS_OP_XCDR2_DLH,
+//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendWr, msg_field1),
+//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendWr, msg_field2),
+//   DDS_OP_RTS,
+// };
+
+// static const uint32_t TestIdl_MsgAppendRd_ops [] =
+// {
+//   // Msg2
+//   DDS_OP_XCDR2_DLH,
+//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendRd, msg_field1),
+//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendRd, msg_field2),
+//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendRd, msg_field3),
+//   DDS_OP_RTS,
+// };
+
+// const dds_topic_descriptor_t TestIdl_MsgAppendWr_desc = { sizeof (TestIdl_MsgAppendWr), 4u, 0u, 0u, "TestIdl::MsgAppendWr", NULL, 0, TestIdl_MsgAppendWr_ops, "" };
+// const dds_topic_descriptor_t TestIdl_MsgAppendRd_desc = { sizeof (TestIdl_MsgAppendRd), 4u, 0u, 0u, "TestIdl::MsgAppendRd", NULL, 0, TestIdl_MsgAppendRd_ops, "" };
+
+// static void * sample_init_appenddiff ()
+// {
+//   TestIdl_MsgAppendWr msg = { .msg_field1 = 1, .msg_field2 = 2 };
+//   return ddsrt_memdup (&msg, sizeof (TestIdl_MsgAppendWr));
+// }
+
+// static bool sample_equal_appenddiff (void *s1, void *s2)
+// {
+//   TestIdl_MsgAppendWr *msg1 = s1;
+//   TestIdl_MsgAppendRd *msg2 - s2;
+//   return msg1->msg_field1 == msg2->msg_field1
+//     && msg1->msg_field2 == msg2->msg_field2
+//     && msg2->msg_field3 == 0;
+// }
+
+// static void sample_free_appenddiff (void *s)
+// {
+//   dds_free (s);
+// }
 
 /**********************************************
  * Generic implementation and tests
@@ -636,11 +766,12 @@ CU_TheoryDataPoints (ddsc_cdrstream, ser_des) = {
   /*                                             |           |       */"unions",
   /*                                             |           |        |         */"recursive",
   /*                                             |           |        |          |             */"appendable",
-  /*                                             |           |        |          |              |              */"keys nested" ),
-  CU_DataPoints (const dds_topic_descriptor_t *, &D(Nested), &D(Str), &D(Union), &D(Recursive), &D(Appendable), &D(KeysNested) ),
-  CU_DataPoints (sample_init *,                  I(nested),  I(str),  I(union),  I(recursive),  I(appendable),  I(keysnested)  ),
-  CU_DataPoints (sample_equal *,                 C(nested),  C(str),  C(union),  C(recursive),  C(appendable),  C(keysnested)  ),
-  CU_DataPoints (sample_free *,                  F(nested),  F(str),  F(union),  F(recursive),  F(appendable),  F(keysnested)  ),
+  /*                                             |           |        |          |              |              */"keys nested",
+  /*                                             |           |        |          |              |               |              */"arrays" ),
+  CU_DataPoints (const dds_topic_descriptor_t *, &D(Nested), &D(Str), &D(Union), &D(Recursive), &D(Appendable), &D(KeysNested), &D(Arr) ),
+  CU_DataPoints (sample_init *,                  I(nested),  I(str),  I(union),  I(recursive),  I(appendable),  I(keysnested),  I(arr)  ),
+  CU_DataPoints (sample_equal *,                 C(nested),  C(str),  C(union),  C(recursive),  C(appendable),  C(keysnested),  C(arr)  ),
+  CU_DataPoints (sample_free *,                  F(nested),  F(str),  F(union),  F(recursive),  F(appendable),  F(keysnested),  F(arr)  ),
 };
 #undef D
 #undef I
