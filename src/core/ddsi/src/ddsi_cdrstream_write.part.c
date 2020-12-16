@@ -27,7 +27,7 @@ static const uint32_t *dds_stream_write_seqBO (DDS_OSTREAM_T * __restrict os, co
 
   dds_os_put4BO (os, num);
   if (num == 0)
-    return skip_sequence_insns (ops, insn);
+    return skip_sequence_insns (insn, ops);
 
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
   /* following length, stream is aligned to mod 4 */
