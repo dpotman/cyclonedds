@@ -993,22 +993,22 @@ static const uint32_t *dds_stream_skip_adr_default (uint32_t insn, char * __rest
      using default values that are specified in the type definition */
   switch (DDS_OP_TYPE (insn))
   {
-    case DDS_OP_VAL_1BY: *(uint8_t *) addr = 0; ops += 2; break;
-    case DDS_OP_VAL_2BY: *(uint16_t *) addr = 0; ops += 2; break;
-    case DDS_OP_VAL_4BY: *(uint32_t *) addr = 0; ops += 2; break;
-    case DDS_OP_VAL_8BY: *(uint64_t *) addr = 0; ops += 2; break;
+    case DDS_OP_VAL_1BY: *(uint8_t *) addr = 0; return ops + 2;
+    case DDS_OP_VAL_2BY: *(uint16_t *) addr = 0; return ops + 2;
+    case DDS_OP_VAL_4BY: *(uint32_t *) addr = 0; return ops + 2;
+    case DDS_OP_VAL_8BY: *(uint64_t *) addr = 0; return ops + 2;
 
-    case DDS_OP_VAL_STR: *(char **) addr = dds_stream_reuse_string_empty (*(char **) addr); ops += 2; break;
-    case DDS_OP_VAL_BST: ((char *) addr)[0] = '\0'; ops += 3; break;
-    case DDS_OP_VAL_BSP: *(char **) addr = dds_stream_reuse_string_empty (*(char **) addr); ops += 3; break;
+    case DDS_OP_VAL_STR: *(char **) addr = dds_stream_reuse_string_empty (*(char **) addr); return ops + 2;
+    case DDS_OP_VAL_BST: ((char *) addr)[0] = '\0'; return ops + 3;
+    case DDS_OP_VAL_BSP: *(char **) addr = dds_stream_reuse_string_empty (*(char **) addr); return ops + 3;
     case DDS_OP_VAL_ENU: *(uint32_t *) addr = 0; return ops + 3;
     case DDS_OP_VAL_SEQ: {
-      dds_sequence_t * const seq = (dds_sequence_t *) data;
+      dds_sequence_t * const seq = (dds_sequence_t *) addr;
       seq->_length = 0;
       return skip_sequence_insns (insn, ops);
     }
     case DDS_OP_VAL_ARR: {
-      return skip_array_default (insn, data, ops);
+      return skip_array_default (insn, addr, ops);
     }
     case DDS_OP_VAL_UNI: {
       return skip_union_default (insn, addr, data, ops);

@@ -19,6 +19,7 @@
 #include "dds/ddsc/dds_public_impl.h"
 #include "dds__topic.h"
 #include "dds/ddsi/ddsi_serdata.h"
+#include "dds/ddsi/ddsi_cdrstream.h"
 
 #define DDS_DOMAINID1 0
 #define DDS_DOMAINID2 1
@@ -601,65 +602,115 @@ static void sample_free_arr (void *s)
 }
 
 /**********************************************
- * Appendable types (different for rd and wr)
+ * Appendable types: structs
  **********************************************/
 
-// /* @appendable */
-// typedef struct TestIdl_MsgAppendWr
-// {
-//   unsigned msg_field1;
-//   unsigned msg_field2;
-// } TestIdl_MsgAppendWr;
+/* @appendable */
+typedef struct TestIdl_SubMsgAppend1
+{
+  uint32_t submsg_field1;
+  uint32_t submsg_field2;
+} TestIdl_SubMsgAppend1;
 
-// /* @appendable */
-// typedef struct TestIdl_MsgAppendRd
-// {
-//   unsigned msg_field1;
-//   unsigned msg_field2;
-//   unsigned msg_field3;
-// } TestIdl_MsgAppendRd;
+/* @appendable */
+typedef struct TestIdl_MsgAppend1
+{
+  uint32_t msg_field1;
+  TestIdl_SubMsgAppend1 msg_field2;
+  uint32_t msg_field3;
+} TestIdl_MsgAppend1;
 
-// static const uint32_t TestIdl_MsgAppendWr_ops [] =
-// {
-//   // Msg2
-//   DDS_OP_XCDR2_DLH,
-//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendWr, msg_field1),
-//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendWr, msg_field2),
-//   DDS_OP_RTS,
-// };
+static const uint32_t TestIdl_MsgAppend1_ops [] =
+{
+  DDS_OP_XCDR2_DLH,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppend1, msg_field1),
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_MsgAppend1, msg_field2), (3u << 16u) + 6u,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppend1, msg_field3),
+  DDS_OP_RTS,
 
-// static const uint32_t TestIdl_MsgAppendRd_ops [] =
-// {
-//   // Msg2
-//   DDS_OP_XCDR2_DLH,
-//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendRd, msg_field1),
-//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendRd, msg_field2),
-//   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendRd, msg_field3),
-//   DDS_OP_RTS,
-// };
+  DDS_OP_XCDR2_DLH,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgAppend1, submsg_field1),
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgAppend1, submsg_field2),
+  DDS_OP_RTS
+};
 
-// const dds_topic_descriptor_t TestIdl_MsgAppendWr_desc = { sizeof (TestIdl_MsgAppendWr), 4u, 0u, 0u, "TestIdl::MsgAppendWr", NULL, 0, TestIdl_MsgAppendWr_ops, "" };
-// const dds_topic_descriptor_t TestIdl_MsgAppendRd_desc = { sizeof (TestIdl_MsgAppendRd), 4u, 0u, 0u, "TestIdl::MsgAppendRd", NULL, 0, TestIdl_MsgAppendRd_ops, "" };
+/* @appendable */
+typedef struct TestIdl_SubMsgAppend2
+{
+  uint32_t submsg_field1;
+  uint32_t submsg_field2;
+  uint32_t submsg_field3[10000];
+} TestIdl_SubMsgAppend2;
 
-// static void * sample_init_appenddiff ()
-// {
-//   TestIdl_MsgAppendWr msg = { .msg_field1 = 1, .msg_field2 = 2 };
-//   return ddsrt_memdup (&msg, sizeof (TestIdl_MsgAppendWr));
-// }
+/* @appendable */
+typedef struct TestIdl_MsgAppend2
+{
+  uint32_t msg_field1;
+  TestIdl_SubMsgAppend2 msg_field2;
+  uint32_t msg_field3;
+  uint32_t msg_field4[10000];
+} TestIdl_MsgAppend2;
 
-// static bool sample_equal_appenddiff (void *s1, void *s2)
-// {
-//   TestIdl_MsgAppendWr *msg1 = s1;
-//   TestIdl_MsgAppendRd *msg2 - s2;
-//   return msg1->msg_field1 == msg2->msg_field1
-//     && msg1->msg_field2 == msg2->msg_field2
-//     && msg2->msg_field3 == 0;
-// }
+static const uint32_t TestIdl_MsgAppend2_ops [] =
+{
+  DDS_OP_XCDR2_DLH,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppend2, msg_field1),
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_MsgAppend2, msg_field2), (3u << 16u) + 9u,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppend2, msg_field3),
+  DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_4BY, offsetof (TestIdl_MsgAppend2, msg_field4), 10000u,
+  DDS_OP_RTS,
 
-// static void sample_free_appenddiff (void *s)
-// {
-//   dds_free (s);
-// }
+  DDS_OP_XCDR2_DLH,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgAppend2, submsg_field1),
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgAppend2, submsg_field2),
+  DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_4BY, offsetof (TestIdl_SubMsgAppend2, submsg_field3), 10000u,
+  DDS_OP_RTS
+};
+
+const dds_topic_descriptor_t TestIdl_MsgAppend1_desc = { sizeof (TestIdl_MsgAppend1), 4u, 0u, 0u, "TestIdl::MsgAppend1", NULL, 0, TestIdl_MsgAppend1_ops, "" };
+const dds_topic_descriptor_t TestIdl_MsgAppend2_desc = { sizeof (TestIdl_MsgAppend2), 4u, 0u, 0u, "TestIdl::MsgAppend2", NULL, 0, TestIdl_MsgAppend2_ops, "" };
+
+static void * sample_init_append1 ()
+{
+  TestIdl_MsgAppend1 msg = { .msg_field1 = 1, .msg_field2 = { .submsg_field1 = 11, .submsg_field2 = 22 } };
+  return ddsrt_memdup (&msg, sizeof (TestIdl_MsgAppend1));
+}
+
+static void * sample_init_append2 ()
+{
+  TestIdl_MsgAppend2 msg = { .msg_field1 = 1, .msg_field2 = { .submsg_field1 = 11, .submsg_field2 = 22 } };
+  return ddsrt_memdup (&msg, sizeof (TestIdl_MsgAppend2));
+}
+
+static bool sample_equal_append1 (void *s_wr, void *s_rd)
+{
+  TestIdl_MsgAppend1 *msg_wr = s_wr;
+  TestIdl_MsgAppend2 *msg_rd = s_rd;
+  bool eq = true;
+  for (int n = 0; n < 10000 && eq; n++)
+    eq = eq && msg_rd->msg_field2.submsg_field3[n] == 0;
+  for (int n = 0; n < 10000 && eq; n++)
+    eq = eq && msg_rd->msg_field4[n] == 0;
+  return eq
+    && msg_wr->msg_field1 == msg_rd->msg_field1
+    && msg_wr->msg_field2.submsg_field1 == msg_rd->msg_field2.submsg_field1
+    && msg_wr->msg_field2.submsg_field2 == msg_rd->msg_field2.submsg_field2;
+}
+
+static bool sample_equal_append2 (void *s_wr, void *s_rd)
+{
+  TestIdl_MsgAppend2 *msg_wr = s_wr;
+  TestIdl_MsgAppend1 *msg_rd = s_rd;
+  return
+    msg_wr->msg_field1 == msg_rd->msg_field1
+    && msg_wr->msg_field2.submsg_field1 == msg_rd->msg_field2.submsg_field1
+    && msg_wr->msg_field2.submsg_field2 == msg_rd->msg_field2.submsg_field2;
+}
+
+static void sample_free_append (void *s)
+{
+  dds_free (s);
+}
 
 /**********************************************
  * Generic implementation and tests
@@ -760,6 +811,7 @@ static void cdrstream_fini ()
 #define I(n) sample_init_ ## n
 #define C(n) sample_equal_ ## n
 #define F(n) sample_free_ ## n
+
 CU_TheoryDataPoints (ddsc_cdrstream, ser_des) = {
   CU_DataPoints (const char *,                   "nested structs",
   /*                                             |          */"string types",
@@ -773,10 +825,7 @@ CU_TheoryDataPoints (ddsc_cdrstream, ser_des) = {
   CU_DataPoints (sample_equal *,                 C(nested),  C(str),  C(union),  C(recursive),  C(appendable),  C(keysnested),  C(arr)  ),
   CU_DataPoints (sample_free *,                  F(nested),  F(str),  F(union),  F(recursive),  F(appendable),  F(keysnested),  F(arr)  ),
 };
-#undef D
-#undef I
-#undef C
-#undef F
+
 CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_init *sample_init_fn, sample_equal *sample_equal_fn, sample_free *sample_free_fn),
     ddsc_cdrstream, ser_des, .init = cdrstream_init, .fini = cdrstream_fini)
 {
@@ -809,3 +858,83 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_init *
   dds_return_loan (rd, rds, 1);
 }
 
+
+CU_TheoryDataPoints (ddsc_cdrstream, appendable) = {
+  CU_DataPoints (const char *,                   "appendable"),
+  CU_DataPoints (const dds_topic_descriptor_t *, &D(Append1)  ),
+  CU_DataPoints (const dds_topic_descriptor_t *, &D(Append2)  ),
+  CU_DataPoints (sample_init *,                   I(append1)  ),
+  CU_DataPoints (sample_init *,                   I(append2)  ),
+  CU_DataPoints (sample_equal *,                  C(append1)  ),
+  CU_DataPoints (sample_equal *,                  C(append2)  ),
+  CU_DataPoints (sample_free *,                   F(append)   ),
+};
+
+CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_topic_descriptor_t *desc2,
+    sample_init *sample_init_fn1, sample_init *sample_init_fn2, sample_equal *sample_equal_fn1, sample_equal *sample_equal_fn2, sample_free *sample_free_fn),
+    ddsc_cdrstream, appendable, .init = cdrstream_init, .fini = cdrstream_fini)
+{
+  for (int t = 0; t <= 1; t++)
+  {
+    msg ("Running test: %s (run %d/2)", descr, t + 1);
+
+    const dds_topic_descriptor_t *desc_wr = t ? desc2 : desc1;
+    const dds_topic_descriptor_t *desc_rd = t ? desc1 : desc2;
+
+    /* Write data */
+    dds_ostream_t os;
+    os.m_buffer = NULL;
+    os.m_index = 0;
+    os.m_size = 0;
+
+    struct ddsi_sertype_default tp_wr;
+    memset (&tp_wr, 0, sizeof (tp_wr));
+    tp_wr.type = (struct ddsi_sertype_default_desc) {
+      .size = desc_wr->m_size,
+      .align = desc_wr->m_align,
+      .flagset = desc_wr->m_flagset,
+      .keys.nkeys = 0,
+      .keys.keys = NULL,
+      .ops.nops = dds_stream_countops (desc_wr->m_ops, desc_wr->m_nkeys, desc_wr->m_keys),
+      .ops.ops = (uint32_t *) desc_wr->m_ops
+    };
+
+    void * msg_wr = t ? sample_init_fn2 () : sample_init_fn1 ();
+    dds_stream_write_sample (&os, msg_wr, &tp_wr);
+
+    /* Read data */
+    dds_istream_t is;
+    is.m_buffer = os.m_buffer;
+    is.m_index = 0;
+    is.m_size = os.m_size;
+
+    struct ddsi_sertype_default tp_rd;
+    memset (&tp_rd, 0, sizeof (tp_rd));
+    tp_rd.type = (struct ddsi_sertype_default_desc) {
+      .size = desc_rd->m_size,
+      .align = desc_rd->m_align,
+      .flagset = desc_rd->m_flagset,
+      .keys.nkeys = 0,
+      .keys.keys = NULL,
+      .ops.nops = dds_stream_countops (desc_rd->m_ops, desc_rd->m_nkeys, desc_rd->m_keys),
+      .ops.ops = (uint32_t *) desc_rd->m_ops
+    };
+
+    void *msg_rd = ddsrt_malloc (desc_rd->m_size);
+    dds_stream_read_sample (&is, msg_rd, &tp_rd);
+
+    /* Check for expected result */
+    bool eq = t ? sample_equal_fn2 (msg_wr, msg_rd) : sample_equal_fn1 (msg_wr, msg_rd);
+    CU_ASSERT_FATAL (eq);
+
+    // cleanup
+    sample_free_fn (msg_wr);
+    sample_free_fn (msg_rd);
+    dds_free (os.m_buffer);
+  }
+}
+
+#undef D
+#undef I
+#undef C
+#undef F
