@@ -41,11 +41,11 @@ bool ddsi_typeid_equal (const type_identifier_t *a, const type_identifier_t *b)
   return memcmp (a->hash, b->hash, sizeof (*a)) == 0;
 }
 
-bool ddsi_typeid_none (const type_identifier_t *typeid)
+bool ddsi_typeid_none (const type_identifier_t *type_id)
 {
-  if (typeid == NULL)
+  if (type_id == NULL)
     return true;
   type_identifier_t empty;
-  memset (&empty, 0, sizeof (*typeid));
-  return memcmp (typeid, &empty, sizeof (*typeid)) == 0;
+  memset (&empty, 0, sizeof (*type_id));
+  return memcmp (type_id, &empty, sizeof (*type_id)) == 0;
 }

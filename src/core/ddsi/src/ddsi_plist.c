@@ -215,6 +215,20 @@ static void *ser_generic_align8(char * __restrict p, size_t * __restrict off)
   return ser_generic_aligned(p, off, 8);
 }
 
+static dds_return_t deser_uint16 (uint16_t *dst, const struct dd * __restrict dd, size_t * __restrict off)
+{
+  size_t off1 = (*off + 1) & ~(size_t)1;
+  uint16_t tmp;
+  if (off1 + 2 > dd->bufsz)
+    return DDS_RETCODE_BAD_PARAMETER;
+  tmp = *((uint16_t *) (dd->buf + off1));
+  if (dd->bswap)
+    tmp = ddsrt_bswap2u (tmp);
+  *dst = tmp;
+  *off = off1 + 2;
+  return 0;
+}
+
 static dds_return_t deser_uint32 (uint32_t *dst, const struct dd * __restrict dd, size_t * __restrict off)
 {
   size_t off1 = (*off + 3) & ~(size_t)3;
@@ -463,6 +477,92 @@ static bool print_locator (char * __restrict *buf, size_t * __restrict bufsize, 
     sep = ",";
   }
   return prtf (buf, bufsize, "}");
+}
+
+static dds_return_t deser_type_consistency (void * __restrict dst, size_t * __restrict dstoff, struct flagset *flagset, uint64_t flag, const struct dd * __restrict dd, size_t * __restrict srcoff)
+{
+  DDSRT_STATIC_ASSERT (DDS_TYPE_CONSISTENCY_DISALLOW_TYPE_COERCION == 0 && DDS_TYPE_CONSISTENCY_ALLOW_TYPE_COERCION == 1);
+  dds_type_consistency_enforcement_qospolicy_t * const x = deser_generic_dst (dst, dstoff, alignof (dds_type_consistency_enforcement_qospolicy_t));
+  uint32_t option_count = 5;
+  uint16_t kind;
+  if (deser_uint16 (&kind, dd, srcoff) < 0)
+    return DDS_RETCODE_BAD_PARAMETER;
+  if (kind > DDS_TYPE_CONSISTENCY_ALLOW_TYPE_COERCION)
+    return DDS_RETCODE_BAD_PARAMETER;
+  x->kind = kind;
+  if (dd->bufsz - *srcoff < option_count)
+  {
+    /* set defaults as described in clause 7.6.3.4.1 of the xtypes spec */
+    x->ignore_sequence_bounds = x->kind != DDS_TYPE_CONSISTENCY_DISALLOW_TYPE_COERCION;
+    x->ignore_string_bounds = x->kind != DDS_TYPE_CONSISTENCY_DISALLOW_TYPE_COERCION;
+    x->ignore_member_names = false;
+    x->prevent_type_widening = x->kind == DDS_TYPE_CONSISTENCY_DISALLOW_TYPE_COERCION;
+    x->force_type_validation = false;
+  }
+  else
+  {
+    if (x->kind == DDS_TYPE_CONSISTENCY_DISALLOW_TYPE_COERCION)
+    {
+      x->force_type_validation = *(char *)(dd->buf + *srcoff + 4);
+      /* set values for options that do not apply (xtypes spec 7.6.3.4.1) */
+      x->ignore_sequence_bounds = false;
+      x->ignore_string_bounds = false;
+      x->ignore_member_names = false;
+      x->prevent_type_widening = true;
+    }
+    else
+    {
+      char * tmp = (char *)x + sizeof (x->kind);
+      memcpy (tmp, dd->buf + *srcoff, option_count);
+      for (uint32_t i = 0; i < option_count; i++)
+        if (tmp[i] > 1)
+          return DDS_RETCODE_BAD_PARAMETER;
+    }
+    *srcoff += option_count;
+  }
+  *dstoff += sizeof (*x);
+  *flagset->present |= flag;
+  return 0;
+}
+
+static dds_return_t ser_type_consistency (struct nn_xmsg *xmsg, nn_parameterid_t pid, const void *src, size_t srcoff, enum ddsrt_byte_order_selector bo)
+{
+  dds_type_consistency_enforcement_qospolicy_t const * const x = deser_generic_src (src, &srcoff, alignof (dds_type_consistency_enforcement_qospolicy_t));
+  char * const p = nn_xmsg_addpar_bo (xmsg, pid, 8, bo);
+  const uint16_t kind = ddsrt_toBO2u (bo, (uint16_t) x->kind);
+  memcpy (p, &kind, 2);
+  memcpy (p + 2, (char *)x + sizeof (x->kind), 5);
+  return 0;
+}
+
+static dds_return_t valid_type_consistency (const void *src, size_t srcoff)
+{
+  DDSRT_STATIC_ASSERT (DDS_TYPE_CONSISTENCY_DISALLOW_TYPE_COERCION == 0 && DDS_TYPE_CONSISTENCY_ALLOW_TYPE_COERCION == 1);
+  dds_type_consistency_enforcement_qospolicy_t const * const x = deser_generic_src (src, &srcoff, alignof (dds_type_consistency_enforcement_qospolicy_t));
+  if (x->kind == DDS_TYPE_CONSISTENCY_DISALLOW_TYPE_COERCION
+      && (x->ignore_sequence_bounds || x->ignore_string_bounds || x->ignore_member_names || !x->prevent_type_widening))
+    return DDS_RETCODE_BAD_PARAMETER;
+  if (x->kind > DDS_TYPE_CONSISTENCY_ALLOW_TYPE_COERCION)
+    return DDS_RETCODE_BAD_PARAMETER;
+  return 0;
+}
+
+static bool equal_type_consistency (const void *srcx, const void *srcy, size_t srcoff)
+{
+  dds_type_consistency_enforcement_qospolicy_t const * const x = deser_generic_src (srcx, &srcoff, alignof (dds_type_consistency_enforcement_qospolicy_t));
+  dds_type_consistency_enforcement_qospolicy_t const * const y = deser_generic_src (srcy, &srcoff, alignof (dds_type_consistency_enforcement_qospolicy_t));
+  return x->kind == y->kind
+    && x->ignore_sequence_bounds == y->ignore_sequence_bounds
+    && x->ignore_string_bounds== y->ignore_string_bounds
+    && x->ignore_member_names == y->ignore_member_names
+    && x->prevent_type_widening == y->prevent_type_widening
+    && x->force_type_validation == y->force_type_validation;
+}
+
+static bool print_type_consistency (char * __restrict *buf, size_t * __restrict bufsize, const void *src, size_t srcoff)
+{
+  dds_type_consistency_enforcement_qospolicy_t const * const x = deser_generic_src (src, &srcoff, alignof (dds_type_consistency_enforcement_qospolicy_t));
+  return prtf (buf, bufsize, "%d:%d%d%d%d%d", (int) x->kind, x->ignore_sequence_bounds, x->ignore_string_bounds, x->ignore_member_names, x->prevent_type_widening, x->force_type_validation);
 }
 
 static size_t ser_generic_srcsize (const enum pserop * __restrict desc)
@@ -1570,7 +1670,10 @@ static const struct piddesc piddesc_omg[] = {
   QP  (PARTITION,                           partition, XQ, XS, XSTOP),
   QP  (TIME_BASED_FILTER,                   time_based_filter, XD),
   QP  (TRANSPORT_PRIORITY,                  transport_priority, Xi),
-  QP  (TYPE_CONSISTENCY_ENFORCEMENT,        type_consistency, XE1, Xbx5),
+  /* Type consistency enforcement has some custom validations and uses a bitbound(16) enum */
+  { PID_TYPE_CONSISTENCY_ENFORCEMENT, PDF_QOS | PDF_FUNCTION, QP_TYPE_CONSISTENCY_ENFORCEMENT, "TYPE_CONSISTENCY_ENFORCEMENT",
+    offsetof (struct ddsi_plist, qos.type_consistency), membersize (struct ddsi_plist, qos.type_consistency),
+    { .f = { .deser = deser_type_consistency, .ser = ser_type_consistency, .valid = valid_type_consistency, .equal = equal_type_consistency, .print = print_type_consistency } }, 0 },
   PP  (PROTOCOL_VERSION,                    protocol_version, Xox2),
   PP  (VENDORID,                            vendorid, Xox2),
   PP  (EXPECTS_INLINE_QOS,                  expects_inline_qos, Xb),

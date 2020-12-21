@@ -199,7 +199,7 @@ static void tlm_ref_impl (struct ddsi_domaingv *gv, const type_identifier_t *typ
     resolved = true;
   }
   tlm->refc++;
-  GVTRACE (" state %d refc %u", tlm->state, tlm->refc);
+  GVTRACE (" state %d refc %u\n", tlm->state, tlm->refc);
 
   if (resolved)
     ddsrt_cond_broadcast (&gv->tl_resolved_cond);
@@ -258,6 +258,7 @@ static void tlm_unref_impl (struct ddsi_domaingv *gv, const type_identifier_t *t
   ddsrt_mutex_unlock (&gv->tl_admin_lock);
   if (type_id == NULL)
     ddsrt_free (tid);
+  GVTRACE ("\n");
 }
 
 void ddsi_tl_meta_proxy_unref (struct ddsi_domaingv *gv, const type_identifier_t *type_id, const ddsi_guid_t *proxy_ep_guid)

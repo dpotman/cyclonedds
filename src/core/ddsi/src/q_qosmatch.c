@@ -75,19 +75,19 @@ static bool check_assignability (struct tl_meta *rd_tlm, struct tl_meta *wr_tlm)
   return ddsi_sertype_assignable_from (rd_tlm->sertype, wr_tlm->sertype);
 }
 
-static bool check_endpoint_typeid (struct ddsi_domaingv *gv, const type_identifier_t *typeid, struct tl_meta **tlm, bool *req_lookup)
+static bool check_endpoint_typeid (struct ddsi_domaingv *gv, const type_identifier_t *type_id, struct tl_meta **tlm, bool *req_lookup)
 {
   assert (tlm != NULL);
-  if (typeid != NULL && !ddsi_typeid_none (typeid))
+  if (type_id != NULL && !ddsi_typeid_none (type_id))
   {
     ddsrt_mutex_lock (&gv->tl_admin_lock);
     /* no refcounting for returned tlm object, but its lifetime is
        at least that of the endpoint that refers to it */
-    *tlm = ddsi_tl_meta_lookup_locked (gv, typeid);
+    *tlm = ddsi_tl_meta_lookup_locked (gv, type_id);
     assert (*tlm != NULL);
     if ((*tlm)->state != TL_META_RESOLVED)
     {
-      GVTRACE ("typeid unresolved "PTYPEIDFMT"\n", PTYPEID(*typeid));
+      GVTRACE ("typeid unresolved "PTYPEIDFMT"\n", PTYPEID(*type_id));
       /* defer requesting unresolved type until after the endpoint qos lock
          has been released, so just set a bool value indicating that a type
          lookup is required */
