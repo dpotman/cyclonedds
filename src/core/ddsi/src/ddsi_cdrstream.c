@@ -502,7 +502,7 @@ static char *dds_stream_reuse_string (dds_istream_t * __restrict is, char * __re
 
 static char *dds_stream_reuse_string_empty (char * __restrict str)
 {
-  if (str == NULL || strlen (str) == 0)
+  if (str == NULL)
     str = dds_realloc (str, 1);
   str[0] = '\0';
   return str;
