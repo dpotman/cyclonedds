@@ -483,7 +483,7 @@ static dds_return_t deser_type_consistency (void * __restrict dst, size_t * __re
 {
   DDSRT_STATIC_ASSERT (DDS_TYPE_CONSISTENCY_DISALLOW_TYPE_COERCION == 0 && DDS_TYPE_CONSISTENCY_ALLOW_TYPE_COERCION == 1);
   dds_type_consistency_enforcement_qospolicy_t * const x = deser_generic_dst (dst, dstoff, alignof (dds_type_consistency_enforcement_qospolicy_t));
-  uint32_t option_count = 5;
+  const uint32_t option_count = 5;
   uint16_t kind;
   if (deser_uint16 (&kind, dd, srcoff) < 0)
     return DDS_RETCODE_BAD_PARAMETER;
@@ -501,9 +501,12 @@ static dds_return_t deser_type_consistency (void * __restrict dst, size_t * __re
   }
   else
   {
+    for (uint32_t i = 0; i < option_count; i++)
+      if (dd->buf[*srcoff + i] > 1)
+        return DDS_RETCODE_BAD_PARAMETER;
+    x->force_type_validation = (bool) dd->buf[*srcoff + 4];
     if (x->kind == DDS_TYPE_CONSISTENCY_DISALLOW_TYPE_COERCION)
     {
-      x->force_type_validation = *(char *)(dd->buf + *srcoff + 4);
       /* set values for options that do not apply (xtypes spec 7.6.3.4.1) */
       x->ignore_sequence_bounds = false;
       x->ignore_string_bounds = false;
@@ -512,11 +515,10 @@ static dds_return_t deser_type_consistency (void * __restrict dst, size_t * __re
     }
     else
     {
-      char * tmp = (char *)x + sizeof (x->kind);
-      memcpy (tmp, dd->buf + *srcoff, option_count);
-      for (uint32_t i = 0; i < option_count; i++)
-        if (tmp[i] > 1)
-          return DDS_RETCODE_BAD_PARAMETER;
+      x->ignore_sequence_bounds = (bool) dd->buf[*srcoff + 0];
+      x->ignore_string_bounds = (bool) dd->buf[*srcoff + 1];
+      x->ignore_member_names = (bool) dd->buf[*srcoff + 2];
+      x->prevent_type_widening = (bool) dd->buf[*srcoff + 3];
     }
     *srcoff += option_count;
   }
@@ -531,7 +533,12 @@ static dds_return_t ser_type_consistency (struct nn_xmsg *xmsg, nn_parameterid_t
   char * const p = nn_xmsg_addpar_bo (xmsg, pid, 8, bo);
   const uint16_t kind = ddsrt_toBO2u (bo, (uint16_t) x->kind);
   memcpy (p, &kind, 2);
-  memcpy (p + 2, (char *)x + sizeof (x->kind), 5);
+  size_t offs = sizeof (x->kind);
+  p[offs + 0] = x->force_type_validation;
+  p[offs + 1] = x->ignore_sequence_bounds;
+  p[offs + 2] = x->ignore_string_bounds;
+  p[offs + 3] = x->ignore_member_names;
+  p[offs + 4] = x->prevent_type_widening;
   return 0;
 }
 
