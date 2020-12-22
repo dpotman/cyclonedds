@@ -233,6 +233,32 @@ uint32_t ddsi_sertype_compute_serdata_basehash (const struct ddsi_serdata_ops *o
   return res;
 }
 
+uint16_t ddsi_sertype_get_native_encoding_identifier (uint32_t version, uint32_t toplevel_type_ext)
+{
+#if (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN)
+#define CDR_BO(x) x ## _LE
+#else
+#define CDR_BO(x) x ## _BE
+#endif
+  switch (version)
+  {
+    case 1:
+      if (toplevel_type_ext == DDS_TOPIC_TYPE_EXTENSIBILITY_MUTABLE)
+        return CDR_BO(PL_CDR);
+      return CDR_BO(CDR);
+    case 2:
+      if (toplevel_type_ext == DDS_TOPIC_TYPE_EXTENSIBILITY_MUTABLE)
+        return CDR_BO(PL_CDR2);
+      if (toplevel_type_ext == DDS_TOPIC_TYPE_EXTENSIBILITY_APPENDABLE)
+        return CDR_BO(D_CDR2);
+      return CDR_BO(CDR2);
+    default:
+      abort (); /* unsupported */
+  }
+#undef CDR_BO_EXT
+#undef CDR_BO
+}
+
 extern inline void ddsi_sertype_free (struct ddsi_sertype *tp);
 extern inline void ddsi_sertype_zero_samples (const struct ddsi_sertype *tp, void *samples, size_t count);
 extern inline void ddsi_sertype_realloc_samples (void **ptrs, const struct ddsi_sertype *tp, void *old, size_t oldcount, size_t count);

@@ -401,7 +401,7 @@ static const uint32_t TestIdl_AppendableMsg_ops [] =
   DDS_OP_RTS,
 };
 
-const dds_topic_descriptor_t TestIdl_MsgAppendable_desc = { sizeof (TestIdl_AppendableMsg), 4u, DDS_TOPIC_NO_OPTIMIZE, 0u, "TestIdl::AppendableMsg", NULL, 4, TestIdl_AppendableMsg_ops, "" };
+const dds_topic_descriptor_t TestIdl_MsgAppendable_desc = { sizeof (TestIdl_AppendableMsg), 4u, DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_ENCODING_CDR2 | DDS_TOPIC_TYPE_EXTENSIBILITY_APPENDABLE, 0u, "TestIdl::AppendableMsg", NULL, 4, TestIdl_AppendableMsg_ops, "" };
 
 static void * sample_init_appendable ()
 {
@@ -1053,7 +1053,7 @@ CU_TheoryDataPoints (ddsc_cdrstream, appendable) = {
 
 CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_topic_descriptor_t *desc2,
     sample_init *sample_init_fn1, sample_init *sample_init_fn2, sample_equal *sample_equal_fn1, sample_equal *sample_equal_fn2, sample_free2 *sample_free_fn1, sample_free2 *sample_free_fn2),
-    ddsc_cdrstream, appendable, .init = cdrstream_init, .fini = cdrstream_fini)
+    ddsc_cdrstream, appendable)
 {
   for (int t = 0; t <= 1; t++)
   {

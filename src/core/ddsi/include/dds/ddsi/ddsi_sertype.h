@@ -149,6 +149,8 @@ DDS_EXPORT bool ddsi_sertype_equal (const struct ddsi_sertype *a, const struct d
 DDS_EXPORT uint32_t ddsi_sertype_hash (const struct ddsi_sertype *tp);
 DDS_EXPORT bool ddsi_sertype_serialize (const struct ddsi_sertype *tp, size_t *dst_pos, unsigned char **dst_buf);
 
+uint16_t ddsi_sertype_get_native_encoding_identifier (uint32_t version, uint32_t toplevel_type_ext);
+
 DDS_EXPORT inline void ddsi_sertype_free (struct ddsi_sertype *tp) {
   tp->ops->free (tp);
 }

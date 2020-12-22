@@ -39,6 +39,8 @@ static bool sertype_default_equal (const struct ddsi_sertype *acmn, const struct
     return false;
   if (a->type.flagset != b->type.flagset)
     return false;
+  if (a->type.extensibility != b->type.extensibility)
+    return false;
   if (a->type.keys.nkeys != b->type.keys.nkeys)
     return false;
   if (
@@ -66,6 +68,7 @@ static bool sertype_default_typeid_hash (const struct ddsi_sertype *tpcmn, unsig
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.size, sizeof (tp->type.size));
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.align, sizeof (tp->type.align));
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.flagset, sizeof (tp->type.flagset));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.extensibility, sizeof (tp->type.extensibility));
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) tp->type.keys.keys, (uint32_t) (tp->type.keys.nkeys * sizeof (*tp->type.keys.keys)));
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) tp->type.ops.ops, (uint32_t) (tp->type.ops.nops * sizeof (*tp->type.ops.ops)));
   ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) buf);
@@ -135,7 +138,7 @@ static void sertype_default_free_samples (const struct ddsi_sertype *sertype_com
   }
 }
 
-const enum pserop ddsi_sertype_default_desc_ops[] = { Xux3, XQ, Xu, XSTOP, XQ, Xu, XSTOP, XSTOP };
+const enum pserop ddsi_sertype_default_desc_ops[] = { Xux3, XE2, XQ, Xu, XSTOP, XQ, Xu, XSTOP, XSTOP };
 
 static void sertype_default_serialized_size (const struct ddsi_sertype *stc, size_t *dst_offset)
 {
@@ -152,7 +155,7 @@ static bool sertype_default_serialize (const struct ddsi_sertype *stc, size_t *d
 static bool sertype_default_deserialize (struct ddsi_domaingv *gv, struct ddsi_sertype *stc, size_t src_sz, const unsigned char *src_data, size_t *src_offset)
 {
   struct ddsi_sertype_default *st = (struct ddsi_sertype_default *) stc;
-  st->native_encoding_identifier = (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN ? CDR_LE : CDR_BE);
+  st->native_encoding_identifier = ddsi_sertype_get_native_encoding_identifier (/* FIXME */ 2, st->type.extensibility);
   st->serpool = gv->serpool;
   st->c.serdata_ops = st->c.typekind_no_key ? &ddsi_serdata_ops_cdr_nokey : &ddsi_serdata_ops_cdr;
   if (plist_deser_generic_srcoff (&st->type, src_data, src_sz, src_offset, DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN, ddsi_sertype_default_desc_ops) < 0)

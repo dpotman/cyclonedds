@@ -2504,9 +2504,9 @@ void dds_istream_from_serdata_default (dds_istream_t * __restrict s, const struc
   s->m_index = (uint32_t) offsetof (struct ddsi_serdata_default, data);
   s->m_size = d->size + s->m_index;
 #if DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN
-  assert (d->hdr.identifier == CDR_LE);
+  assert (CDR_ENC_LE (d->hdr.identifier));
 #elif DDSRT_ENDIAN == DDSRT_BIG_ENDIAN
-  assert (d->hdr.identifier == CDR_BE);
+  assert (!CDR_ENC_LE (d->hdr.identifier));
 #else
 #error "DDSRT_ENDIAN neither LITTLE nor BIG"
 #endif
@@ -2518,9 +2518,9 @@ void dds_ostream_from_serdata_default (dds_ostream_t * __restrict s, struct ddsi
   s->m_index = (uint32_t) offsetof (struct ddsi_serdata_default, data);
   s->m_size = d->size + s->m_index;
 #if DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN
-  assert (d->hdr.identifier == CDR_LE);
+  assert (CDR_ENC_LE (d->hdr.identifier));
 #elif DDSRT_ENDIAN == DDSRT_BIG_ENDIAN
-  assert (d->hdr.identifier == CDR_BE);
+  assert (!CDR_ENC_LE (d->hdr.identifier));
 #else
 #error "DDSRT_ENDIAN neither LITTLE nor BIG"
 #endif

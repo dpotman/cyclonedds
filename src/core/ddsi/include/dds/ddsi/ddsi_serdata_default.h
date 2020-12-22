@@ -25,14 +25,6 @@
 extern "C" {
 #endif
 
-#if DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN
-#define CDR_BE 0x0000
-#define CDR_LE 0x0100
-#else
-#define CDR_BE 0x0000
-#define CDR_LE 0x0001
-#endif
-
 struct CDRHeader {
   unsigned short identifier;
   unsigned short options;
@@ -100,6 +92,13 @@ struct ddsi_serdata_default {
 typedef bool (*dds_topic_intern_filter_fn) (const void * sample, void *ctx);
 #endif
 
+enum ddsi_sertype_extensibility
+{
+  DDSI_SERTYPE_DEFAULT_EXT_FINAL = 0,
+  DDSI_SERTYPE_DEFAULT_EXT_APPENDABLE = 1,
+  DDSI_SERTYPE_DEFAULT_EXT_MUTABLE = 2
+};
+
 typedef struct ddsi_sertype_default_desc_key_seq {
   uint32_t nkeys;   /* Number of keys (can be 0) */
   uint32_t *keys;   /* Key descriptors (NULL iff nkeys 0) */
@@ -115,13 +114,14 @@ struct ddsi_sertype_default_desc {
   uint32_t size;    /* Size of topic type */
   uint32_t align;   /* Alignment of topic type */
   uint32_t flagset; /* Flags */
+  enum ddsi_sertype_extensibility extensibility;  /* Extensibility of the top-level type */
   ddsi_sertype_default_desc_key_seq_t keys;
   ddsi_sertype_default_desc_op_seq_t ops;
 };
 
 struct ddsi_sertype_default {
   struct ddsi_sertype c;
-  uint16_t native_encoding_identifier; /* (PL_)?CDR_(LE|BE) */
+  uint16_t native_encoding_identifier; /* (D_|PL_)?CDR(2)?_(LE|BE) */
   struct serdatapool *serpool;
   struct ddsi_sertype_default_desc type;
   size_t opt_size;

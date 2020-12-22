@@ -27,16 +27,6 @@
 #include "dds/ddsi/ddsi_domaingv.h"
 #include "dds/ddsi/ddsi_serdata_default.h"
 
-#if DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN
-#define NATIVE_ENCODING CDR_LE
-#define NATIVE_ENCODING_PL PL_CDR_LE
-#elif DDSRT_ENDIAN == DDSRT_BIG_ENDIAN
-#define NATIVE_ENCODING CDR_BE
-#define NATIVE_ENCODING_PL PL_CDR_BE
-#else
-#error "DDSRT_ENDIAN neither LITTLE nor BIG"
-#endif
-
 /* 8k entries in the freelist seems to be roughly the amount needed to send
    minimum-size (well, 4 bytes) samples as fast as possible over loopback
    while using large messages -- actually, it stands to reason that this would
@@ -231,7 +221,9 @@ static struct ddsi_serdata_default *serdata_default_from_ser_common (const struc
   assert (fragchain->maxp1 >= off); /* CDR header must be in first fragment */
 
   memcpy (&d->hdr, NN_RMSG_PAYLOADOFF (fragchain->rmsg, NN_RDATA_PAYLOAD_OFF (fragchain)), sizeof (d->hdr));
-  assert (d->hdr.identifier == CDR_LE || d->hdr.identifier == CDR_BE);
+  assert (d->hdr.identifier == CDR_LE || d->hdr.identifier == CDR_BE
+    || d->hdr.identifier == CDR2_LE || d->hdr.identifier == D_CDR2_BE
+    || d->hdr.identifier == D_CDR2_LE || d->hdr.identifier == D_CDR2_BE);
 
   while (fragchain)
   {
@@ -247,8 +239,8 @@ static struct ddsi_serdata_default *serdata_default_from_ser_common (const struc
     fragchain = fragchain->nextfrag;
   }
 
-  const bool needs_bswap = (d->hdr.identifier != NATIVE_ENCODING);
-  d->hdr.identifier = NATIVE_ENCODING;
+  const bool needs_bswap = !CDR_ENC_IS_NATIVE (d->hdr.identifier);
+  d->hdr.identifier = CDR_ENC_TO_NATIVE (d->hdr.identifier);
   const uint32_t pad = ddsrt_fromBE2u (d->hdr.options) & 2;
   if (d->pos < pad)
   {
@@ -287,13 +279,15 @@ static struct ddsi_serdata_default *serdata_default_from_ser_iov_common (const s
     return NULL;
 
   memcpy (&d->hdr, iov[0].iov_base, sizeof (d->hdr));
-  assert (d->hdr.identifier == CDR_LE || d->hdr.identifier == CDR_BE);
+  assert (d->hdr.identifier == CDR_LE || d->hdr.identifier == CDR_BE
+    || d->hdr.identifier == CDR2_LE || d->hdr.identifier == D_CDR2_BE
+    || d->hdr.identifier == D_CDR2_LE || d->hdr.identifier == D_CDR2_BE);
   serdata_default_append_blob (&d, 1, iov[0].iov_len - 4, (const char *) iov[0].iov_base + 4);
   for (ddsrt_msg_iovlen_t i = 1; i < niov; i++)
     serdata_default_append_blob (&d, 1, iov[i].iov_len, iov[i].iov_base);
 
-  const bool needs_bswap = (d->hdr.identifier != NATIVE_ENCODING);
-  d->hdr.identifier = NATIVE_ENCODING;
+  const bool needs_bswap = CDR_ENC_LE (d->hdr.identifier) != (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN);
+  d->hdr.identifier = CDR_ENC_TO_NATIVE (d->hdr.identifier);
   const uint32_t pad = ddsrt_fromBE2u (d->hdr.options) & 2;
   if (d->pos < pad)
   {
@@ -361,7 +355,7 @@ static struct ddsi_serdata *ddsi_serdata_from_keyhash_cdr (const struct ddsi_ser
     if (d == NULL)
       return NULL;
     serdata_default_append_blob (&d, 1, sizeof (keyhash->value), keyhash->value);
-    if (!dds_stream_normalize (d->data, d->pos, (NATIVE_ENCODING != CDR_BE), tp, true))
+    if (!dds_stream_normalize (d->data, d->pos, (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN), tp, true))
     {
       ddsi_serdata_unref (&d->c);
       return NULL;
@@ -465,7 +459,8 @@ static struct ddsi_serdata *serdata_default_to_untyped (const struct ddsi_serdat
 {
   const struct ddsi_serdata_default *d = (const struct ddsi_serdata_default *)serdata_common;
   const struct ddsi_sertype_default *tp = (const struct ddsi_sertype_default *)d->c.type;
-  assert (d->hdr.identifier == NATIVE_ENCODING || d->hdr.identifier == NATIVE_ENCODING_PL);
+
+  assert (CDR_ENC_IS_NATIVE (d->hdr.identifier));
   struct ddsi_serdata_default *d_tl = serdata_default_new(tp, SDK_KEY);
   if (d_tl == NULL)
     return NULL;
@@ -478,13 +473,12 @@ static struct ddsi_serdata *serdata_default_to_untyped (const struct ddsi_serdat
      the payload is of interest. */
   if (d->c.ops == &ddsi_serdata_ops_cdr)
   {
-    assert (d->hdr.identifier == NATIVE_ENCODING);
     if (d->c.kind == SDK_KEY)
       serdata_default_append_blob (&d_tl, 1, d->pos, d->data);
     else if (d->keyhash.m_iskey)
     {
       serdata_default_append_blob (&d_tl, 1, sizeof (d->keyhash.m_hash), d->keyhash.m_hash);
-#if NATIVE_ENCODING != CDR_BE
+#if DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN
       bool ok = dds_stream_normalize (d_tl->data, d_tl->pos, true, tp, true);
       assert (ok);
       (void) ok;
@@ -539,7 +533,7 @@ static bool serdata_default_to_sample_cdr (const struct ddsi_serdata *serdata_co
   const struct ddsi_sertype_default *tp = (const struct ddsi_sertype_default *) d->c.type;
   dds_istream_t is;
   if (bufptr) abort(); else { (void)buflim; } /* FIXME: haven't implemented that bit yet! */
-  assert (d->hdr.identifier == NATIVE_ENCODING);
+  assert (CDR_ENC_IS_NATIVE (d->hdr.identifier));
   dds_istream_from_serdata_default(&is, d);
   if (d->c.kind == SDK_KEY)
     dds_stream_read_key (&is, sample, tp);
@@ -556,7 +550,7 @@ static bool serdata_default_untyped_to_sample_cdr (const struct ddsi_sertype *se
   assert (d->c.type == NULL);
   assert (d->c.kind == SDK_KEY);
   assert (d->c.ops == sertype_common->serdata_ops);
-  assert (d->hdr.identifier == NATIVE_ENCODING);
+  assert (CDR_ENC_IS_NATIVE (d->hdr.identifier));
   if (bufptr) abort(); else { (void)buflim; } /* FIXME: haven't implemented that bit yet! */
   dds_istream_from_serdata_default(&is, d);
   dds_stream_read_key (&is, sample, tp);
