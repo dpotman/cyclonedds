@@ -73,7 +73,6 @@ dds_topic_descriptor_t;
 #define DDS_TOPIC_FIXED_KEY                     (1u << 1)
 #define DDS_TOPIC_CONTAINS_UNION                (1u << 2)
 #define DDS_TOPIC_DISABLE_TYPECHECK             (1u << 3)
-#define DDS_TOPIC_ENCODING_CDR2                 (1u << 4)
 
 #define DDS_TOPIC_TYPE_EXTENSIBILITY_MASK       0xc0000000
 #define DDS_TOPIC_TYPE_EXTENSIBILITY(fs)        (((fs) & DDS_TOPIC_TYPE_EXTENSIBILITY_MASK) >> 30)
@@ -191,7 +190,7 @@ enum dds_stream_opcode {
              instruction sequence must end in RTS, execution resumes at instruction
              following JSR */
   DDS_OP_JSR = 0x02 << 24,
-  /* union case
+  /* jump-if-equal, used for union cases:
      [JEQ, nBY, 0] [disc] [offset]
      [JEQ, STR, 0] [disc] [offset]
      [JEQ, ENU, 0] [disc] [offset] [max]
@@ -201,11 +200,28 @@ enum dds_stream_opcode {
          s  = subtype other than {nBY,STR,ENU,EXT}
          e  = (unsigned 16 bits) offset to first instruction for case, from start of insn
               instruction sequence must end in RTS, at which point executes continues
-              at the next field's instruction as specified by the union */
+              at the next field's instruction as specified by the union
+     and used for members of aggregated mutable types (pl-cdr):
+     [JEQ,   m, elem-insn] [member id]
+       where
+         m           = must-understand flag (DDS_OP_FLAG_MUST_UNDERSTAND)
+         [elem-insn] = (unsigned 16 bits) offset to instruction for element, from start of insn
+         [member id] = id for this member
+  */
   DDS_OP_JEQ = 0x03 << 24,
 
-  /* XCDR2 delimiter header (DHEADER) */
-  DDS_OP_XCDR2_DLH = 0x04 << 24,
+  /* XCDR2 delimited CDR (inserts DHEADER before type)
+    [DLC, 0, 0]
+  */
+  DDS_OP_DLC = 0x04 << 24,
+
+  /* XCDR2 parameter list CDR (inserts DHEADER before type and EMHEADER before each member)
+     [PLC, 0, 0] [count]
+          followed by [count] JEQ instructions
+       where
+         [count] = number of members
+  */
+  DDS_OP_PLC = 0x05 << 24,
 
   /* Key offset list
      [KOF, 0, n] [offset-1] ... [offset-n]
@@ -214,7 +230,7 @@ enum dds_stream_opcode {
         offset = offset of the key field, relative to the previous offset
                   (repeated n times, e.g. when key in nested struct)
   */
-  DDS_OP_KOF = 0x05 << 24,
+  DDS_OP_KOF = 0x06 << 24,
 };
 
 enum dds_stream_typecode {
@@ -283,6 +299,7 @@ enum dds_stream_typecode_subtype {
    There are only a few flag bits, so saving one is not such a bad idea. */
 #define DDS_OP_FLAG_FP  0x02 /* floating-point: applicable to {4,8}BY and arrays, sequences of them */
 #define DDS_OP_FLAG_SGN 0x04 /* signed: applicable to {1,2,4,8}BY and arrays, sequences of them */
+#define DDS_OP_FLAG_MU  0x08 /* must-understand flag, used with JEQ in parameter list CDR */
 
 /**
  * Description : Enable or disable write batching. Overrides default configuration

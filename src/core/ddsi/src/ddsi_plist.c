@@ -416,7 +416,7 @@ static dds_return_t unalias_locator (void * __restrict dst, size_t * __restrict 
 static dds_return_t fini_locator (void * __restrict dst, size_t * __restrict dstoff, struct flagset *flagset, uint64_t flag)
 {
   nn_locators_t * const x = deser_generic_dst (dst, dstoff, alignof (nn_locators_t));
-  if (!(*flagset->aliased &flag))
+  if (!(*flagset->aliased & flag))
   {
     while (x->first)
     {

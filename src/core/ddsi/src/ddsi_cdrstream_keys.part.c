@@ -130,7 +130,7 @@ static void dds_stream_extract_key_from_data1BO (dds_istream_t * __restrict is, 
         abort ();
         break;
       }
-      case DDS_OP_XCDR2_DLH: {
+      case DDS_OP_DLC: case DDS_OP_PLC: {
         abort (); /* FIXME */
         break;
       }

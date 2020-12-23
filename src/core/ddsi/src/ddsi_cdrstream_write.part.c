@@ -198,8 +198,12 @@ static const uint32_t *dds_stream_writeBO (DDS_OSTREAM_T * __restrict os, const 
         abort ();
         break;
       }
-      case DDS_OP_XCDR2_DLH: {
+      case DDS_OP_DLC: {
         ops = dds_stream_write_delimitedBO (os, data, ops);
+        break;
+      }
+      case DDS_OP_PLC: {
+        /* FIXME: ops = dds_stream_write_plBO (os, data, ops); */
         break;
       }
     }

@@ -373,7 +373,7 @@ typedef struct TestIdl_AppendableMsg
 static const uint32_t TestIdl_AppendableMsg_ops [] =
 {
   /* AppendableMsg */
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_AppendableMsg, msg_field1), (3u << 16u) + 18u,  // AppendableSubMsg1
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_AppendableMsg, msg_field2), (3u << 16u) + 21u, // AppendableSubMsg2
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU , offsetof (TestIdl_AppendableMsg, msg_field3), sizeof (TestIdl_AppendableSubMsg2), (4u << 16u) + 18u,  // sequence<AppendableSubMsg2>
@@ -382,26 +382,26 @@ static const uint32_t TestIdl_AppendableMsg_ops [] =
   DDS_OP_RTS,
 
   /* AppendableSubMsg1 */
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_AppendableSubMsg1, submsg1_field1),
   DDS_OP_ADR | DDS_OP_TYPE_STR, offsetof (TestIdl_AppendableSubMsg1, submsg1_field2),
   DDS_OP_RTS,
 
   /* AppendableSubMsg2 */
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_AppendableSubMsg2, submsg2_field1),
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_AppendableSubMsg2, submsg2_field2),
   DDS_OP_RTS,
 
   /* AppendableUnion0 */
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY, offsetof (TestIdl_AppendableUnion0, _d), 2u, (10u << 16) + 4u,
     DDS_OP_JEQ | DDS_OP_TYPE_4BY | 0, 0, offsetof (TestIdl_AppendableUnion0, _u.field1),
     DDS_OP_JEQ | DDS_OP_TYPE_4BY | DDS_OP_FLAG_SGN | 0, 1, offsetof (TestIdl_AppendableUnion0, _u.field2),
   DDS_OP_RTS,
 };
 
-const dds_topic_descriptor_t TestIdl_MsgAppendable_desc = { sizeof (TestIdl_AppendableMsg), 4u, DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_ENCODING_CDR2 | DDS_TOPIC_TYPE_EXTENSIBILITY_APPENDABLE, 0u, "TestIdl::AppendableMsg", NULL, 4, TestIdl_AppendableMsg_ops, "" };
+const dds_topic_descriptor_t TestIdl_MsgAppendable_desc = { sizeof (TestIdl_AppendableMsg), 4u, DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_TYPE_EXTENSIBILITY_APPENDABLE, 0u, "TestIdl::AppendableMsg", NULL, 4, TestIdl_AppendableMsg_ops, "" };
 
 static void * sample_init_appendable ()
 {
@@ -623,13 +623,13 @@ typedef struct TestIdl_MsgAppendStruct1
 
 static const uint32_t TestIdl_MsgAppendStruct1_ops [] =
 {
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendStruct1, msg_field1),
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_MsgAppendStruct1, msg_field2), (3u << 16u) + 6u,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendStruct1, msg_field3),
   DDS_OP_RTS,
 
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgAppendStruct1, submsg_field1),
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgAppendStruct1, submsg_field2),
   DDS_OP_RTS
@@ -654,14 +654,14 @@ typedef struct TestIdl_MsgAppendStruct2
 
 static const uint32_t TestIdl_MsgAppendStruct2_ops [] =
 {
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendStruct2, msg_field1),
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_MsgAppendStruct2, msg_field2), (3u << 16u) + 9u,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendStruct2, msg_field3),
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_4BY, offsetof (TestIdl_MsgAppendStruct2, msg_field4), 10000u,
   DDS_OP_RTS,
 
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgAppendStruct2, submsg_field1),
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgAppendStruct2, submsg_field2),
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_4BY, offsetof (TestIdl_SubMsgAppendStruct2, submsg_field3), 10000u,
@@ -726,7 +726,7 @@ typedef struct TestIdl_MsgAppendDefaults1
 
 static const uint32_t TestIdl_MsgAppendDefaults1_ops [] =
 {
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendDefaults1, msg_field1),
   DDS_OP_RTS,
 };
@@ -798,7 +798,7 @@ typedef struct TestIdl_MsgAppendDefaults2
 
 static const uint32_t TestIdl_MsgAppendDefaults2_ops [] =
 {
-  DDS_OP_XCDR2_DLH,
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgAppendDefaults2, msg_field1),
   DDS_OP_ADR | DDS_OP_TYPE_1BY, offsetof (TestIdl_MsgAppendDefaults2, msg_field_i8),
   DDS_OP_ADR | DDS_OP_TYPE_1BY, offsetof (TestIdl_MsgAppendDefaults2, msg_field_u8),
