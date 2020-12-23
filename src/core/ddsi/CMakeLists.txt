@@ -178,7 +178,10 @@ endif()
 if(ENABLE_TYPE_DISCOVERY)
   list(APPEND hdrs_private_ddsi
     "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_typeid.h"
-    "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_typelookup.h")
+    "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_typelookup.h"
+    "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_type_identifier.h"
+    "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_type_information.h"
+    "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_type_object.h")
 endif()
 
 target_sources(ddsc
