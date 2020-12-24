@@ -36,9 +36,11 @@
 #define DDS_OSTREAM_T TOKENPASTE3(dds_ostream, NAME_BO_EXT, _t)
 
 #define EMHEADER_FLAG_MASK      0x80000000u
-#define EMHEADER_LC_MASK        0x70000000u
-#define EMHEADER_MEMBERID_MASK  0x0fffffffu
 #define EMHEADER_FLAG_MUSTUNDERSTAND  (1u << 31)
+#define EMHEADER_LC_MASK        0x70000000u
+#define EMHEADER_LC(x)          (((x) & EMHEADER_LC_MASK) >> 28)
+#define EMHEADER_MEMBERID_MASK  0x0fffffffu
+#define EMHEADER_MEMBERID(x)    ((x) & EMHEADER_MEMBERID_MASK)
 
 #define dds_os_put1BO                               NAME_BO(dds_os_put1)
 #define dds_os_put2BO                               NAME_BO(dds_os_put2)
@@ -51,6 +53,7 @@
 #define write_union_discriminantBO                  NAME_BO(write_union_discriminant)
 #define dds_stream_write_uniBO                      NAME_BO(dds_stream_write_uni)
 #define dds_stream_writeBO                          NAME_BO(dds_stream_write)
+#define dds_stream_write_plBO                       NAME_BO(dds_stream_write_pl)
 #define dds_stream_write_delimitedBO                NAME_BO(dds_stream_write_delimited)
 #define dds_stream_write_sampleBO                   NAME_BO(dds_stream_write_sample)
 #define dds_stream_write_keyBO                      NAME_BO(dds_stream_write_key)
@@ -171,6 +174,13 @@ static uint32_t dds_is_get4 (dds_istream_t * __restrict s)
   dds_cdr_alignto (s, 4);
   uint32_t v = * ((uint32_t *) (s->m_buffer + s->m_index));
   s->m_index += 4;
+  return v;
+}
+
+static uint32_t dds_is_peek4 (dds_istream_t * __restrict s)
+{
+  dds_cdr_alignto (s, 4);
+  uint32_t v = * ((uint32_t *) (s->m_buffer + s->m_index));
   return v;
 }
 
@@ -406,6 +416,28 @@ static const uint32_t *dds_stream_countops_uni (const uint32_t * __restrict ops,
   return ops;
 }
 
+static const uint32_t *dds_stream_countops_pl (const uint32_t * __restrict ops, const uint32_t **ops_end)
+{
+  uint32_t insn;
+  ops++; /* skip PLC op */
+  while ((insn = *ops) != DDS_OP_RTS)
+  {
+    switch (DDS_OP (insn))
+    {
+      case DDS_OP_JEQ:
+        dds_stream_countops1 (ops + DDS_OP_ADR_JSR (insn), ops_end);
+        ops += 2;
+        break;
+      default:
+        abort (); /* only list of (JEQ, member-id) supported */
+        break;
+    }
+  }
+  if (ops > *ops_end)
+    *ops_end = ops;
+  return ops;
+}
+
 static void dds_stream_countops1 (const uint32_t * __restrict ops, const uint32_t **ops_end)
 {
   uint32_t insn;
@@ -453,7 +485,7 @@ static void dds_stream_countops1 (const uint32_t * __restrict ops, const uint32_
         break;
       }
       case DDS_OP_PLC: {
-        abort (); /* FIXME */
+        ops = dds_stream_countops_pl (ops, ops_end);
         break;
       }
     }
@@ -740,10 +772,10 @@ static uint32_t get_length_code_seq (const uint32_t subtype)
     case DDS_OP_VAL_8BY:
       return 7;
     case DDS_OP_VAL_STR: case DDS_OP_VAL_BSP: case DDS_OP_VAL_BST:
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_EXT:
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
       return 5;
-    case DDS_OP_VAL_STU:
-      abort (); /* op type STU only supported as subtype */
+    case DDS_OP_VAL_EXT:
+      abort (); /* not supported */
       break;
   }
   abort ();
@@ -756,10 +788,10 @@ static uint32_t get_length_code_arr (const uint32_t subtype)
     case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_ENU: case DDS_OP_VAL_8BY:
       return 4;
     case DDS_OP_VAL_STR: case DDS_OP_VAL_BSP: case DDS_OP_VAL_BST:
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_EXT:
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
       return 5;
-    case DDS_OP_VAL_STU:
-      abort (); /* op type STU only supported as subtype */
+    case DDS_OP_VAL_EXT:
+      abort (); /* not supported */
       break;
   }
   abort ();
@@ -794,26 +826,25 @@ static uint32_t get_length_code (const uint32_t * __restrict ops)
       abort ();
       break;
     }
-    case DDS_OP_DLC: {
-      return 5; /* nextint overlaps with DHEADER of serialized delimited type */
-    }
-    case DDS_OP_PLC: {
-      /* FIXME */
-      abort ();
-      break;
+    case DDS_OP_DLC: case DDS_OP_PLC: {
+      return 5; /* nextint overlaps with DHEADER of serialized delimited or mutable type */
     }
   }
 }
 
-static const uint32_t *dds_stream_write_pl_member (bool must_understand, uint32_t member_id, dds_ostream_t * __restrict os, const char * __restrict data, const uint32_t * __restrict ops)
+static void dds_stream_write_pl_member (bool must_understand, uint32_t mid, dds_ostream_t * __restrict os, const char * __restrict data, const uint32_t * __restrict ops)
 {
-  assert (!(member_id & ~EMHEADER_MEMBERID_MASK));
+  assert (!(mid & ~EMHEADER_MEMBERID_MASK));
   uint32_t lc = get_length_code (ops);
   assert (lc < 8);
   if (lc != 4)
     dds_os_put4 (os, 0xffffffff);
   else
-    dds_os_put8 (os, 0xffffffffffffffff);
+  {
+    /* FIXME: max alignment in cdr2 is 4, so cannot use put8 until alignment is correct */
+    dds_os_put4 (os, 0xffffffff);
+    dds_os_put4 (os, 0xffffffff);
+  }
   uint32_t data_offs = os->m_index;
   ops = dds_stream_write (os, data, ops);
 
@@ -821,22 +852,44 @@ static const uint32_t *dds_stream_write_pl_member (bool must_understand, uint32_
   if (must_understand)
     em_hdr |= EMHEADER_FLAG_MUSTUNDERSTAND;
   em_hdr |= lc << 28;
-  em_hdr |= member_id & EMHEADER_MEMBERID_MASK;
+  em_hdr |= mid & EMHEADER_MEMBERID_MASK;
 
+  uint32_t *em_hdr_ptr = (uint32_t *) (os->m_buffer + data_offs - (lc == 4 ? 8 : 4));
+  em_hdr_ptr[0] = em_hdr;
+  if (lc == 4)
+    em_hdr_ptr[1] = os->m_index - data_offs;  /* member size in next_int field in emheader */
+}
+
+static void dds_stream_write_pl_memberLE (bool must_understand, uint32_t mid, dds_ostreamLE_t * __restrict os, const char * __restrict data, const uint32_t * __restrict ops)
+{
+  assert (!(mid & ~EMHEADER_MEMBERID_MASK));
+  uint32_t lc = get_length_code (ops);
+  assert (lc < 8);
   if (lc != 4)
-  {
-    *((uint32_t *) (os->m_buffer + data_offs - 4)) = em_hdr;
-  }
+    dds_os_put4LE (os, 0xffffffff);
   else
-  {
-    *((uint32_t *) (os->m_buffer + data_offs - 8)) = em_hdr;
-    *((uint32_t *) (os->m_buffer + data_offs - 4)) = os->m_index - data_offs;
-  }
-  return ops;
+    dds_os_put8LE (os, 0xffffffffffffffff);
+  uint32_t data_offs = os->x.m_index;
+  ops = dds_stream_writeLE (os, data, ops);
+
+  uint32_t em_hdr = 0;
+  if (must_understand)
+    em_hdr |= EMHEADER_FLAG_MUSTUNDERSTAND;
+  em_hdr |= lc << 28;
+  em_hdr |= mid & EMHEADER_MEMBERID_MASK;
+
+  uint32_t *em_hdr_ptr = (uint32_t *) (os->x.m_buffer + data_offs - (lc == 4 ? 8 : 4));
+  em_hdr_ptr[0] = ddsrt_toLE4u (em_hdr);
+  if (lc == 4)
+    em_hdr_ptr[1] = ddsrt_toLE4u (os->x.m_index - data_offs);  /* member size in next_int field in emheader */
 }
 
 static const uint32_t *dds_stream_write_pl (dds_ostream_t * __restrict os, const char * __restrict data, const uint32_t * __restrict ops)
 {
+  /* skip PLC op */
+  ops++;
+
+  /* alloc space for dheader */
   dds_os_put4 (os, 0xffffffff);
   uint32_t data_offs = os->m_index;
 
@@ -849,7 +902,8 @@ static const uint32_t *dds_stream_write_pl (dds_ostream_t * __restrict os, const
         uint32_t flags = DDS_JEQ_FLAGS (insn);
         uint32_t member_id = ops[1];
         const uint32_t *jeq_ops = ops + DDS_OP_ADR_JSR (insn);
-        ops = dds_stream_write_pl_member (flags & DDS_OP_FLAG_MU, member_id, os, data, jeq_ops);
+        dds_stream_write_pl_member (flags & DDS_OP_FLAG_MU, member_id, os, data, jeq_ops);
+        ops += 2;
         break;
       }
       default:
@@ -857,7 +911,37 @@ static const uint32_t *dds_stream_write_pl (dds_ostream_t * __restrict os, const
         break;
     }
   }
+  /* write serialized size in dheader */
   *((uint32_t *) (os->m_buffer + data_offs - 4)) = os->m_index - data_offs;
+  return ops;
+}
+
+static const uint32_t *dds_stream_write_plLE (dds_ostreamLE_t * __restrict os, const char * __restrict data, const uint32_t * __restrict ops)
+{
+  /* alloc space for dheader */
+  dds_os_put4LE (os, 0xffffffff);
+  uint32_t data_offs = os->x.m_index;
+
+  uint32_t insn;
+  while ((insn = *ops) != DDS_OP_RTS)
+  {
+    switch (DDS_OP (insn))
+    {
+      case DDS_OP_JEQ: {
+        uint32_t flags = DDS_JEQ_FLAGS (insn);
+        uint32_t member_id = ops[1];
+        const uint32_t *jeq_ops = ops + DDS_OP_ADR_JSR (insn);
+        dds_stream_write_pl_memberLE (flags & DDS_OP_FLAG_MU, member_id, os, data, jeq_ops);
+        ops += 2;
+        break;
+      }
+      default:
+        abort (); /* other ops not supported at this point */
+        break;
+    }
+  }
+  /* write serialized size in dheader */
+  *((uint32_t *) (os->x.m_buffer + data_offs - 4)) = ddsrt_toLE4u (os->x.m_index - data_offs);
   return ops;
 }
 
@@ -1226,6 +1310,68 @@ static const uint32_t *dds_stream_read_delimited (dds_istream_t * __restrict is,
   return ops;
 }
 
+static const uint32_t *dds_stream_read_pl (dds_istream_t * __restrict is, char * __restrict data, const uint32_t * __restrict ops)
+{
+  ops++; /* skip PLC op */
+  uint32_t pl_sz = dds_is_get4 (is), csr = 0;
+  while (csr < pl_sz)
+  {
+    /* read emheader and next_int */
+    uint32_t em_hdr = dds_is_get4 (is);
+    uint32_t lc = EMHEADER_LC (em_hdr), mid = EMHEADER_MEMBERID (em_hdr), msz;
+    switch (lc)
+    {
+      case 0: case 1: case 2: case 3:
+        msz = 1 << lc;
+        break;
+      case 4:
+        msz = dds_is_get4 (is); /* next-int */
+        csr += 4;
+        break;
+      case 5: case 6: case 7:
+        msz = dds_is_peek4 (is); /* length is part of serialized data */
+        if (lc > 5)
+          msz <<= (lc - 4);
+        break;
+      default:
+        abort ();
+        break;
+    }
+
+    /* find member and deserialize */
+    uint32_t insn, ops_csr = 0;
+    bool found = false;
+    while (!found && (insn = ops[ops_csr]) != DDS_OP_RTS)
+    {
+      assert (DDS_OP (insn) == DDS_OP_JEQ);
+      if (ops[ops_csr + 1] == mid)
+      {
+        const uint32_t *jeq_ops = ops + ops_csr + DDS_OP_ADR_JSR (insn);
+        (void) dds_stream_read (is, data, jeq_ops);
+        found = true;
+        break;
+      }
+      ops_csr += 2;
+    }
+
+    if (!found)
+    {
+      is->m_index += msz;
+      if (lc >= 5)
+        is->m_index += 4; /* length embedded in member does not include it's own 4 bytes */
+    }
+
+    /* align in-stream cursor to 4 bytes */
+    csr += 4 + (msz + 4u - 1) & ~(4u - 1);
+  }
+
+  /* skip all JEQ-memberid pairs */
+  while (ops[0] != DDS_OP_RTS)
+    ops += 2;
+
+  return ops;
+}
+
 static const uint32_t *dds_stream_read (dds_istream_t * __restrict is, char * __restrict data, const uint32_t * __restrict ops)
 {
   uint32_t insn;
@@ -1251,7 +1397,7 @@ static const uint32_t *dds_stream_read (dds_istream_t * __restrict is, char * __
         break;
       }
       case DDS_OP_PLC: {
-        /* FIXME: ops = dds_stream_read_pl (is, data, ops); */
+        ops = dds_stream_read_pl (is, data, ops);
         break;
       }
     }
@@ -1331,6 +1477,17 @@ static bool read_and_normalize_uint32 (uint32_t * __restrict val, char * __restr
     *((uint32_t *) (data + *off)) = ddsrt_bswap4u (*((uint32_t *) (data + *off)));
   *val = *((uint32_t *) (data + *off));
   (*off) += 4;
+  return true;
+}
+
+static bool peek_and_normalize_uint32 (uint32_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap)
+{
+  if ((*off = check_align_prim (*off, size, 2)) == UINT32_MAX)
+    return false;
+  if (bswap)
+    *val = ddsrt_bswap4u (*((uint32_t *) (data + *off)));
+  else
+    *val = *((uint32_t *) (data + *off));
   return true;
 }
 
@@ -1598,6 +1755,7 @@ static const uint32_t *stream_normalize_delimited (char * __restrict data, uint3
     return NULL;
   uint32_t delimited_offs = *off, insn;
 
+  ops++; /* skip DLC op */
   while ((insn = *ops) != DDS_OP_RTS)
   {
     switch (DDS_OP (insn))
@@ -1633,6 +1791,60 @@ static const uint32_t *stream_normalize_delimited (char * __restrict data, uint3
   return ops;
 }
 
+static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, const uint32_t * __restrict ops)
+{
+  uint32_t pl_sz, csr = 0;
+  if (!read_and_normalize_uint32 (&pl_sz, data, off, size, bswap))
+    return NULL;
+
+  while (csr < pl_sz)
+  {
+    /* emheader */
+    uint32_t em_hdr;
+    if (!read_and_normalize_uint32 (&em_hdr, data, off, size, bswap))
+      return NULL;
+    uint32_t lc = EMHEADER_LC (em_hdr), mid = EMHEADER_MEMBERID (em_hdr), msz;
+    switch (lc)
+    {
+      case 0: case 1: case 2: case 3:
+        msz = 1 << lc;
+        break;
+      case 4:
+        if (!read_and_normalize_uint32 (&msz, data, off, size, bswap))
+          return NULL;
+        csr += 4;
+        break;
+      case 5: case 6: case 7:
+        if (!peek_and_normalize_uint32 (&msz, data, off, size, bswap))
+          return NULL;
+        if (lc > 5)
+          msz <<= (lc - 4);
+        break;
+      default:
+        abort ();
+        break;
+    }
+
+    ops++; /* skip PLC op */
+    uint32_t insn, ops_csr = 0;
+    bool found = false;
+    while (!found && (insn = ops[ops_csr]) != DDS_OP_RTS)
+    {
+      assert (DDS_OP (insn) == DDS_OP_JEQ);
+      if (ops[ops_csr + 1] == mid)
+      {
+        const uint32_t *jeq_ops = ops + ops_csr + DDS_OP_ADR_JSR (insn);
+        stream_normalize (data, off, size, bswap, jeq_ops);
+        found = true;
+        break;
+      }
+      ops_csr += 2;
+    }
+    csr += (msz + 4u - 1) & ~(4u - 1);
+  }
+  return ops;
+}
+
 static const uint32_t *stream_normalize (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, const uint32_t * __restrict ops)
 {
   uint32_t insn;
@@ -1656,13 +1868,13 @@ static const uint32_t *stream_normalize (char * __restrict data, uint32_t * __re
         break;
       }
       case DDS_OP_DLC: {
-        if ((ops = stream_normalize_delimited (data, off, size, bswap, ops + 1)) == NULL)
+        if ((ops = stream_normalize_delimited (data, off, size, bswap, ops)) == NULL)
           return NULL;
         break;
       }
       case DDS_OP_PLC: {
-        /* FIXME: if ((ops = stream_normalize_pl (data, off, size, bswap, ops + 1)) == NULL)
-          return NULL; */
+        if ((ops = stream_normalize_pl (data, off, size, bswap, ops)) == NULL)
+          return NULL;
         break;
       }
     }
@@ -1863,6 +2075,28 @@ static const uint32_t *dds_stream_free_sample_uni (char * __restrict discaddr, c
   return ops;
 }
 
+static const uint32_t *dds_stream_free_sample_pl (char * __restrict addr, const uint32_t * __restrict ops)
+{
+  uint32_t insn;
+  ops++; /* skip PLC op */
+  while ((insn = *ops) != DDS_OP_RTS)
+  {
+    switch (DDS_OP (insn))
+    {
+      case DDS_OP_JEQ: {
+        const uint32_t *jeq_ops = ops + DDS_OP_ADR_JSR (insn);
+        dds_stream_free_sample (addr, jeq_ops);
+        ops += 2;
+        break;
+      }
+      default:
+        abort (); /* other ops not supported at this point */
+        break;
+    }
+  }
+  return ops;
+}
+
 void dds_stream_free_sample (void * __restrict data, const uint32_t * __restrict ops)
 {
   uint32_t insn;
@@ -1913,7 +2147,7 @@ void dds_stream_free_sample (void * __restrict data, const uint32_t * __restrict
         break;
       }
       case DDS_OP_PLC: {
-        abort (); /* FIXME */
+        ops = dds_stream_free_sample_pl (data, ops);
         break;
       }
     }
@@ -2529,6 +2763,52 @@ static const uint32_t *prtf_uni (char * __restrict *buf, size_t *bufsize, dds_is
   return ops;
 }
 
+static const uint32_t *prtf_pl (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops)
+{
+  uint32_t pl_sz = dds_is_get4 (is), csr = 0;
+  while (csr < pl_sz)
+  {
+    /* read emheader and next_int */
+    uint32_t em_hdr = dds_is_get4 (is);
+    uint32_t lc = EMHEADER_LC (em_hdr), mid = EMHEADER_MEMBERID (em_hdr), msz;
+    switch (lc)
+    {
+      case 0: case 1: case 2: case 3:
+        msz = 1 << lc;
+        break;
+      case 4:
+        msz = dds_is_get4 (is); /* next-int */
+        break;
+      case 5: case 6: case 7:
+        msz = dds_is_peek4 (is); /* length is part of serialized data */
+        if (lc > 5)
+          msz <<= (lc - 4);
+        break;
+      default:
+        abort ();
+        break;
+    }
+
+    /* find member and deserialize */
+    uint32_t insn, ops_csr = 0;
+    bool found = false;
+    while (!found && (insn = ops[ops_csr]) != DDS_OP_RTS)
+    {
+      assert (DDS_OP (insn) == DDS_OP_JEQ);
+      if (ops[ops_csr + 1] == mid)
+      {
+        const uint32_t *jeq_ops = ops + ops_csr + DDS_OP_ADR_JSR (insn);
+        (void) dds_stream_print_sample1 (buf, bufsize, is, jeq_ops, true);
+        found = true;
+        break;
+      }
+      ops_csr += 2;
+    }
+    csr += msz;
+  }
+  return ops;
+}
+
 static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restrict bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool add_braces)
 {
   uint32_t insn, delimited_sz = 0, delimited_offs = 0;
@@ -2604,9 +2884,7 @@ static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restric
         }
         ops++;
         if (DDS_OP (insn) == DDS_OP_PLC)
-        {
-          /* fixme */
-        }
+          ops = prtf_pl (buf, bufsize, is, ops);
         break;
       }
     }

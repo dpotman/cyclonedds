@@ -203,7 +203,7 @@ static const uint32_t *dds_stream_writeBO (DDS_OSTREAM_T * __restrict os, const 
         break;
       }
       case DDS_OP_PLC: {
-        /* FIXME: ops = dds_stream_write_plBO (os, data, ops); */
+        ops = dds_stream_write_plBO (os, data, ops);
         break;
       }
     }

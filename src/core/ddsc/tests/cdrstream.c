@@ -892,6 +892,246 @@ static void sample_free_appenddefaults2 (void *s_wr, void *s_rd)
 }
 
 /**********************************************
+ * Mutable type
+ **********************************************/
+typedef struct TestIdl_SubMsgMutable1 {
+  uint32_t submsg_field1;
+  uint32_t submsg_field2[3];
+} TestIdl_SubMsgMutable1;
+
+typedef struct TestIdl_SubMsgMutable1_seq
+{
+  uint32_t _maximum;
+  uint32_t _length;
+  TestIdl_SubMsgMutable1 *_buffer;
+  bool _release;
+} TestIdl_SubMsgMutable1_seq;
+
+typedef struct TestIdl_MsgMutable1 {
+  uint32_t msg_field1;
+  uint16_t msg_field2;
+  TestIdl_SubMsgMutable1 msg_field3;
+  TestIdl_SubMsgMutable1 msg_field4[2];
+  int32_t msg_field5;
+  double msg_field7;
+  TestIdl_SubMsgMutable1 msg_field8;
+  TestIdl_SubMsgMutable1_seq msg_field10;
+  uint8_t msg_field11;
+} TestIdl_MsgMutable1;
+
+static const uint32_t TestIdl_MsgMutable1_ops [] =
+{
+  DDS_OP_PLC,
+    DDS_OP_JEQ | DDS_OP_FLAG_MU << 16 | 19u, 1,
+    DDS_OP_JEQ | 20u, 2,
+    DDS_OP_JEQ | 21u, 3,
+    DDS_OP_JEQ | 23u, 4,
+    DDS_OP_JEQ | 27u, 5,
+    DDS_OP_JEQ | 28u, 7,
+    DDS_OP_JEQ | 29u, 8,
+    DDS_OP_JEQ | 31u, 10,
+    DDS_OP_JEQ | 34u, 11,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgMutable1, msg_field1),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (TestIdl_MsgMutable1, msg_field2),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_MsgMutable1, msg_field3), (3u << 16u) + 28u,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_STU, offsetof (TestIdl_MsgMutable1, msg_field4), 2u, (5u << 16u) + 24u, sizeof (TestIdl_SubMsgMutable1),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY | DDS_OP_FLAG_SGN, offsetof (TestIdl_MsgMutable1, msg_field5),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_8BY | DDS_OP_FLAG_FP, offsetof (TestIdl_MsgMutable1, msg_field7),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_MsgMutable1, msg_field8), (3u << 16u) + 12u,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (TestIdl_MsgMutable1, msg_field10), sizeof (TestIdl_SubMsgMutable1), (4u << 16u) + 8u,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_1BY, offsetof (TestIdl_MsgMutable1, msg_field11),
+  DDS_OP_RTS,
+
+  DDS_OP_PLC,
+    DDS_OP_JEQ | 5u, 1,
+    DDS_OP_JEQ | 6u, 2,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgMutable1, submsg_field1),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_4BY, offsetof (TestIdl_SubMsgMutable1, submsg_field2), 3u,
+  DDS_OP_RTS,
+};
+
+typedef struct TestIdl_SubMsgMutable2 {
+  uint32_t submsg_field1;
+  uint32_t submsg_field2[3];
+} TestIdl_SubMsgMutable2;
+
+typedef struct TestIdl_SubMsgMutable2_seq
+{
+  uint32_t _maximum;
+  uint32_t _length;
+  TestIdl_SubMsgMutable2 *_buffer;
+  bool _release;
+} TestIdl_SubMsgMutable2_seq;
+
+typedef struct TestIdl_MsgMutable2 {
+  uint32_t msg_field1;
+  uint16_t msg_field2;
+  TestIdl_SubMsgMutable2 msg_field3;
+  TestIdl_SubMsgMutable2 msg_field4[2];
+  int32_t msg_field6;
+  double msg_field7;
+  TestIdl_SubMsgMutable2 msg_field9;
+  TestIdl_SubMsgMutable2_seq msg_field10;
+  uint8_t msg_field11;
+  TestIdl_SubMsgMutable2_seq msg_field12;
+} TestIdl_MsgMutable2;
+
+static const uint32_t TestIdl_MsgMutable2_ops [] =
+{
+  DDS_OP_PLC,
+    DDS_OP_JEQ | DDS_OP_FLAG_MU << 16 | 21u, 1,
+    DDS_OP_JEQ | 22u, 2,
+    DDS_OP_JEQ | 23u, 3,
+    DDS_OP_JEQ | 25u, 4,
+    DDS_OP_JEQ | 29u, 6,
+    DDS_OP_JEQ | 30u, 7,
+    DDS_OP_JEQ | 31u, 9,
+    DDS_OP_JEQ | 33u, 10,
+    DDS_OP_JEQ | 36u, 11,
+    DDS_OP_JEQ | 37u, 12,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_MsgMutable2, msg_field1),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (TestIdl_MsgMutable2, msg_field2),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_MsgMutable2, msg_field3), (3u << 16u) + 33u,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_STU, offsetof (TestIdl_MsgMutable2, msg_field4), 2u, (5u << 16u) + 29u, sizeof (TestIdl_SubMsgMutable2),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY | DDS_OP_FLAG_SGN, offsetof (TestIdl_MsgMutable2, msg_field6),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_8BY | DDS_OP_FLAG_FP, offsetof (TestIdl_MsgMutable2, msg_field7),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (TestIdl_MsgMutable2, msg_field9), (3u << 16u) + 17u,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (TestIdl_MsgMutable2, msg_field10), sizeof (TestIdl_SubMsgMutable2), (4u << 16u) + 13u,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_1BY, offsetof (TestIdl_MsgMutable2, msg_field11),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (TestIdl_MsgMutable2, msg_field12), sizeof (TestIdl_SubMsgMutable2), (4u << 16u) + 5u,
+  DDS_OP_RTS,
+
+  DDS_OP_PLC,
+    DDS_OP_JEQ | 5u, 1,
+    DDS_OP_JEQ | 6u, 2,
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgMutable2, submsg_field1),
+  DDS_OP_RTS,
+  DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_4BY, offsetof (TestIdl_SubMsgMutable2, submsg_field2), 3u,
+  DDS_OP_RTS,
+};
+
+const dds_topic_descriptor_t TestIdl_MsgMutable1_desc = { sizeof (TestIdl_MsgMutable1), 4u, DDS_TOPIC_NO_OPTIMIZE, 0u, "TestIdl::MsgMutable1", NULL, 0, TestIdl_MsgMutable1_ops, "" };
+const dds_topic_descriptor_t TestIdl_MsgMutable2_desc = { sizeof (TestIdl_MsgMutable2), 4u, DDS_TOPIC_NO_OPTIMIZE, 0u, "TestIdl::MsgMutable2", NULL, 0, TestIdl_MsgMutable2_ops, "" };
+
+static void * sample_init_mutable1 ()
+{
+  TestIdl_SubMsgMutable1 sseq[] = { { .submsg_field1 = 1001, .submsg_field2 = { 1002, 1003, 1004 } }, { .submsg_field1 = 1003, .submsg_field2 = { 1005, 1006, 1007 } } };
+  TestIdl_SubMsgMutable1_seq seq = { ._length = 2, ._maximum = 2, ._buffer = ddsrt_memdup (sseq, 2 * sizeof (TestIdl_SubMsgMutable1)) };
+  TestIdl_MsgMutable1 msg = {
+      .msg_field1 = 1,
+      .msg_field2 = 2,
+      .msg_field3 = { .submsg_field1 = 3, .submsg_field2 = { 4, 5, 6 } },
+      .msg_field4 = { { .submsg_field1 = 10, .submsg_field2 = { 11, 12, 13 } }, { .submsg_field1 = 14, .submsg_field2 = { 15, 16, 17 } } },
+      .msg_field5 = -5,
+      .msg_field7 = 4.1,
+      .msg_field8 = { .submsg_field1 = 8, .submsg_field2 = { 9, 10, 11 } },
+      .msg_field10 = seq,
+      .msg_field11 = 20
+  };
+  return ddsrt_memdup (&msg, sizeof (TestIdl_MsgMutable1));
+}
+
+static void * sample_init_mutable2 ()
+{
+  TestIdl_SubMsgMutable2 sseq[] = { { .submsg_field1 = 2001, .submsg_field2 = { 2002, 2003, 2004 } }, { .submsg_field1 = 2003, .submsg_field2 = { 2005, 2006, 2007 } } };
+  TestIdl_SubMsgMutable2_seq seq = { ._length = 2, ._maximum = 2, ._buffer = ddsrt_memdup (sseq, 2 * sizeof (TestIdl_SubMsgMutable2)) };
+  TestIdl_SubMsgMutable2 sseq2[] = { { .submsg_field1 = 2001, .submsg_field2 = { 2002, 2003, 2004 } }, { .submsg_field1 = 2005, .submsg_field2 = { 2006, 2007, 2008 } }, { .submsg_field1 = 2009, .submsg_field2 = { 2010, 2011, 2012 } } };
+  TestIdl_SubMsgMutable2_seq seq2 = { ._length = 3, ._maximum = 3, ._buffer = ddsrt_memdup (sseq2, 3 * sizeof (TestIdl_SubMsgMutable2)) };
+  TestIdl_MsgMutable2 msg = {
+      .msg_field1 = 101,
+      .msg_field2 = 102,
+      .msg_field3 = { .submsg_field1 = 103, .submsg_field2 = { 104, 105, 106 } },
+      .msg_field4 = { { .submsg_field1 = 1010, .submsg_field2 = { 1011, 1012, 1013 } }, { .submsg_field1 = 1014, .submsg_field2 = { 1015, 1016, 1017 } } },
+      .msg_field6 = -106,
+      .msg_field7 = 104.1,
+      .msg_field9 = { .submsg_field1 = 109, .submsg_field2 = { 1010, 1011, 1012 } },
+      .msg_field10 = seq,
+      .msg_field11 = 254,
+      .msg_field12 = seq2,
+  };
+  return ddsrt_memdup (&msg, sizeof (TestIdl_MsgMutable2));
+}
+
+static bool sample_equal_mutable1 (void *s_wr, void *s_rd)
+{
+  TestIdl_MsgMutable1 *msg_wr = s_wr;
+  TestIdl_MsgMutable2 *msg_rd = s_rd;
+  return msg_wr->msg_field1 == msg_rd->msg_field1
+    && msg_wr->msg_field2 == msg_rd->msg_field2
+    && msg_wr->msg_field3.submsg_field1 == msg_rd->msg_field3.submsg_field1 && !memcmp (&msg_wr->msg_field3.submsg_field2, &msg_rd->msg_field3.submsg_field2, 3 * sizeof (uint32_t))
+    && msg_wr->msg_field4[0].submsg_field1 == msg_rd->msg_field4[0].submsg_field1 && !memcmp (&msg_wr->msg_field4[0].submsg_field2, &msg_rd->msg_field4[0].submsg_field2, 3 * sizeof (uint32_t))
+      && msg_wr->msg_field4[1].submsg_field1 == msg_rd->msg_field4[1].submsg_field1 && !memcmp (&msg_wr->msg_field4[1].submsg_field2, &msg_rd->msg_field4[1].submsg_field2, 3 * sizeof (uint32_t))
+    && msg_rd->msg_field6 == 0
+    && msg_wr->msg_field7 == msg_rd->msg_field7
+    && msg_rd->msg_field9.submsg_field1 == 0 && msg_rd->msg_field9.submsg_field2[0] == 0 && msg_rd->msg_field9.submsg_field2[1] == 0 && msg_rd->msg_field9.submsg_field2[2] == 0
+    && msg_wr->msg_field10._length == msg_rd->msg_field10._length
+    && !memcmp (msg_wr->msg_field10._buffer, msg_rd->msg_field10._buffer, msg_wr->msg_field10._length * sizeof (TestIdl_SubMsgMutable1))
+    && msg_wr->msg_field11 == msg_rd->msg_field11
+    && msg_rd->msg_field12._length == 0
+  ;
+}
+
+static bool sample_equal_mutable2 (void *s_wr, void *s_rd)
+{
+  TestIdl_MsgMutable2 *msg_wr = s_wr;
+  TestIdl_MsgMutable1 *msg_rd = s_rd;
+  return msg_wr->msg_field1 == msg_rd->msg_field1
+    && msg_wr->msg_field2 == msg_rd->msg_field2
+    && msg_wr->msg_field3.submsg_field1 == msg_rd->msg_field3.submsg_field1 && !memcmp (&msg_wr->msg_field3.submsg_field2, &msg_rd->msg_field3.submsg_field2, 3 * sizeof (uint32_t))
+    && msg_wr->msg_field4[0].submsg_field1 == msg_rd->msg_field4[0].submsg_field1 && !memcmp (&msg_wr->msg_field4[0].submsg_field2, &msg_rd->msg_field4[0].submsg_field2, 3 * sizeof (uint32_t))
+      && msg_wr->msg_field4[1].submsg_field1 == msg_rd->msg_field4[1].submsg_field1 && !memcmp (&msg_wr->msg_field4[1].submsg_field2, &msg_rd->msg_field4[1].submsg_field2, 3 * sizeof (uint32_t))
+    && msg_rd->msg_field5 == 0
+    && msg_wr->msg_field7 == msg_rd->msg_field7
+    && msg_rd->msg_field8.submsg_field1 == 0 && msg_rd->msg_field8.submsg_field2[0] == 0 && msg_rd->msg_field8.submsg_field2[1] == 0 && msg_rd->msg_field8.submsg_field2[2] == 0
+    && msg_wr->msg_field10._length == msg_rd->msg_field10._length
+    && !memcmp (msg_wr->msg_field10._buffer, msg_rd->msg_field10._buffer, msg_wr->msg_field10._length * sizeof (TestIdl_SubMsgMutable2))
+    && msg_wr->msg_field11 == msg_rd->msg_field11
+  ;
+}
+
+static void sample_free_mutable (TestIdl_MsgMutable1 *s1, TestIdl_MsgMutable2 *s2)
+{
+  dds_free (s1->msg_field10._buffer);
+  dds_free (s2->msg_field10._buffer);
+  dds_free (s2->msg_field12._buffer);
+  dds_free (s1);
+  dds_free (s2);
+}
+
+static void sample_free_mutable1 (void *s_wr, void *s_rd)
+{
+  sample_free_mutable (s_wr, s_rd);
+}
+
+static void sample_free_mutable2 (void *s_wr, void *s_rd)
+{
+  sample_free_mutable (s_rd, s_wr);
+}
+
+
+/**********************************************
  * Generic implementation and tests
  **********************************************/
 
@@ -1038,22 +1278,23 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_init *
 }
 
 
-CU_TheoryDataPoints (ddsc_cdrstream, appendable) = {
+CU_TheoryDataPoints (ddsc_cdrstream, appendable_mutable) = {
   CU_DataPoints (const char *,                   "appendable struct",
-  /*                                              |                  */"appendable defaults"),
-  CU_DataPoints (const dds_topic_descriptor_t *, &D(AppendStruct1), &D(AppendDefaults1) ),
-  CU_DataPoints (const dds_topic_descriptor_t *, &D(AppendStruct2), &D(AppendDefaults2) ),
-  CU_DataPoints (sample_init *,                   I(appendstruct1),  I(appenddefaults1) ),
-  CU_DataPoints (sample_init *,                   I(appendstruct2),  I(appenddefaults2) ),
-  CU_DataPoints (sample_equal *,                  C(appendstruct1),  C(appenddefaults1) ),
-  CU_DataPoints (sample_equal *,                  C(appendstruct2),  C(appenddefaults2) ),
-  CU_DataPoints (sample_free2 *,                  F(appendstruct),   F(appenddefaults1) ),
-  CU_DataPoints (sample_free2 *,                  F(appendstruct),   F(appenddefaults2) ),
+  /*                                              |                 */"appendable defaults",
+  /*                                              |                  |                     */"mutable"),
+  CU_DataPoints (const dds_topic_descriptor_t *, &D(AppendStruct1), &D(AppendDefaults1),  &D(Mutable1) ),
+  CU_DataPoints (const dds_topic_descriptor_t *, &D(AppendStruct2), &D(AppendDefaults2),  &D(Mutable2) ),
+  CU_DataPoints (sample_init *,                   I(appendstruct1),  I(appenddefaults1),   I(mutable1) ),
+  CU_DataPoints (sample_init *,                   I(appendstruct2),  I(appenddefaults2),   I(mutable2) ),
+  CU_DataPoints (sample_equal *,                  C(appendstruct1),  C(appenddefaults1),   C(mutable1) ),
+  CU_DataPoints (sample_equal *,                  C(appendstruct2),  C(appenddefaults2),   C(mutable2) ),
+  CU_DataPoints (sample_free2 *,                  F(appendstruct),   F(appenddefaults1),   F(mutable1) ),
+  CU_DataPoints (sample_free2 *,                  F(appendstruct),   F(appenddefaults2),   F(mutable2) ),
 };
 
 CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_topic_descriptor_t *desc2,
     sample_init *sample_init_fn1, sample_init *sample_init_fn2, sample_equal *sample_equal_fn1, sample_equal *sample_equal_fn2, sample_free2 *sample_free_fn1, sample_free2 *sample_free_fn2),
-    ddsc_cdrstream, appendable)
+    ddsc_cdrstream, appendable_mutable)
 {
   for (int t = 0; t <= 1; t++)
   {
