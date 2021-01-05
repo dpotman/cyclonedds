@@ -613,13 +613,14 @@ static const uint32_t *find_union_case (const uint32_t * __restrict union_ops, u
 
 static const uint32_t *skip_sequence_insns (uint32_t insn, const uint32_t * __restrict ops)
 {
+  assert (DDS_OP_TYPE (insn) == DDS_OP_VAL_SEQ);
   switch (DDS_OP_SUBTYPE (insn))
   {
     case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
     case DDS_OP_VAL_STR:
       return ops + 2;
     case DDS_OP_VAL_BST: case DDS_OP_VAL_BSP: case DDS_OP_VAL_ENU:
-      return ops + 3; /* bound */
+      return ops + 3;
     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
       const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
       return ops + (jmp ? jmp : 4); /* FIXME: why would jmp be 0? */
@@ -634,8 +635,8 @@ static const uint32_t *skip_sequence_insns (uint32_t insn, const uint32_t * __re
 
 static const uint32_t *skip_array_insns (uint32_t insn, const uint32_t * __restrict ops)
 {
-  const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
-  switch (subtype)
+  assert (DDS_OP_TYPE (insn) == DDS_OP_VAL_ARR);
+  switch (DDS_OP_SUBTYPE (insn))
   {
     case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
     case DDS_OP_VAL_STR:
@@ -763,19 +764,29 @@ static uint32_t get_length_code_seq (const uint32_t subtype)
 {
   switch (subtype)
   {
+    /* Sequence length can be used as byte length */
     case DDS_OP_VAL_1BY:
       return 5;
+
+    /* A sequence with primitive subtype does not include a DHEADER,
+       only the seq length, so we have to include a NEXTINT */
     case DDS_OP_VAL_2BY:
       return 4;
+
+    /* Sequence length (item count) is used to calculate byte length */
     case DDS_OP_VAL_4BY: case DDS_OP_VAL_ENU:
       return 6;
     case DDS_OP_VAL_8BY:
       return 7;
+
+    /* Sequences with non-primitive subtype contain a DHEADER */
     case DDS_OP_VAL_STR: case DDS_OP_VAL_BSP: case DDS_OP_VAL_BST:
     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
       return 5;
+
+    /* not supported */
     case DDS_OP_VAL_EXT:
-      abort (); /* not supported */
+      abort ();
       break;
   }
   abort ();
@@ -785,13 +796,19 @@ static uint32_t get_length_code_arr (const uint32_t subtype)
 {
   switch (subtype)
   {
+    /* An array with primitive subtype does not include a DHEADER,
+       so we have to include a NEXTINT */
     case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_ENU: case DDS_OP_VAL_8BY:
       return 4;
+
+    /* Arrays with non-primitive subtype contain a DHEADER */
     case DDS_OP_VAL_STR: case DDS_OP_VAL_BSP: case DDS_OP_VAL_BST:
     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
       return 5;
+
+    /* not supported */
     case DDS_OP_VAL_EXT:
-      abort (); /* not supported */
+      abort ();
       break;
   }
   abort ();
@@ -868,7 +885,11 @@ static void dds_stream_write_pl_memberLE (bool must_understand, uint32_t mid, dd
   if (lc != 4)
     dds_os_put4LE (os, 0xffffffff);
   else
-    dds_os_put8LE (os, 0xffffffffffffffff);
+  {
+    /* FIXME: max alignment in cdr2 is 4, so cannot use put8 until alignment is correct */
+    dds_os_put4LE (os, 0xffffffff);
+    dds_os_put4LE (os, 0xffffffff);
+  }
   uint32_t data_offs = os->x.m_index;
   ops = dds_stream_writeLE (os, data, ops);
 
@@ -997,6 +1018,12 @@ static const uint32_t *dds_stream_read_seq (dds_istream_t * __restrict is, char 
 {
   dds_sequence_t * const seq = (dds_sequence_t *) addr;
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    /* skip DHEADER */
+    dds_is_get4 (is);
+  }
+
   const uint32_t num = dds_is_get4 (is);
   if (num == 0)
   {
@@ -1069,6 +1096,11 @@ static const uint32_t *dds_stream_read_seq (dds_istream_t * __restrict is, char 
 static const uint32_t *dds_stream_read_arr (dds_istream_t * __restrict is, char * __restrict addr, const uint32_t * __restrict ops, uint32_t insn)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    /* skip DHEADER */
+    dds_is_get4 (is);
+  }
   const uint32_t num = ops[2];
   switch (subtype)
   {
@@ -1312,11 +1344,14 @@ static const uint32_t *dds_stream_read_delimited (dds_istream_t * __restrict is,
 
 static const uint32_t *dds_stream_read_pl (dds_istream_t * __restrict is, char * __restrict data, const uint32_t * __restrict ops)
 {
-  ops++; /* skip PLC op */
-  uint32_t pl_sz = dds_is_get4 (is), csr = 0;
-  while (csr < pl_sz)
+  /* skip PLC op */
+  ops++;
+
+  /* read DHEADER */
+  uint32_t pl_sz = dds_is_get4 (is), pl_offs = is->m_index;
+  while (is->m_index - pl_offs < pl_sz)
   {
-    /* read emheader and next_int */
+    /* read EMHEADER and next_int */
     uint32_t em_hdr = dds_is_get4 (is);
     uint32_t lc = EMHEADER_LC (em_hdr), mid = EMHEADER_MEMBERID (em_hdr), msz;
     switch (lc)
@@ -1325,11 +1360,12 @@ static const uint32_t *dds_stream_read_pl (dds_istream_t * __restrict is, char *
         msz = 1 << lc;
         break;
       case 4:
-        msz = dds_is_get4 (is); /* next-int */
-        csr += 4;
+        /* read NEXTINT */
+        msz = dds_is_get4 (is);
         break;
       case 5: case 6: case 7:
-        msz = dds_is_peek4 (is); /* length is part of serialized data */
+        /* length is part of serialized data */
+        msz = dds_is_peek4 (is);
         if (lc > 5)
           msz <<= (lc - 4);
         break;
@@ -1341,6 +1377,9 @@ static const uint32_t *dds_stream_read_pl (dds_istream_t * __restrict is, char *
     /* find member and deserialize */
     uint32_t insn, ops_csr = 0;
     bool found = false;
+
+    /* FIXME: continue finding the member from the last found one,
+       because in many cases the members will be in the data sequentially */
     while (!found && (insn = ops[ops_csr]) != DDS_OP_RTS)
     {
       assert (DDS_OP (insn) == DDS_OP_JEQ);
@@ -1360,9 +1399,6 @@ static const uint32_t *dds_stream_read_pl (dds_istream_t * __restrict is, char *
       if (lc >= 5)
         is->m_index += 4; /* length embedded in member does not include it's own 4 bytes */
     }
-
-    /* align in-stream cursor to 4 bytes */
-    csr += 4 + (msz + 4u - 1) & ~(4u - 1);
   }
 
   /* skip all JEQ-memberid pairs */
@@ -1575,6 +1611,12 @@ static bool normalize_primarray (char * __restrict data, uint32_t * __restrict o
 static const uint32_t *normalize_seq (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, const uint32_t * __restrict ops, uint32_t insn)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    /* DHEADER */
+    if (!normalize_uint32 (data, off, size, bswap))
+      return NULL;
+  }
   uint32_t num;
   if (!read_and_normalize_uint32 (&num, data, off, size, bswap))
     return NULL;
@@ -1617,6 +1659,12 @@ static const uint32_t *normalize_seq (char * __restrict data, uint32_t * __restr
 static const uint32_t *normalize_arr (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, const uint32_t * __restrict ops, uint32_t insn)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    /* DHEADER */
+    if (!normalize_uint32 (data, off, size, bswap))
+      return NULL;
+  }
   const uint32_t num = ops[2];
   switch (subtype)
   {
@@ -1793,13 +1841,17 @@ static const uint32_t *stream_normalize_delimited (char * __restrict data, uint3
 
 static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, const uint32_t * __restrict ops)
 {
-  uint32_t pl_sz, csr = 0;
+  /* skip PLC op */
+  ops++;
+
+  /* normalize DHEADER */
+  uint32_t pl_sz;
   if (!read_and_normalize_uint32 (&pl_sz, data, off, size, bswap))
     return NULL;
-
-  while (csr < pl_sz)
+  uint32_t pl_offs = *off;
+  while (*off - pl_offs < pl_sz)
   {
-    /* emheader */
+    /* normalize EMHEADER */
     uint32_t em_hdr;
     if (!read_and_normalize_uint32 (&em_hdr, data, off, size, bswap))
       return NULL;
@@ -1810,11 +1862,12 @@ static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * _
         msz = 1 << lc;
         break;
       case 4:
+        /* NEXTINT */
         if (!read_and_normalize_uint32 (&msz, data, off, size, bswap))
           return NULL;
-        csr += 4;
         break;
       case 5: case 6: case 7:
+        /* length is part of serialized data */
         if (!peek_and_normalize_uint32 (&msz, data, off, size, bswap))
           return NULL;
         if (lc > 5)
@@ -1825,7 +1878,6 @@ static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * _
         break;
     }
 
-    ops++; /* skip PLC op */
     uint32_t insn, ops_csr = 0;
     bool found = false;
     while (!found && (insn = ops[ops_csr]) != DDS_OP_RTS)
@@ -1840,8 +1892,19 @@ static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * _
       }
       ops_csr += 2;
     }
-    csr += (msz + 4u - 1) & ~(4u - 1);
+
+    if (!found)
+    {
+      *off += msz;
+      if (lc >= 5)
+        *off += 4; /* length embedded in member does not include it's own 4 bytes */
+    }
   }
+
+  /* skip all JEQ-memberid pairs */
+  while (ops[0] != DDS_OP_RTS)
+    ops += 2;
+
   return ops;
 }
 
@@ -2332,18 +2395,16 @@ static const uint32_t *dds_stream_extract_key_from_data_skip_array (dds_istream_
   assert (DDS_OP_TYPE (op) == DDS_OP_VAL_ARR);
   const uint32_t subtype = DDS_OP_SUBTYPE (op);
   const uint32_t num = ops[2];
-  if (type_has_subtype_or_members (subtype))
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
   {
-    const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[3]);
-    const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
-    dds_stream_extract_key_from_data_skip_subtype (is, num, subtype, jsr_ops);
-    return ops + (jmp ? jmp : 5);
+    const uint32_t sz = dds_is_get4 (is);
+    is->m_index += sz;
   }
+  else if (type_has_subtype_or_members (subtype))
+    dds_stream_extract_key_from_data_skip_subtype (is, num, subtype, ops + DDS_OP_ADR_JSR (ops[3]));
   else
-  {
     dds_stream_extract_key_from_data_skip_subtype (is, num, subtype, NULL);
-    return ops + 3;
-  }
+  return skip_array_insns (op, ops);
 }
 
 static const uint32_t *dds_stream_extract_key_from_data_skip_sequence (dds_istream_t * __restrict is, const uint32_t * __restrict ops)
@@ -2355,18 +2416,17 @@ static const uint32_t *dds_stream_extract_key_from_data_skip_sequence (dds_istre
   const uint32_t num = dds_is_get4 (is);
   if (num == 0)
     return ops + 2 + (subtype == DDS_OP_VAL_BST || subtype == DDS_OP_VAL_BSP || subtype == DDS_OP_VAL_ARR || subtype == DDS_OP_VAL_ENU);
+
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    const uint32_t sz = dds_is_get4 (is);
+    is->m_index += sz;
+  }
   else if (type_has_subtype_or_members (subtype))
-  {
-    const uint32_t * jsr_ops = ops + DDS_OP_ADR_JSR (ops[3]);
-    const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
-    dds_stream_extract_key_from_data_skip_subtype (is, num, subtype, jsr_ops);
-    return ops + (jmp ? jmp : 4);
-  }
+    dds_stream_extract_key_from_data_skip_subtype (is, num, subtype, ops + DDS_OP_ADR_JSR (ops[3]));
   else
-  {
     dds_stream_extract_key_from_data_skip_subtype (is, num, subtype, NULL);
-    return ops + 2 + (subtype == DDS_OP_VAL_BST || subtype == DDS_OP_VAL_BSP || subtype == DDS_OP_VAL_ARR || subtype == DDS_OP_VAL_ENU || subtype == DDS_OP_VAL_EXT);
-  }
+  return skip_sequence_insns (op, ops);
 }
 
 static const uint32_t *dds_stream_extract_key_from_data_skip_union (dds_istream_t * __restrict is, const uint32_t * __restrict ops)
@@ -2669,8 +2729,13 @@ static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restric
 static const uint32_t *prtf_seq (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, uint32_t insn)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
-  uint32_t num;
-  num = dds_is_get4 (is);
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    /* skip DHEADER */
+    dds_is_get4 (is);
+  }
+
+  const uint32_t num = dds_is_get4 (is);
   if (num == 0)
   {
     (void) prtf (buf, bufsize, "{}");
@@ -2707,6 +2772,11 @@ static const uint32_t *prtf_seq (char * __restrict *buf, size_t *bufsize, dds_is
 static const uint32_t *prtf_arr (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, uint32_t insn)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    /* skip DHEADER */
+    dds_is_get4 (is);
+  }
   const uint32_t num = ops[2];
   switch (subtype)
   {
@@ -2765,8 +2835,8 @@ static const uint32_t *prtf_uni (char * __restrict *buf, size_t *bufsize, dds_is
 
 static const uint32_t *prtf_pl (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops)
 {
-  uint32_t pl_sz = dds_is_get4 (is), csr = 0;
-  while (csr < pl_sz)
+  uint32_t pl_sz = dds_is_get4 (is), pl_offs = is->m_index;
+  while (is->m_index - pl_offs < pl_sz)
   {
     /* read emheader and next_int */
     uint32_t em_hdr = dds_is_get4 (is);
@@ -2804,8 +2874,19 @@ static const uint32_t *prtf_pl (char * __restrict *buf, size_t *bufsize, dds_ist
       }
       ops_csr += 2;
     }
-    csr += msz;
+
+    if (!found)
+    {
+      is->m_index += msz;
+      if (lc >= 5)
+        is->m_index += 4; /* length embedded in member does not include it's own 4 bytes */
+    }
   }
+
+  /* skip all JEQ-memberid pairs */
+  while (ops[0] != DDS_OP_RTS)
+    ops += 2;
+
   return ops;
 }
 

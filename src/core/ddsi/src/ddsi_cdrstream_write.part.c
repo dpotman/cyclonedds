@@ -23,57 +23,89 @@ static void dds_stream_write_stringBO (DDS_OSTREAM_T * __restrict os, const char
 static const uint32_t *dds_stream_write_seqBO (DDS_OSTREAM_T * __restrict os, const char * __restrict addr, const uint32_t * __restrict ops, uint32_t insn)
 {
   const dds_sequence_t * const seq = (const dds_sequence_t *) addr;
-  const uint32_t num = seq->_length;
-
-  dds_os_put4BO (os, num);
-  if (num == 0)
-    return skip_sequence_insns (insn, ops);
+  uint32_t offs = 0;
 
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
-  /* following length, stream is aligned to mod 4 */
-  switch (subtype)
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
   {
-    case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: {
-      dds_os_put_bytes_aligned ((struct dds_ostream *)os, seq->_buffer, num, get_type_size (subtype));
-      return ops + 2;
-    }
-    case DDS_OP_VAL_ENU: {
-      dds_os_put_bytes_aligned ((struct dds_ostream *)os, seq->_buffer, num, get_type_size (DDS_OP_VAL_4BY));
-      return ops + 3;
-    }
-    case DDS_OP_VAL_STR: case DDS_OP_VAL_BSP: {
-      const char **ptr = (const char **) seq->_buffer;
-      for (uint32_t i = 0; i < num; i++)
-        dds_stream_write_stringBO (os, ptr[i]);
-      return ops + 2 + (subtype == DDS_OP_VAL_BSP ? 2 : 0);
-    }
-    case DDS_OP_VAL_BST: {
-      const char *ptr = (const char *) seq->_buffer;
-      const uint32_t elem_size = ops[2];
-      for (uint32_t i = 0; i < num; i++)
-        dds_stream_write_stringBO (os, ptr + i * elem_size);
-      return ops + 3;
-    }
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
-      const uint32_t elem_size = ops[2];
-      const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
-      uint32_t const * const jsr_ops = ops + DDS_OP_ADR_JSR (ops[3]);
-      const char *ptr = (const char *) seq->_buffer;
-      for (uint32_t i = 0; i < num; i++)
-        (void) dds_stream_writeBO (os, ptr + i * elem_size, jsr_ops);
-      return ops + (jmp ? jmp : 4); /* FIXME: why would jmp be 0? */
-    }
-    case DDS_OP_VAL_EXT: {
-      abort (); /* op type EXT as sequence subtype not supported */
-      break;
+    /* reserve space for DHEADER */
+    dds_os_put4BO (os, 0xffffffff);
+    offs = ((struct dds_ostream *)os)->m_index;
+  }
+
+  const uint32_t num = seq->_length;
+  dds_os_put4BO (os, num);
+
+  if (num == 0)
+  {
+    ops = skip_sequence_insns (insn, ops);
+  }
+  else
+  {
+    /* following length, stream is aligned to mod 4 */
+    switch (subtype)
+    {
+      case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: {
+        dds_os_put_bytes_aligned ((struct dds_ostream *)os, seq->_buffer, num, get_type_size (subtype));
+        ops += 2;
+        break;
+      }
+      case DDS_OP_VAL_ENU: {
+        dds_os_put_bytes_aligned ((struct dds_ostream *)os, seq->_buffer, num, get_type_size (DDS_OP_VAL_4BY));
+        ops += 3;
+        break;
+      }
+      case DDS_OP_VAL_STR: case DDS_OP_VAL_BSP: {
+        const char **ptr = (const char **) seq->_buffer;
+        for (uint32_t i = 0; i < num; i++)
+          dds_stream_write_stringBO (os, ptr[i]);
+        ops += 2 + (subtype == DDS_OP_VAL_BSP ? 2 : 0);
+        break;
+      }
+      case DDS_OP_VAL_BST: {
+        const char *ptr = (const char *) seq->_buffer;
+        const uint32_t elem_size = ops[2];
+        for (uint32_t i = 0; i < num; i++)
+          dds_stream_write_stringBO (os, ptr + i * elem_size);
+        ops += 3;
+        break;
+      }
+      case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
+        const uint32_t elem_size = ops[2];
+        const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
+        uint32_t const * const jsr_ops = ops + DDS_OP_ADR_JSR (ops[3]);
+        const char *ptr = (const char *) seq->_buffer;
+        for (uint32_t i = 0; i < num; i++)
+          (void) dds_stream_writeBO (os, ptr + i * elem_size, jsr_ops);
+        ops += (jmp ? jmp : 4); /* FIXME: why would jmp be 0? */
+        break;
+      }
+      case DDS_OP_VAL_EXT: {
+        abort (); /* op type EXT as sequence subtype not supported */
+        return NULL;
+      }
     }
   }
-  return NULL;
+
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    /* write DHEADER */
+    *((uint32_t *) (((struct dds_ostream *)os)->m_buffer + offs - 4)) = ((struct dds_ostream *)os)->m_index - offs;
+  }
+
+  return ops;
 }
 
 static const uint32_t *dds_stream_write_arrBO (DDS_OSTREAM_T * __restrict os, const char * __restrict addr, const uint32_t * __restrict ops, uint32_t insn)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
+  uint32_t offs = 0;
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    /* reserve space for DHEADER */
+    dds_os_put4BO (os, 0xffffffff);
+    offs = ((struct dds_ostream *)os)->m_index;
+  }
   const uint32_t num = ops[2];
   switch (subtype)
   {
@@ -83,20 +115,22 @@ static const uint32_t *dds_stream_write_arrBO (DDS_OSTREAM_T * __restrict os, co
     }
     case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: {
       dds_os_put_bytes_aligned ((struct dds_ostream *)os, addr, num, get_type_size (subtype));
-      return ops + 3;
+      ops += 3;
+      break;
     }
     case DDS_OP_VAL_STR: case DDS_OP_VAL_BSP: {
       const char **ptr = (const char **) addr;
       for (uint32_t i = 0; i < num; i++)
         dds_stream_write_stringBO (os, ptr[i]);
-      return ops + 3 + (subtype == DDS_OP_VAL_BSP ? 2 : 0);
+      ops += 3 + (subtype == DDS_OP_VAL_BSP ? 2 : 0);
+      break;
     }
     case DDS_OP_VAL_BST: {
       const char *ptr = (const char *) addr;
       const uint32_t elem_size = ops[4];
       for (uint32_t i = 0; i < num; i++)
         dds_stream_write_stringBO (os, ptr + i * elem_size);
-      return ops + 5;
+      ops += 5;
       break;
     }
     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
@@ -105,14 +139,22 @@ static const uint32_t *dds_stream_write_arrBO (DDS_OSTREAM_T * __restrict os, co
       const uint32_t elem_size = ops[4];
       for (uint32_t i = 0; i < num; i++)
         (void) dds_stream_writeBO (os, addr + i * elem_size, jsr_ops);
-      return ops + (jmp ? jmp : 5);
+      ops += (jmp ? jmp : 5);
+      break;
     }
     case DDS_OP_VAL_EXT: {
       abort (); /* op type EXT as array subtype not supported */
       break;
     }
   }
-  return NULL;
+
+  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  {
+    /* write DHEADER */
+    *((uint32_t *) (((struct dds_ostream *)os)->m_buffer + offs - 4)) = ((struct dds_ostream *)os)->m_index - offs;
+  }
+
+  return ops;
 }
 
 static uint32_t write_union_discriminantBO (DDS_OSTREAM_T * __restrict os, enum dds_stream_typecode type, const void * __restrict addr)
