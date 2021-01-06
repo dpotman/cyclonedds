@@ -673,13 +673,18 @@ const dds_topic_descriptor_t TestIdl_MsgAppendStruct2_desc = { sizeof (TestIdl_M
 
 static void * sample_init_appendstruct1 ()
 {
-  TestIdl_MsgAppendStruct1 msg = { .msg_field1 = 1, .msg_field2 = { .submsg_field1 = 11, .submsg_field2 = 22 } };
+  TestIdl_MsgAppendStruct1 msg = { .msg_field1 = 1, .msg_field2 = { .submsg_field1 = 11, .submsg_field2 = 22 }, .msg_field3 = 3 };
   return ddsrt_memdup (&msg, sizeof (TestIdl_MsgAppendStruct1));
 }
 
 static void * sample_init_appendstruct2 ()
 {
-  TestIdl_MsgAppendStruct2 msg = { .msg_field1 = 1, .msg_field2 = { .submsg_field1 = 11, .submsg_field2 = 22 } };
+  TestIdl_MsgAppendStruct2 msg = { .msg_field1 = 101, .msg_field2 = { .submsg_field1 = 1011, .submsg_field2 = 1022 }, .msg_field3 = 103 };
+  for (uint32_t n = 0; n < 10000; n++)
+  {
+    msg.msg_field2.submsg_field3[n] = 1 + n;
+    msg.msg_field4[n] = 1 + n;
+  }
   return ddsrt_memdup (&msg, sizeof (TestIdl_MsgAppendStruct2));
 }
 
@@ -689,13 +694,13 @@ static bool sample_equal_appendstruct1 (void *s_wr, void *s_rd)
   TestIdl_MsgAppendStruct2 *msg_rd = s_rd;
   bool eq = true;
   for (int n = 0; n < 10000 && eq; n++)
-    eq = eq && msg_rd->msg_field2.submsg_field3[n] == 0;
-  for (int n = 0; n < 10000 && eq; n++)
-    eq = eq && msg_rd->msg_field4[n] == 0;
+    eq = msg_rd->msg_field2.submsg_field3[n] == 0 && msg_rd->msg_field4[n] == 0;
   return eq
     && msg_wr->msg_field1 == msg_rd->msg_field1
     && msg_wr->msg_field2.submsg_field1 == msg_rd->msg_field2.submsg_field1
-    && msg_wr->msg_field2.submsg_field2 == msg_rd->msg_field2.submsg_field2;
+    && msg_wr->msg_field2.submsg_field2 == msg_rd->msg_field2.submsg_field2
+    && msg_wr->msg_field3 == msg_rd->msg_field3
+  ;
 }
 
 static bool sample_equal_appendstruct2 (void *s_wr, void *s_rd)
@@ -705,7 +710,9 @@ static bool sample_equal_appendstruct2 (void *s_wr, void *s_rd)
   return
     msg_wr->msg_field1 == msg_rd->msg_field1
     && msg_wr->msg_field2.submsg_field1 == msg_rd->msg_field2.submsg_field1
-    && msg_wr->msg_field2.submsg_field2 == msg_rd->msg_field2.submsg_field2;
+    && msg_wr->msg_field2.submsg_field2 == msg_rd->msg_field2.submsg_field2
+    && msg_wr->msg_field3 == msg_rd->msg_field3
+  ;
 }
 
 static void sample_free_appendstruct (void *s1, void *s2)
@@ -839,7 +846,14 @@ static void * sample_init_appenddefaults1 ()
 
 static void * sample_init_appenddefaults2 ()
 {
-  TestIdl_MsgAppendDefaults2 msg = { .msg_field1 = 123 };
+  TestIdl_MsgAppendDefaults2 msg;
+  memset (&msg, 0xff, sizeof (msg));
+  msg.msg_field_str = NULL;
+  msg.msg_field_bstrp = NULL;
+  msg.msg_field_su8._length = 0;
+  msg.msg_field_ssubm._length = 0;
+  msg.msg_field_uni._d = 0;
+  msg.msg_field1 = 456;
   return ddsrt_memdup (&msg, sizeof (TestIdl_MsgAppendDefaults2));
 }
 
@@ -1170,16 +1184,16 @@ static void msg (const char *msg, ...)
   printf ("\n");
 }
 
-static dds_entity_t tp1, tp2, dp1, dp2, rd, wr, ws;
+static dds_entity_t d1, d2, tp1, tp2, dp1, dp2, rd, wr, ws;
 
 static void cdrstream_init ()
 {
   char * conf = ddsrt_expand_envvars (DDS_CONFIG, DDS_DOMAINID1);
-  dds_entity_t d1 = dds_create_domain (DDS_DOMAINID1, conf);
+  d1 = dds_create_domain (DDS_DOMAINID1, conf);
   CU_ASSERT_FATAL (d1 > 0);
   dds_free (conf);
   conf = ddsrt_expand_envvars (DDS_CONFIG, DDS_DOMAINID2);
-  dds_entity_t d2 = dds_create_domain (DDS_DOMAINID2, conf);
+  d2 = dds_create_domain (DDS_DOMAINID2, conf);
   CU_ASSERT_FATAL (d2 > 0);
   dds_free (conf);
 
@@ -1222,8 +1236,8 @@ static void write_key_sample (void * msg)
 
 static void cdrstream_fini ()
 {
-  dds_delete (dp1);
-  dds_delete (dp2);
+  dds_delete (d1);
+  dds_delete (d2);
 }
 
 #define D(n) TestIdl_Msg ## n ## _desc
@@ -1249,7 +1263,7 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_init *
     ddsc_cdrstream, ser_des, .init = cdrstream_init, .fini = cdrstream_fini)
 {
   dds_return_t ret;
-  msg ("Running test: %s", descr);
+  msg ("Running test ser_des: %s", descr);
 
   entity_init (desc);
 
@@ -1294,11 +1308,11 @@ CU_TheoryDataPoints (ddsc_cdrstream, appendable_mutable) = {
 
 CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_topic_descriptor_t *desc2,
     sample_init *sample_init_fn1, sample_init *sample_init_fn2, sample_equal *sample_equal_fn1, sample_equal *sample_equal_fn2, sample_free2 *sample_free_fn1, sample_free2 *sample_free_fn2),
-    ddsc_cdrstream, appendable_mutable)
+    ddsc_cdrstream, appendable_mutable, .init = cdrstream_init, .fini = cdrstream_fini)
 {
   for (int t = 0; t <= 1; t++)
   {
-    msg ("Running test: %s (run %d/2)", descr, t + 1);
+    msg ("Running test appendable_mutable: %s (run %d/2)", descr, t + 1);
 
     const dds_topic_descriptor_t *desc_wr = t ? desc2 : desc1;
     const dds_topic_descriptor_t *desc_rd = t ? desc1 : desc2;
@@ -1348,6 +1362,12 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_to
     /* Check for expected result */
     bool eq = t ? sample_equal_fn2 (msg_wr, msg_rd) : sample_equal_fn1 (msg_wr, msg_rd);
     CU_ASSERT_FATAL (eq);
+
+    /* print result */
+    char buf[5000];
+    is.m_index = 0;
+    dds_stream_print_sample (&is, &tp_rd, buf, 5000);
+    printf ("read sample: %s\n\n", buf);
 
     // cleanup
     t ? sample_free_fn2 (msg_wr, msg_rd) : sample_free_fn1 (msg_wr, msg_rd);

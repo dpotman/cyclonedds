@@ -222,6 +222,7 @@ static void dds_os_put4 (dds_ostream_t * __restrict s, uint32_t v)
 
 static void dds_os_put8 (dds_ostream_t * __restrict s, uint64_t v)
 {
+  /* FIXME: if CDR2: align 4,4 */
   dds_cdr_alignto_clear_and_resize (s, 8, 8);
   *((uint64_t *) (s->m_buffer + s->m_index)) = v;
   s->m_index += 8;
@@ -1231,8 +1232,8 @@ static const uint32_t *dds_stream_skip_adr (uint32_t insn, const uint32_t * __re
     case DDS_OP_VAL_ARR:
       return skip_array_insns (insn, ops);
     case DDS_OP_VAL_UNI: {
-      const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
-      return ops + (jmp ? jmp : 2);
+      const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
+      return ops + (jmp ? jmp : 4); /* FIXME: jmp cannot be 0? */
     }
     case DDS_OP_VAL_EXT: {
       const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
@@ -1685,8 +1686,8 @@ static const uint32_t *normalize_arr (char * __restrict data, uint32_t * __restr
       return ops + (subtype == DDS_OP_VAL_STR ? 3 : 5);
     }
     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
-      const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[3]);
       const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
+      uint32_t const * const jsr_ops = ops + DDS_OP_ADR_JSR (ops[3]);
       for (uint32_t i = 0; i < num; i++)
         if (stream_normalize (data, off, size, bswap, jsr_ops) == NULL)
           return NULL;
@@ -2835,12 +2836,20 @@ static const uint32_t *prtf_uni (char * __restrict *buf, size_t *bufsize, dds_is
 
 static const uint32_t *prtf_pl (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops)
 {
+  /* skip PLC op */
+  ops++;
+
   uint32_t pl_sz = dds_is_get4 (is), pl_offs = is->m_index;
+  if (!prtf (buf, bufsize, "pl:%d", pl_sz))
+    return NULL;
+
   while (is->m_index - pl_offs < pl_sz)
   {
     /* read emheader and next_int */
     uint32_t em_hdr = dds_is_get4 (is);
     uint32_t lc = EMHEADER_LC (em_hdr), mid = EMHEADER_MEMBERID (em_hdr), msz;
+    if (!prtf (buf, bufsize, ",lc:%d,m:%d,", lc, mid))
+      return NULL;
     switch (lc)
     {
       case 0: case 1: case 2: case 3:
@@ -2943,6 +2952,7 @@ static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restric
         {
           /* skip fields that are not in serialized data for appendable type */
           ops = dds_stream_skip_adr (insn, ops);
+          cont = prtf (buf, bufsize, "_");
         }
         break;
       }
@@ -2955,17 +2965,20 @@ static bool dds_stream_print_sample1 (char * __restrict *buf, size_t * __restric
         abort ();
         break;
       }
-      case DDS_OP_DLC: case DDS_OP_PLC: {
+      case DDS_OP_DLC: {
         cont = prtf (buf, bufsize, "dlh:");
         if (cont)
         {
           dds_cdr_alignto (is, 4);
           delimited_sz = * ((uint32_t *) (is->m_buffer + is->m_index));
           cont = prtf_simple (buf, bufsize, is, DDS_OP_VAL_4BY, 0);
+          delimited_offs = is->m_index;
+          ops++;
         }
-        ops++;
-        if (DDS_OP (insn) == DDS_OP_PLC)
-          ops = prtf_pl (buf, bufsize, is, ops);
+        break;
+      }
+      case DDS_OP_PLC: {
+        ops = prtf_pl (buf, bufsize, is, ops);
         break;
       }
     }

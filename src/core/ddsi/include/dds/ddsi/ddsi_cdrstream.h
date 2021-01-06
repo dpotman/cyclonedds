@@ -12,6 +12,7 @@
 #ifndef DDSI_CDRSTREAM_H
 #define DDSI_CDRSTREAM_H
 
+#include "dds/ddsrt/static_assert.h"
 #include "dds/ddsi/ddsi_serdata.h"
 #include "dds/ddsi/ddsi_serdata_default.h"
 
@@ -39,8 +40,8 @@ typedef struct dds_ostreamLE {
   dds_ostream_t x;
 } dds_ostreamLE_t;
 
-// DDSRT_STATIC_ASSERT (offsetof (dds_ostreamLE_t, x) == 0);
-// DDSRT_STATIC_ASSERT (offsetof (dds_ostreamBE_t, x) == 0);
+DDSRT_STATIC_ASSERT (offsetof (dds_ostreamLE_t, x) == 0);
+DDSRT_STATIC_ASSERT (offsetof (dds_ostreamBE_t, x) == 0);
 
 DDS_EXPORT void dds_ostream_init (dds_ostream_t * __restrict st, uint32_t size);
 DDS_EXPORT void dds_ostream_fini (dds_ostream_t * __restrict st);
