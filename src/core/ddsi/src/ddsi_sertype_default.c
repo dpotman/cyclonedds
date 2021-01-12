@@ -31,7 +31,7 @@ static bool sertype_default_equal (const struct ddsi_sertype *acmn, const struct
 {
   const struct ddsi_sertype_default *a = (struct ddsi_sertype_default *) acmn;
   const struct ddsi_sertype_default *b = (struct ddsi_sertype_default *) bcmn;
-  if (a->native_encoding_identifier != b->native_encoding_identifier)
+  if (a->encoding_format != b->encoding_format)
     return false;
   if (a->type.size != b->type.size)
     return false;
@@ -64,7 +64,7 @@ static bool sertype_default_typeid_hash (const struct ddsi_sertype *tpcmn, unsig
 
   ddsrt_md5_state_t md5st;
   ddsrt_md5_init (&md5st);
-  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->native_encoding_identifier, sizeof (tp->native_encoding_identifier));
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->encoding_format, sizeof (tp->encoding_format));
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.size, sizeof (tp->type.size));
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.align, sizeof (tp->type.align));
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &tp->type.flagset, sizeof (tp->type.flagset));
@@ -155,7 +155,7 @@ static bool sertype_default_serialize (const struct ddsi_sertype *stc, size_t *d
 static bool sertype_default_deserialize (struct ddsi_domaingv *gv, struct ddsi_sertype *stc, size_t src_sz, const unsigned char *src_data, size_t *src_offset)
 {
   struct ddsi_sertype_default *st = (struct ddsi_sertype_default *) stc;
-  st->native_encoding_identifier = ddsi_sertype_get_native_encoding_identifier (/* FIXME */ 2, st->type.extensibility);
+  st->encoding_format = ddsi_sertype_get_encoding_format (CDR_ENC_FORMAT_PLAIN);
   st->serpool = gv->serpool;
   st->c.serdata_ops = st->c.typekind_no_key ? &ddsi_serdata_ops_cdr_nokey : &ddsi_serdata_ops_cdr;
   if (plist_deser_generic_srcoff (&st->type, src_data, src_sz, src_offset, DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN, ddsi_sertype_default_desc_ops) < 0)

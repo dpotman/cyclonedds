@@ -92,13 +92,6 @@ struct ddsi_serdata_default {
 typedef bool (*dds_topic_intern_filter_fn) (const void * sample, void *ctx);
 #endif
 
-enum ddsi_sertype_extensibility
-{
-  DDSI_SERTYPE_DEFAULT_EXT_FINAL = 0,
-  DDSI_SERTYPE_DEFAULT_EXT_APPENDABLE = 1,
-  DDSI_SERTYPE_DEFAULT_EXT_MUTABLE = 2
-};
-
 typedef struct ddsi_sertype_default_desc_key_seq {
   uint32_t nkeys;   /* Number of keys (can be 0) */
   uint32_t *keys;   /* Key descriptors (NULL iff nkeys 0) */
@@ -121,7 +114,7 @@ struct ddsi_sertype_default_desc {
 
 struct ddsi_sertype_default {
   struct ddsi_sertype c;
-  uint16_t native_encoding_identifier; /* (D_|PL_)?CDR(2)?_(LE|BE) */
+  uint16_t encoding_format; /* CDR_ENC_FORMAT_(PLAIN|DELIMITED|PL) */
   struct serdatapool *serpool;
   struct ddsi_sertype_default_desc type;
   size_t opt_size;

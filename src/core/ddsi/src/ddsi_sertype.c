@@ -233,23 +233,23 @@ uint32_t ddsi_sertype_compute_serdata_basehash (const struct ddsi_serdata_ops *o
   return res;
 }
 
-uint16_t ddsi_sertype_get_native_encoding_identifier (uint32_t version, uint32_t toplevel_type_ext)
+uint16_t ddsi_sertype_get_native_encoding_identifier (uint32_t enc_version, uint32_t enc_format)
 {
 #if (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN)
 #define CDR_BO(x) x ## _LE
 #else
 #define CDR_BO(x) x ## _BE
 #endif
-  switch (version)
+  switch (enc_version)
   {
-    case 1:
-      if (toplevel_type_ext == DDS_TOPIC_TYPE_EXTENSIBILITY_MUTABLE)
+    case CDR_ENC_VERSION_1:
+      if (enc_format == CDR_ENC_FORMAT_PL)
         return CDR_BO(PL_CDR);
       return CDR_BO(CDR);
-    case 2:
-      if (toplevel_type_ext == DDS_TOPIC_TYPE_EXTENSIBILITY_MUTABLE)
+    case CDR_ENC_VERSION_2:
+      if (enc_format == CDR_ENC_FORMAT_PL)
         return CDR_BO(PL_CDR2);
-      if (toplevel_type_ext == DDS_TOPIC_TYPE_EXTENSIBILITY_APPENDABLE)
+      if (enc_format == CDR_ENC_FORMAT_DELIMITED)
         return CDR_BO(D_CDR2);
       return CDR_BO(CDR2);
     default:
@@ -257,6 +257,36 @@ uint16_t ddsi_sertype_get_native_encoding_identifier (uint32_t version, uint32_t
   }
 #undef CDR_BO_EXT
 #undef CDR_BO
+}
+
+uint16_t ddsi_sertype_get_encoding_format (enum ddsi_sertype_extensibility type_extensibility)
+{
+  switch (type_extensibility)
+  {
+    case DDSI_SERTYPE_EXT_FINAL:
+      return CDR_ENC_FORMAT_PLAIN;
+    case DDSI_SERTYPE_EXT_APPENDABLE:
+      return CDR_ENC_FORMAT_DELIMITED;
+    case DDSI_SERTYPE_EXT_MUTABLE:
+      return CDR_ENC_FORMAT_PL;
+    default:
+      abort ();
+  }
+}
+
+uint32_t get_xcdr_version (unsigned short cdr_identifier)
+{
+  switch (cdr_identifier)
+  {
+    case CDR_LE: case CDR_BE:
+      return CDR_ENC_VERSION_1;
+    case CDR2_LE: case CDR2_BE:
+    case D_CDR2_LE: case D_CDR2_BE:
+    case PL_CDR2_LE: case PL_CDR2_BE:
+      return CDR_ENC_VERSION_2;
+    default:
+      return CDR_ENC_VERSION_UNDEF;
+  }
 }
 
 extern inline void ddsi_sertype_free (struct ddsi_sertype *tp);

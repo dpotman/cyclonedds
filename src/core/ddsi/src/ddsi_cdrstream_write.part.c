@@ -26,7 +26,7 @@ static const uint32_t *dds_stream_write_seqBO (DDS_OSTREAM_T * __restrict os, co
   uint32_t offs = 0;
 
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
-  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  if (subtype > DDS_OP_VAL_8BY && ((struct dds_ostream *)os)->m_xcdr_version == CDR_ENC_VERSION_2)
   {
     /* reserve space for DHEADER */
     dds_os_put4BO (os, 0xffffffff);
@@ -87,7 +87,7 @@ static const uint32_t *dds_stream_write_seqBO (DDS_OSTREAM_T * __restrict os, co
     }
   }
 
-  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  if (subtype > DDS_OP_VAL_8BY && ((struct dds_ostream *)os)->m_xcdr_version == CDR_ENC_VERSION_2)
   {
     /* write DHEADER */
     *((uint32_t *) (((struct dds_ostream *)os)->m_buffer + offs - 4)) = ((struct dds_ostream *)os)->m_index - offs;
@@ -100,7 +100,7 @@ static const uint32_t *dds_stream_write_arrBO (DDS_OSTREAM_T * __restrict os, co
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
   uint32_t offs = 0;
-  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  if (subtype > DDS_OP_VAL_8BY && ((struct dds_ostream *)os)->m_xcdr_version == CDR_ENC_VERSION_2)
   {
     /* reserve space for DHEADER */
     dds_os_put4BO (os, 0xffffffff);
@@ -148,7 +148,7 @@ static const uint32_t *dds_stream_write_arrBO (DDS_OSTREAM_T * __restrict os, co
     }
   }
 
-  if (subtype > DDS_OP_VAL_8BY /* FIXME: && isCDR2 */)
+  if (subtype > DDS_OP_VAL_8BY && ((struct dds_ostream *)os)->m_xcdr_version == CDR_ENC_VERSION_2)
   {
     /* write DHEADER */
     *((uint32_t *) (((struct dds_ostream *)os)->m_buffer + offs - 4)) = ((struct dds_ostream *)os)->m_index - offs;
@@ -241,10 +241,12 @@ static const uint32_t *dds_stream_writeBO (DDS_OSTREAM_T * __restrict os, const 
         break;
       }
       case DDS_OP_DLC: {
+        assert (((struct dds_ostream *)os)->m_xcdr_version == CDR_ENC_VERSION_2);
         ops = dds_stream_write_delimitedBO (os, data, ops);
         break;
       }
       case DDS_OP_PLC: {
+        assert (((struct dds_ostream *)os)->m_xcdr_version == CDR_ENC_VERSION_2);
         ops = dds_stream_write_plBO (os, data, ops);
         break;
       }

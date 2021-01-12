@@ -581,12 +581,12 @@ dds_entity_t dds_create_topic (dds_entity_t participant, const dds_topic_descrip
 
   st = dds_alloc (sizeof (*st));
 
-  DDSRT_STATIC_ASSERT (DDSI_SERTYPE_DEFAULT_EXT_FINAL == DDS_TOPIC_TYPE_EXTENSIBILITY (DDS_TOPIC_TYPE_EXTENSIBILITY_FINAL));
-  DDSRT_STATIC_ASSERT (DDSI_SERTYPE_DEFAULT_EXT_APPENDABLE == DDS_TOPIC_TYPE_EXTENSIBILITY (DDS_TOPIC_TYPE_EXTENSIBILITY_APPENDABLE));
-  DDSRT_STATIC_ASSERT (DDSI_SERTYPE_DEFAULT_EXT_MUTABLE == DDS_TOPIC_TYPE_EXTENSIBILITY (DDS_TOPIC_TYPE_EXTENSIBILITY_MUTABLE));
+  DDSRT_STATIC_ASSERT (DDSI_SERTYPE_EXT_FINAL == DDS_TOPIC_TYPE_EXTENSIBILITY (DDS_TOPIC_TYPE_EXTENSIBILITY_FINAL));
+  DDSRT_STATIC_ASSERT (DDSI_SERTYPE_EXT_APPENDABLE == DDS_TOPIC_TYPE_EXTENSIBILITY (DDS_TOPIC_TYPE_EXTENSIBILITY_APPENDABLE));
+  DDSRT_STATIC_ASSERT (DDSI_SERTYPE_EXT_MUTABLE == DDS_TOPIC_TYPE_EXTENSIBILITY (DDS_TOPIC_TYPE_EXTENSIBILITY_MUTABLE));
 
   ddsi_sertype_init (&st->c, desc->m_typename, &ddsi_sertype_ops_default, desc->m_nkeys ? &ddsi_serdata_ops_cdr : &ddsi_serdata_ops_cdr_nokey, (desc->m_nkeys == 0));
-  st->native_encoding_identifier = ddsi_sertype_get_native_encoding_identifier (/* FIXME */ 2, DDS_TOPIC_TYPE_EXTENSIBILITY (desc->m_flagset));
+  st->encoding_format = ddsi_sertype_get_encoding_format (DDS_TOPIC_TYPE_EXTENSIBILITY (desc->m_flagset));
   st->serpool = ppent->m_domain->gv.serpool;
   st->type.size = desc->m_size;
   st->type.align = desc->m_align;

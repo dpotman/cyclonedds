@@ -219,6 +219,13 @@ typedef struct InfoSRC {
 #define CDR_ENC_IS_NATIVE(x) (!CDR_ENC_LE ((x)))
 #endif
 
+#define CDR_ENC_VERSION_UNDEF     0
+#define CDR_ENC_VERSION_1         1
+#define CDR_ENC_VERSION_2         2
+
+#define CDR_ENC_FORMAT_PLAIN      0
+#define CDR_ENC_FORMAT_DELIMITED  1
+#define CDR_ENC_FORMAT_PL         2
 
 
 typedef uint16_t nn_parameterid_t; /* spec says short */
@@ -408,6 +415,7 @@ typedef union Submessage {
 #define PID_DIRECTED_WRITE                      0x57u
 #define PID_ORIGINAL_WRITER_INFO                0x61u
 #define PID_ENDPOINT_GUID                       0x5au /* !SPEC <=> ADLINK_ENDPOINT_GUID */
+#define PID_DATA_REPRESENTATION                 0x73u
 #define PID_TYPE_CONSISTENCY_ENFORCEMENT        0x74u
 #define PID_TYPE_INFORMATION                    0x75u
 

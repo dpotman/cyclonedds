@@ -22,14 +22,16 @@ extern "C" {
 
 typedef struct dds_istream {
   const unsigned char *m_buffer;
-  uint32_t m_size;      /* Buffer size */
-  uint32_t m_index;     /* Read/write offset from start of buffer */
+  uint32_t m_size;          /* Buffer size */
+  uint32_t m_index;         /* Read/write offset from start of buffer */
+  uint32_t m_xcdr_version;  /* XCDR version of the data */
 } dds_istream_t;
 
 typedef struct dds_ostream {
   unsigned char *m_buffer;
-  uint32_t m_size;      /* Buffer size */
-  uint32_t m_index;     /* Read/write offset from start of buffer */
+  uint32_t m_size;          /* Buffer size */
+  uint32_t m_index;         /* Read/write offset from start of buffer */
+  uint32_t m_xcdr_version;  /* XCDR version to use for serializing data */
 } dds_ostream_t;
 
 typedef struct dds_ostreamBE {
@@ -50,7 +52,7 @@ DDS_EXPORT void dds_ostreamLE_fini (dds_ostreamLE_t * __restrict st);
 DDS_EXPORT void dds_ostreamBE_init (dds_ostreamBE_t * __restrict st, uint32_t size);
 DDS_EXPORT void dds_ostreamBE_fini (dds_ostreamBE_t * __restrict st);
 
-bool dds_stream_normalize (void * __restrict data, uint32_t size, bool bswap, const struct ddsi_sertype_default * __restrict type, bool just_key);
+bool dds_stream_normalize (void * __restrict data, uint32_t size, bool bswap, uint32_t xcdr_version, const struct ddsi_sertype_default * __restrict type, bool just_key);
 
 void dds_stream_write_sample (dds_ostream_t * __restrict os, const void * __restrict data, const struct ddsi_sertype_default * __restrict type);
 void dds_stream_write_sampleLE (dds_ostreamLE_t * __restrict os, const void * __restrict data, const struct ddsi_sertype_default * __restrict type);
@@ -60,10 +62,8 @@ void dds_stream_free_sample (void * __restrict data, const uint32_t * __restrict
 uint32_t dds_stream_countops (const uint32_t * __restrict ops, uint32_t nkeys, const dds_key_descriptor_t * __restrict keys);
 size_t dds_stream_check_optimize (const struct ddsi_sertype_default_desc * __restrict desc);
 void dds_istream_from_serdata_default (dds_istream_t * __restrict s, const struct ddsi_serdata_default * __restrict d);
-void dds_ostream_from_serdata_default (dds_ostream_t * __restrict s, struct ddsi_serdata_default * __restrict d);
+void dds_ostream_from_serdata_default (dds_ostream_t * __restrict s, const struct ddsi_serdata_default * __restrict d);
 void dds_ostream_add_to_serdata_default (dds_ostream_t * __restrict s, struct ddsi_serdata_default ** __restrict d);
-void dds_ostreamBE_from_serdata_default (dds_ostreamBE_t * __restrict s, struct ddsi_serdata_default * __restrict d);
-void dds_ostreamBE_add_to_serdata_default (dds_ostreamBE_t * __restrict s, struct ddsi_serdata_default ** __restrict d);
 
 void dds_stream_write_key (dds_ostream_t * __restrict os, const char * __restrict sample, const struct ddsi_sertype_default * __restrict type);
 void dds_stream_write_keyBE (dds_ostreamBE_t * __restrict os, const char * __restrict sample, const struct ddsi_sertype_default * __restrict type);

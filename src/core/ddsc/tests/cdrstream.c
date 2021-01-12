@@ -20,6 +20,7 @@
 #include "dds__topic.h"
 #include "dds/ddsi/ddsi_serdata.h"
 #include "dds/ddsi/ddsi_cdrstream.h"
+#include "test_util.h"
 
 #define DDS_DOMAINID1 0
 #define DDS_DOMAINID2 1
@@ -1149,29 +1150,6 @@ static void sample_free_mutable2 (void *s_wr, void *s_rd)
  * Generic implementation and tests
  **********************************************/
 
-static int topic_nr = 0;
-
-static void sync_reader_writer (dds_entity_t participant_rd, dds_entity_t reader, dds_entity_t participant_wr, dds_entity_t writer)
-{
-  dds_attach_t triggered;
-  dds_entity_t waitset_rd = dds_create_waitset (participant_rd);
-  dds_entity_t waitset_wr = dds_create_waitset (participant_wr);
-
-  /* Sync reader to writer. */
-  dds_set_status_mask (reader, DDS_SUBSCRIPTION_MATCHED_STATUS);
-  dds_waitset_attach (waitset_rd, reader, reader);
-  dds_waitset_wait (waitset_rd, &triggered, 1, DDS_SECS (1));
-  dds_waitset_detach (waitset_rd, reader);
-  dds_delete (waitset_rd);
-
-  /* Sync writer to reader. */
-  dds_set_status_mask (writer, DDS_PUBLICATION_MATCHED_STATUS);
-  dds_waitset_attach (waitset_wr, writer, writer);
-  dds_waitset_wait (waitset_wr, &triggered, 1, DDS_SECS (1));
-  dds_waitset_detach (waitset_wr, writer);
-  dds_delete (waitset_wr);
-}
-
 static void msg (const char *msg, ...)
 {
   va_list args;
@@ -1184,7 +1162,7 @@ static void msg (const char *msg, ...)
   printf ("\n");
 }
 
-static dds_entity_t d1, d2, tp1, tp2, dp1, dp2, rd, wr, ws;
+static dds_entity_t d1, d2, tp1, tp2, dp1, dp2, rd, wr;
 
 static void cdrstream_init ()
 {
@@ -1205,22 +1183,24 @@ static void cdrstream_init ()
 
 static void entity_init (const dds_topic_descriptor_t *desc)
 {
-  char * name;
-  ddsrt_asprintf (&name, "ddsc_cdrstream_%d", topic_nr++);
-  tp1 = dds_create_topic (dp1, desc, name, NULL, NULL);
+  char topicname[100];
+  create_unique_topic_name ("ddsc_cdrstream", topicname, sizeof topicname);
+
+  tp1 = dds_create_topic (dp1, desc, topicname, NULL, NULL);
   CU_ASSERT_FATAL (tp1 > 0);
-  tp2 = dds_create_topic (dp2, desc, name, NULL, NULL);
+  tp2 = dds_create_topic (dp2, desc, topicname, NULL, NULL);
   CU_ASSERT_FATAL (tp2 > 0);
-  dds_free (name);
-  rd = dds_create_reader (dp2, tp2, NULL, NULL);
+  dds_qos_t *qos = dds_create_qos ();
+  dds_qset_history(qos, DDS_HISTORY_KEEP_ALL, DDS_LENGTH_UNLIMITED);
+  dds_qset_durability(qos, DDS_DURABILITY_TRANSIENT_LOCAL);
+  dds_qset_reliability(qos, DDS_RELIABILITY_RELIABLE, DDS_INFINITY);
+  dds_qset_data_representation (qos, 1, (dds_data_representation_id_t[]) { XCDR2_DATA_REPRESENTATION });
+  rd = dds_create_reader (dp2, tp2, qos, NULL);
   CU_ASSERT_FATAL (rd > 0);
-  wr = dds_create_writer (dp1, tp1, NULL, NULL);
+  wr = dds_create_writer (dp1, tp1, qos, NULL);
   CU_ASSERT_FATAL (wr > 0);
   sync_reader_writer (dp2, rd, dp1, wr);
-
-  dds_set_status_mask (rd, DDS_DATA_AVAILABLE_STATUS);
-  ws = dds_create_waitset (dp2);
-  dds_waitset_attach (ws, rd, rd);
+  dds_delete_qos (qos);
 }
 
 static void write_key_sample (void * msg)
@@ -1266,6 +1246,9 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_init *
   msg ("Running test ser_des: %s", descr);
 
   entity_init (desc);
+  dds_set_status_mask (rd, DDS_DATA_AVAILABLE_STATUS);
+  dds_entity_t ws = dds_create_waitset (dp2);
+  dds_waitset_attach (ws, rd, rd);
 
   void * msg = sample_init_fn ();
 
@@ -1322,6 +1305,7 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_to
     os.m_buffer = NULL;
     os.m_index = 0;
     os.m_size = 0;
+    os.m_xcdr_version = CDR_ENC_VERSION_2;
 
     struct ddsi_sertype_default tp_wr;
     memset (&tp_wr, 0, sizeof (tp_wr));
@@ -1343,6 +1327,7 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_to
     is.m_buffer = os.m_buffer;
     is.m_index = 0;
     is.m_size = os.m_size;
+    is.m_xcdr_version = CDR_ENC_VERSION_2;
 
     struct ddsi_sertype_default tp_rd;
     memset (&tp_rd, 0, sizeof (tp_rd));
