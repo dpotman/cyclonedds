@@ -43,7 +43,7 @@ struct ddsi_serdata_builtintopic_participant {
 struct ddsi_serdata_builtintopic_topic {
   struct ddsi_serdata_builtintopic common;
   unsigned char key[16];
-  type_identifier_t type_id;
+  struct TypeIdentifier type_id;
 };
 #endif
 
@@ -52,7 +52,7 @@ struct ddsi_serdata_builtintopic_endpoint {
   ddsi_guid_t key;
   dds_instance_handle_t pphandle;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  type_identifier_t type_id;
+  struct TypeIdentifier type_id;
 #endif
 };
 

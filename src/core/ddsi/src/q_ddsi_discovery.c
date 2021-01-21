@@ -899,7 +899,7 @@ static int sedp_write_endpoint_impl
    const struct entity_common *common, const struct endpoint_common *epcommon,
    const dds_qos_t *xqos, struct addrset *as, nn_security_info_t *security
 #ifdef DDS_HAS_TYPE_DISCOVERY
-   , type_identifier_t *type_id
+   , struct TypeIdentifier *type_id
 #endif
 )
 {
@@ -991,7 +991,7 @@ static int sedp_write_endpoint_impl
 #ifdef DDS_HAS_TYPE_DISCOVERY
     ps.qos.present |= QP_CYCLONE_TYPE_INFORMATION;
     ps.qos.type_information.length = sizeof (*type_id);
-    ps.qos.type_information.value = ddsrt_memdup (&type_id->hash, ps.qos.type_information.length);
+    // FIXME: ps.qos.type_information.value = ddsrt_memdup (&type_id->hash, ps.qos.type_information.length);
 #endif
   }
 
@@ -1002,7 +1002,7 @@ static int sedp_write_endpoint_impl
 
 #ifdef DDS_HAS_TOPIC_DISCOVERY
 
-static int sedp_write_topic_impl (struct writer *wr, int alive, const ddsi_guid_t *guid, const dds_qos_t *xqos, type_identifier_t *type_id)
+static int sedp_write_topic_impl (struct writer *wr, int alive, const ddsi_guid_t *guid, const dds_qos_t *xqos, struct TypeIdentifier *type_id)
 {
   struct ddsi_domaingv * const gv = wr->e.gv;
   const dds_qos_t *defqos = &gv->default_xqos_tp;
@@ -1026,7 +1026,7 @@ static int sedp_write_topic_impl (struct writer *wr, int alive, const ddsi_guid_
   {
     ps.qos.present |= QP_CYCLONE_TYPE_INFORMATION;
     ps.qos.type_information.length = sizeof (*type_id);
-    ps.qos.type_information.value = ddsrt_memdup (&type_id->hash, ps.qos.type_information.length);
+    // FIXME: ps.qos.type_information.value = ddsrt_memdup (&type_id->hash, ps.qos.type_information.length);
   }
   if (xqos)
     ddsi_xqos_mergein_missing (&ps.qos, xqos, qosdiff);
@@ -1311,12 +1311,13 @@ static void handle_SEDP_alive (const struct receiver_state *rst, seqno_t seq, dd
              ((xqos->present & QP_PARTITION) && xqos->partition.n > 1) ? "+" : "",
              xqos->topic_name, xqos->type_name);
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  type_identifier_t type_id;
-  if ((xqos->present & QP_CYCLONE_TYPE_INFORMATION) && xqos->type_information.length == sizeof (type_id.hash))
-  {
-    memcpy (type_id.hash, xqos->type_information.value, sizeof (type_id.hash));
-    GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(type_id));
-  }
+  // FIXME
+  // struct TypeIdentifier type_id;
+  // if ((xqos->present & QP_CYCLONE_TYPE_INFORMATION) && xqos->type_information.length == sizeof (type_id.hash))
+  // {
+  //   memcpy (type_id.hash, xqos->type_information.value, sizeof (type_id.hash));
+  //   GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(type_id));
+  // }
 #endif
 
   if (! is_writer && (datap->present & PP_EXPECTS_INLINE_QOS) && datap->expects_inline_qos)
@@ -1448,7 +1449,7 @@ static void handle_SEDP_alive_topic (const struct receiver_state *rst, ddsi_plis
   ddsi_guid_t ppguid;
   dds_qos_t *xqos;
   int reliable;
-  type_identifier_t type_id = { .hash = { 0 }};
+  struct TypeIdentifier type_id; // FIXME = { .hash = { 0 }};
 
   assert (datap);
   assert (datap->present & PP_CYCLONE_TOPIC_GUID);
@@ -1487,11 +1488,12 @@ static void handle_SEDP_alive_topic (const struct receiver_state *rst, ddsi_plis
              reliable ? "reliable" : "best-effort",
              durability_to_string (xqos->durability.kind),
              "topic", xqos->topic_name, xqos->type_name);
-  if ((xqos->present & QP_CYCLONE_TYPE_INFORMATION) && xqos->type_information.length == sizeof (type_id.hash))
-  {
-    memcpy (type_id.hash, xqos->type_information.value, sizeof (type_id.hash));
-    GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(type_id));
-  }
+  // FIXME
+  // if ((xqos->present & QP_CYCLONE_TYPE_INFORMATION) && xqos->type_information.length == sizeof (type_id.hash))
+  // {
+  //   memcpy (type_id.hash, xqos->type_information.value, sizeof (type_id.hash));
+  //   GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(type_id));
+  // }
   GVLOGDISC ("\n ");
 
   // FIXME: check compatibility with known topic definitions

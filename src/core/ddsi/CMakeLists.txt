@@ -89,7 +89,8 @@ endif()
 if(ENABLE_TYPE_DISCOVERY)
   list(APPEND srcs_ddsi
   "${CMAKE_CURRENT_LIST_DIR}/src/ddsi_typeid.c"
-  "${CMAKE_CURRENT_LIST_DIR}/src/ddsi_typelookup.c")
+  "${CMAKE_CURRENT_LIST_DIR}/src/ddsi_typelookup.c"
+  "${CMAKE_CURRENT_LIST_DIR}/src/ddsi_type_xtypes.c")
 endif()
 
 # The includes should reside close to the code. As long as that's not the case,
@@ -181,6 +182,7 @@ if(ENABLE_TYPE_DISCOVERY)
     "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_type_identifier.h"
     "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_type_information.h"
     "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_type_object.h"
+    "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_type_xtypes.h"
     "${CMAKE_CURRENT_LIST_DIR}/include/dds/ddsi/ddsi_typelookup.h")
 endif()
 
