@@ -178,7 +178,7 @@ static int wrinfo_eq (const void *va, const void *vb)
 static void dumplog (char logbuf[LOGDEPTH][LOGLINE], int *logidx)
 {
   if (logbuf[*logidx][0])
-    for (int i = 0; i < LOGDEPTH; i++)
+    for (int i = *logidx; i < LOGDEPTH; i++)
       fputs (logbuf[i], stdout);
   for (int i = 0; i < *logidx; i++)
     fputs (logbuf[i], stdout);

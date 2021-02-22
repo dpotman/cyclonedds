@@ -2597,7 +2597,8 @@ static void proxy_writer_add_connection (struct proxy_writer *pwr, struct reader
   m->ack_requested = 0;
   m->heartbeat_since_ack = 0;
   m->heartbeatfrag_since_ack = 0;
-  m->directed_heartbeat = 0;
+  m->directed_heartbeat_since_ack = 0;
+  m->has_seen_directed_heartbeat = 0;
   m->nack_sent_on_nackdelay = 0;
 
 #ifdef DDS_HAS_SECURITY

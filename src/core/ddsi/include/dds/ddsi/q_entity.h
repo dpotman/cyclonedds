@@ -177,8 +177,9 @@ struct pwr_rd_match {
   unsigned ack_requested : 1; /* set on receipt of HEARTBEAT with FINAL clear, cleared on sending an ACKNACK */
   unsigned heartbeat_since_ack : 1; /* set when a HEARTBEAT has been received since the last ACKNACK */
   unsigned heartbeatfrag_since_ack : 1; /* set when a HEARTBEATFRAG has been received since the last ACKNACK */
-  unsigned directed_heartbeat : 1; /* set on receipt of a directed heartbeat, cleared on sending an ACKNACK */
+  unsigned directed_heartbeat_since_ack : 1; /* set on receipt of a directed heartbeat, cleared on sending an ACKNACK */
   unsigned nack_sent_on_nackdelay : 1; /* set when the most recent NACK sent was because of the NackDelay  */
+  unsigned has_seen_directed_heartbeat : 1; /* has seen a heartbeat that was directed at this specific reader */
   unsigned filtered : 1;
   union {
     struct {

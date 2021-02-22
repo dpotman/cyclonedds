@@ -89,17 +89,18 @@ static void maybe_set_reader_in_sync (struct proxy_writer *pwr, struct pwr_rd_ma
     case PRMSS_TLCATCHUP:
       if (last_deliv_seq >= wn->u.not_in_sync.end_of_tl_seq)
       {
+        ETRACE (pwr, " msr_in_sync("PGUIDFMT" tlcatchup to sync)\n", PGUID (wn->rd_guid));
         wn->in_sync = PRMSS_SYNC;
         if (--pwr->n_readers_out_of_sync == 0)
           local_reader_ary_setfastpath_ok (&pwr->rdary, true);
       }
       break;
     case PRMSS_OUT_OF_SYNC:
-      if (!wn->filtered)
+      if (!wn->filtered && (!vendor_is_eclipse (pwr->c.vendor) || wn->has_seen_directed_heartbeat))
       {
         if (pwr->have_seen_heartbeat && nn_reorder_next_seq (wn->u.not_in_sync.reorder) == nn_reorder_next_seq (pwr->reorder))
         {
-          ETRACE (pwr, " msr_in_sync("PGUIDFMT" out-of-sync to tlcatchup)", PGUID (wn->rd_guid));
+          ETRACE (pwr, " msr_in_sync("PGUIDFMT" out-of-sync to tlcatchup)\n", PGUID (wn->rd_guid));
           wn->in_sync = PRMSS_TLCATCHUP;
           maybe_set_reader_in_sync (pwr, wn, last_deliv_seq);
         }
@@ -795,7 +796,7 @@ static int handle_AckNack (struct receiver_state *rst, ddsrt_etime_t tnow, const
      get set when only historical data is being acked, which is
      relevant to setting "has_replied_to_hb" and "assumed_in_sync". */
   is_pure_ack = !acknack_is_nack (msg);
-  is_pure_nonhist_ack = is_pure_ack && seqbase - 1 >= rn->seq;
+  is_pure_nonhist_ack = is_pure_ack && seqbase - 1 >= rn->seq && seqbase > 1;
   is_preemptive_ack = seqbase < 1 || (seqbase == 1 && *countp == 0);
 
   wr->num_acks_received++;
@@ -921,6 +922,12 @@ static int handle_AckNack (struct receiver_state *rst, ddsrt_etime_t tnow, const
     {
       RSTTRACE (" happy-now");
       rn->assumed_in_sync = 1;
+    }
+    else if (seqbase == 1)
+    {
+      RSTTRACE (" force-directed-hb");
+      force_heartbeat_to_peer (wr, &whcst, prd, 1, defer_hb_state);
+      hb_sent_in_response = 1;
     }
     else if (msg->readerSNState.numbits < rst->gv->config.accelerate_rexmit_block_size)
     {
@@ -1177,7 +1184,11 @@ static void handle_Heartbeat_helper (struct pwr_rd_match * const wn, struct hand
   if (!(msg->smhdr.flags & HEARTBEAT_FLAG_FINAL))
     wn->ack_requested = 1;
   if (arg->directed_heartbeat)
-    wn->directed_heartbeat = 1;
+  {
+    wn->directed_heartbeat_since_ack = 1;
+    if (!wn->has_seen_directed_heartbeat)
+      wn->has_seen_directed_heartbeat = 1;
+  }
 
   sched_acknack_if_needed (wn->acknack_xevent, pwr, wn, arg->tnow_mt, true);
 }
@@ -1497,7 +1508,11 @@ static int handle_HeartbeatFrag (struct receiver_state *rst, UNUSED_ARG(ddsrt_et
     else
     {
       if (directed_heartbeat)
-        m->directed_heartbeat = 1;
+      {
+        m->directed_heartbeat_since_ack = 1;
+        if (!m->has_seen_directed_heartbeat)
+          m->has_seen_directed_heartbeat = 1;
+      }
       m->heartbeatfrag_since_ack = 1;
 
       DDSRT_STATIC_ASSERT ((NN_FRAGMENT_NUMBER_SET_MAX_BITS % 32) == 0);
@@ -1707,22 +1722,51 @@ static int handle_one_gap (struct proxy_writer *pwr, struct pwr_rd_match *wn, se
   int gap_was_valuable = 0;
   ASSERT_MUTEX_HELD (&pwr->e.lock);
 
-  /* Clean up the defrag admin: no fragments of a missing sample will
-     be arriving in the future */
-  if (!(wn && wn->filtered))
+  if (wn != NULL)
   {
-    nn_defrag_notegap (pwr->defrag, a, b);
-
-    /* Primary reorder: the gap message may cause some samples to become
-     deliverable. */
-
-    if ((res = nn_reorder_gap (&sc, pwr->reorder, gap, a, b, refc_adjust)) > 0)
+    switch (wn->in_sync)
     {
-      if (pwr->deliver_synchronously)
-        deliver_user_data_synchronously (&sc, NULL);
-      else
-        nn_dqueue_enqueue (pwr->dqueue, &sc, res);
+      case PRMSS_SYNC:
+      case PRMSS_TLCATCHUP:
+        if (!wn->filtered)
+        {
+          /* Clean up the defrag admin: no fragments of a missing sample will
+            be arriving in the future */
+          nn_defrag_notegap (pwr->defrag, a, b);
+
+          /* Primary reorder: the gap message may cause some samples to become
+          deliverable. */
+          ETRACE (pwr, "reorder_gap for pwr "PGUIDFMT"\n", PGUID (pwr->e.guid));
+          if ((res = nn_reorder_gap (&sc, pwr->reorder, gap, a, b, refc_adjust)) > 0)
+          {
+            if (pwr->deliver_synchronously)
+              deliver_user_data_synchronously (&sc, NULL);
+            else
+              nn_dqueue_enqueue (pwr->dqueue, &sc, res);
+          }
+        }
+        break;
+      case PRMSS_OUT_OF_SYNC:
+        /* Out-of-sync readers never deal with samples with a sequence
+          number beyond end_of_tl_seq -- and so it needn't be bothered
+          with gaps that start beyond that number */
+        ETRACE (pwr, "reorder_gap for match %p (rd "PGUIDFMT")\n", pwr, PGUID (wn->rd_guid));
+        if ((res = nn_reorder_gap (&sc, wn->u.not_in_sync.reorder, gap, a, b, refc_adjust)) > 0)
+        {
+          if (pwr->deliver_synchronously)
+            deliver_user_data_synchronously (&sc, &wn->rd_guid);
+          else
+            nn_dqueue_enqueue1 (pwr->dqueue, &wn->rd_guid, &sc, res);
+        }
+        break;
     }
+
+    /* Upon receipt of data a reader can only become in-sync if there
+       is something to deliver; for missing data, you just don't know.
+       The return value of reorder_gap _is_ sufficiently precise, but
+       why not simply check?  It isn't a very expensive test. */
+    if (wn->in_sync != PRMSS_SYNC)
+      maybe_set_reader_in_sync (pwr, wn, b - 1);
   }
 
   /* If the result was REJECT or TOO_OLD, then this gap didn't add
@@ -1732,38 +1776,6 @@ static int handle_one_gap (struct proxy_writer *pwr, struct pwr_rd_match *wn, se
   DDSRT_STATIC_ASSERT_CODE (NN_REORDER_ACCEPT == 0);
   if (res >= 0)
     gap_was_valuable = 1;
-
-  /* Out-of-sync readers never deal with samples with a sequence
-     number beyond end_of_tl_seq -- and so it needn't be bothered
-     with gaps that start beyond that number */
-  if (wn != NULL && wn->in_sync != PRMSS_SYNC)
-  {
-    switch (wn->in_sync)
-    {
-      case PRMSS_SYNC:
-        assert(0);
-        break;
-      case PRMSS_TLCATCHUP:
-        break;
-      case PRMSS_OUT_OF_SYNC:
-        if ((res = nn_reorder_gap (&sc, wn->u.not_in_sync.reorder, gap, a, b, refc_adjust)) > 0)
-        {
-          if (pwr->deliver_synchronously)
-            deliver_user_data_synchronously (&sc, &wn->rd_guid);
-          else
-            nn_dqueue_enqueue1 (pwr->dqueue, &wn->rd_guid, &sc, res);
-        }
-        if (res >= 0)
-          gap_was_valuable = 1;
-        break;
-    }
-
-    /* Upon receipt of data a reader can only become in-sync if there
-       is something to deliver; for missing data, you just don't know.
-       The return value of reorder_gap _is_ sufficiently precise, but
-       why not simply check?  It isn't a very expensive test. */
-    maybe_set_reader_in_sync (pwr, wn, b-1);
-  }
 
   return gap_was_valuable;
 }
