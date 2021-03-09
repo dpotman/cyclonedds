@@ -2216,7 +2216,10 @@ static void proxy_writer_drop_connection (const struct ddsi_guid *pwr_guid, stru
       if (m->in_sync != PRMSS_SYNC)
       {
         if (--pwr->n_readers_out_of_sync == 0)
+        {
+          ETRACE (pwr, "pwr "PGUIDFMT" fastpath true\n", PGUID (pwr->e.guid));
           local_reader_ary_setfastpath_ok (&pwr->rdary, true);
+        }
       }
       if (rd->reliable)
         pwr->n_reliable_readers--;
@@ -2655,6 +2658,7 @@ static void proxy_writer_add_connection (struct proxy_writer *pwr, struct reader
   {
     ELOGDISC (pwr, " - out-of-sync");
     pwr->n_readers_out_of_sync++;
+    ELOGDISC (pwr, " - fastpath false\n");
     local_reader_ary_setfastpath_ok (&pwr->rdary, false);
   }
   m->count = init_count;
@@ -4256,6 +4260,7 @@ dds_return_t delete_writer_nolinger_locked (struct writer *wr)
 
   ELOGDISC (wr, "delete_writer_nolinger(guid "PGUIDFMT") ...\n", PGUID (wr->e.guid));
   builtintopic_write (wr->e.gv->builtin_topic_interface, &wr->e, ddsrt_time_wallclock(), false);
+  ELOGDISC (wr, "set fastpath false ");
   local_reader_ary_setinvalid (&wr->rdary);
   entidx_remove_writer_guid (wr->e.gv->entity_index, wr);
   writer_set_state (wr, WRST_DELETING);
@@ -5913,6 +5918,7 @@ int delete_proxy_writer (struct ddsi_domaingv *gv, const struct ddsi_guid *guid,
      trust rdary[] anymore, which is because removing the proxy writer from the hash
      table will prevent the readers from looking up the proxy writer, and consequently
      from removing themselves from the proxy writer's rdary[]. */
+  GVLOGDISC ("set fastpath false ");
   local_reader_ary_setinvalid (&pwr->rdary);
   GVLOGDISC ("- deleting\n");
   builtintopic_write (gv->builtin_topic_interface, &pwr->e, timestamp, false);
