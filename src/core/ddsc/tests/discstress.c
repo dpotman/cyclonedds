@@ -21,7 +21,7 @@
 
 #define N_WRITERS 3
 #define N_READERS 4
-#define N_ROUNDS 100
+#define N_ROUNDS 10
 #define DEPTH 7
 
 static dds_return_t get_matched_count_writers (uint32_t *count, dds_entity_t writers[N_WRITERS])
