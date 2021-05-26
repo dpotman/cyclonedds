@@ -1413,7 +1413,7 @@ static const uint32_t *dds_stream_read_pl (dds_istream_t * __restrict is, char *
     switch (lc)
     {
       case 0: case 1: case 2: case 3:
-        msz = 1 << lc;
+        msz = 1u << lc;
         break;
       case 4:
         /* read NEXTINT */
@@ -1915,7 +1915,7 @@ static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * _
     switch (lc)
     {
       case 0: case 1: case 2: case 3:
-        msz = 1 << lc;
+        msz = 1u << lc;
         break;
       case 4:
         /* NEXTINT */
@@ -2918,7 +2918,7 @@ static const uint32_t *prtf_pl (char * __restrict *buf, size_t *bufsize, dds_ist
     switch (lc)
     {
       case 0: case 1: case 2: case 3:
-        msz = 1 << lc;
+        msz = 1u << lc;
         break;
       case 4:
         msz = dds_is_get4 (is); /* next-int */
