@@ -204,7 +204,7 @@ enum dds_stream_typecode_subtype {
 #define DDS_TOPIC_FIXED_SIZE 0x0010
 
 #define DDS_OP_FLAG_MU  0x08 /* must-understand flag, used with JEQ in parameter list CDR */
-
+#define DDS_OP_FLAG_EXT 0x10 /* external: field is stored as a pointer */
 
 /* Topic descriptor flag values */
 
