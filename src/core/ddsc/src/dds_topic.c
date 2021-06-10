@@ -79,7 +79,7 @@ static struct ktopic_type_guid * topic_guid_map_refc_impl (const struct dds_ktop
 {
   if (sertype->tlm == NULL)
     return NULL;
-  struct TypeIdentifier *tid = &sertype->tlm->type_id;
+  ddsi_typeid_t *tid = &sertype->tlm->type_id;
   if (ddsi_typeid_is_none (tid))
     return NULL;
   }
@@ -115,7 +115,7 @@ static void topic_guid_map_unref (struct ddsi_domaingv * const gv, const struct 
     thread_state_awake (lookup_thread_state (), gv);
     (void) delete_topic (gv, &m->guid);
     thread_state_asleep (lookup_thread_state ());
-    ddsrt_free ((struct TypeIdentifier *) m->type_id);
+    ddsrt_free ((ddsi_typeid_t *) m->type_id);
     ddsrt_free (m);
   }
 }
@@ -347,8 +347,8 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
 {
   bool new_topic_def = false;
   /* create or reference ktopic-sertype meta-data entry */
-  struct TypeIdentifier *tid = ddsi_typeid_from_sertype (sertype_registered, false);
-  if (ddsi_typeid_none (tid))
+  ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype_registered, false);
+  if (ddsi_typeid_is_none (tid))
   {
     // ddsi_typeid_none is true for both a null pointer and all-zero ids
     ddsrt_free (tid);
