@@ -193,33 +193,25 @@ enum dds_stream_typecode_subtype {
    and (3) the discriminator can be an integral type (or enumerated - here treated as equivalent).
    What it can't be is a floating-point type. So DEF and FP need never be set at the same time.
    There are only a few flag bits, so saving one is not such a bad idea. */
-#define DDS_OP_FLAG_FP  0x02 /* floating-point: applicable to {4,8}BY and arrays, sequences of them */
-#define DDS_OP_FLAG_SGN 0x04 /* signed: applicable to {1,2,4,8}BY and arrays, sequences of them */
+#define DDS_OP_FLAG_FP  (1u << 1) /* floating-point: applicable to {4,8}BY and arrays, sequences of them */
+#define DDS_OP_FLAG_SGN (1u << 2) /* signed: applicable to {1,2,4,8}BY and arrays, sequences of them */
+#define DDS_OP_FLAG_MU  (1u << 3) /* must-understand flag, used with JEQ in parameter list CDR */
+#define DDS_OP_FLAG_EXT (1u << 4) /* external: field is stored as a pointer */
 
 /* Topic descriptor flag values */
-#define DDS_TOPIC_NO_OPTIMIZE 0x0001
-#define DDS_TOPIC_FIXED_KEY 0x0002
-#define DDS_TOPIC_CONTAINS_UNION 0x0004
-#define DDS_TOPIC_DISABLE_TYPECHECK 0x0008
-#define DDS_TOPIC_FIXED_SIZE 0x0010
-
-#define DDS_OP_FLAG_MU  0x08 /* must-understand flag, used with JEQ in parameter list CDR */
-#define DDS_OP_FLAG_EXT 0x10 /* external: field is stored as a pointer */
-
-/* Topic descriptor flag values */
-
 #define DDS_TOPIC_FLAGS_MASK                    0x7fffffff
 #define DDS_TOPIC_NO_OPTIMIZE                   (1u << 0)
 #define DDS_TOPIC_FIXED_KEY                     (1u << 1)
 #define DDS_TOPIC_CONTAINS_UNION                (1u << 2)
 #define DDS_TOPIC_DISABLE_TYPECHECK             (1u << 3)
+#define DDS_TOPIC_FIXED_SIZE                    (1u << 4)
+
 
 #define DDS_TOPIC_TYPE_EXTENSIBILITY_MASK       0xc0000000
 #define DDS_TOPIC_TYPE_EXTENSIBILITY(fs)        (((fs) & DDS_TOPIC_TYPE_EXTENSIBILITY_MASK) >> 30)
 #define DDS_TOPIC_TYPE_EXTENSIBILITY_FINAL      (0u << 30)
 #define DDS_TOPIC_TYPE_EXTENSIBILITY_APPENDABLE (1u << 30)
 #define DDS_TOPIC_TYPE_EXTENSIBILITY_MUTABLE    (2u << 30)
-
 
 #if defined(__cplusplus)
 }
