@@ -295,7 +295,7 @@ stash_opcode(
   const struct alignment *alignment = NULL;
 
   descriptor->n_opcodes++;
-  switch ((code & (0xffu<<24))) {
+  switch ((code & (0xffu << 24))) {
     case DDS_OP_ADR:
       if (code & DDS_OP_FLAG_KEY) {
         assert(order >  0);
@@ -1871,16 +1871,16 @@ static int print_flags(FILE *fp, struct descriptor *descriptor)
     vec[len++] = "DDS_TOPIC_FIXED_KEY";
 
   bool fixed_size = true;
-  for (uint32_t op = 0; op < descriptor->instructions.count && fixed_size; op++)
-  {
-    struct instruction i = descriptor->instructions.table[op];
-    if (i.type != OPCODE)
-      continue;
+  for (struct constructed_type *ctype = descriptor->constructed_types; ctype && fixed_size; ctype = ctype->next) {
+    for (uint32_t op = 0; op < ctype->instructions.count && fixed_size; op++) {
+      struct instruction i = ctype->instructions.table[op];
+      if (i.type != OPCODE)
+        continue;
 
-    if (((i.data.opcode.code>>16)&0xFF) == DDS_OP_VAL_STR ||
-      ((i.data.opcode.code >> 16) & 0xFF) == DDS_OP_VAL_BST ||
-      ((i.data.opcode.code >> 16) & 0xFF) == DDS_OP_VAL_SEQ)
-      fixed_size = false;
+      uint32_t typecode = (i.data.opcode.code >> 16) & 0xff;
+      if (typecode == DDS_OP_VAL_STR || typecode == DDS_OP_VAL_BST || typecode == DDS_OP_VAL_BSP ||typecode == DDS_OP_VAL_SEQ)
+        fixed_size = false;
+    }
   }
 
   if (fixed_size)
