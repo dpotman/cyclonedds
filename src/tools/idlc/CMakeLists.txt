@@ -34,8 +34,6 @@ else()
     src/generator.c
     src/descriptor.c
     src/types.c
-    src/typeobject.c
-    src/typemapping.c
     src/descriptor_type_meta.c)
   add_executable(idlc ${sources} ${headers})
 
