@@ -144,7 +144,7 @@ get_fully_descriptive_typeid (DDS_XTypes_TypeIdentifier *ti, const idl_type_spec
 }
 
 static void
-get_type_hash (DDS_XTypes_EquivalenceHash *hash, const DDS_XTypes_TypeObject *to)
+get_type_hash (DDS_XTypes_EquivalenceHash hash, const DDS_XTypes_TypeObject *to)
 {
   dds_ostream_t os;
   xcdr2_ser (to, &DDS_XTypes_TypeObject_desc, &os);
@@ -153,9 +153,9 @@ get_type_hash (DDS_XTypes_EquivalenceHash *hash, const DDS_XTypes_TypeObject *to
   char buf[16];
   ddsrt_md5_state_t md5st;
   ddsrt_md5_init (&md5st);
-  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) &os.m_buffer, os.m_size);
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) os.m_buffer, os.m_index);
   ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) buf);
-  memcpy (hash, &buf, 14);
+  memcpy (hash, buf, sizeof(DDS_XTypes_EquivalenceHash));
   dds_ostream_fini (&os);
 }
 
@@ -171,10 +171,10 @@ get_hashed_typeid (struct descriptor_type_meta *dtm, DDS_XTypes_TypeIdentifier *
     return -1;
   if (complete) {
     ti->_d = DDS_XTypes_EK_COMPLETE;
-    get_type_hash (&ti->_u.equivalence_hash, tm->to_complete);
+    get_type_hash (ti->_u.equivalence_hash, tm->to_complete);
   } else {
     ti->_d = DDS_XTypes_EK_MINIMAL;
-    get_type_hash (&ti->_u.equivalence_hash, tm->to_minimal);
+    get_type_hash (ti->_u.equivalence_hash, tm->to_minimal);
   }
   return 0;
 }
@@ -188,7 +188,7 @@ get_namehash (DDS_XTypes_NameHash name_hash, const char *name)
   ddsrt_md5_init (&md5st);
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) name, (uint32_t) strlen (name));
   ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) buf);
-  memcpy (name_hash, &buf, sizeof (*name_hash));
+  memcpy (name_hash, buf, sizeof (DDS_XTypes_NameHash));
 }
 
 static idl_retcode_t
@@ -366,8 +366,8 @@ emit_hashed_type(
 {
   assert (!is_fully_descriptive (idl_type_spec (node)));
   if (revisit) {
-    get_type_hash (&dtm->stack->ti_minimal->_u.equivalence_hash, dtm->stack->to_minimal);
-    get_type_hash (&dtm->stack->ti_complete->_u.equivalence_hash, dtm->stack->to_complete);
+    get_type_hash (dtm->stack->ti_minimal->_u.equivalence_hash, dtm->stack->to_minimal);
+    get_type_hash (dtm->stack->ti_complete->_u.equivalence_hash, dtm->stack->to_complete);
     pop_type (dtm, node);
   } else {
     push_type (dtm, node);
