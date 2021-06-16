@@ -112,34 +112,89 @@ xcdr2_ser (
   dds_stream_write_sampleLE ((dds_ostreamLE_t *) os, obj, &sertype);
 }
 
+static idl_retcode_t
+add_to_seq (dds_sequence_t *seq, const void *obj, size_t sz)
+{
+  seq->_buffer = realloc (seq->_buffer, (seq->_length + 1) * sz);
+  if (seq->_buffer == NULL)
+    return -1;
+  seq->_length++;
+  seq->_maximum++;
+  memcpy (seq->_buffer + (seq->_length - 1) * sz, obj, sz);
+  return 0;
+}
+
 static bool
 is_fully_descriptive (const idl_type_spec_t *type_spec)
 {
-  return idl_is_string (type_spec) || idl_is_base_type (type_spec);
+  if (idl_is_string (type_spec) || idl_is_base_type (type_spec))
+    return true;
+  if (idl_is_sequence (type_spec) || idl_is_array (type_spec)) {
+    return is_fully_descriptive (idl_type_spec (type_spec));
+  }
+  return false;
 }
 
 static void
-get_fully_descriptive_typeid (DDS_XTypes_TypeIdentifier *ti, const idl_type_spec_t *type_spec)
+get_fully_descriptive_typeid (DDS_XTypes_TypeIdentifier *ti, const idl_type_spec_t *type_spec, bool array_element)
 {
   assert (ti);
   assert (is_fully_descriptive (type_spec));
-  switch (idl_type (type_spec))
-  {
-    case IDL_BOOL: ti->_d = DDS_XTypes_TK_BOOLEAN; break;
-    case IDL_UINT8: case IDL_OCTET: ti->_d = DDS_XTypes_TK_BYTE; break;
-    case IDL_INT16: case IDL_SHORT: ti->_d = DDS_XTypes_TK_INT16; break;
-    case IDL_INT32: case IDL_LONG: ti->_d = DDS_XTypes_TK_INT32; break;
-    case IDL_INT64: case IDL_LLONG: ti->_d = DDS_XTypes_TK_INT64; break;
-    case IDL_UINT16: case IDL_USHORT: ti->_d = DDS_XTypes_TK_UINT16; break;
-    case IDL_UINT32: case IDL_ULONG: ti->_d = DDS_XTypes_TK_UINT32; break;
-    case IDL_UINT64: case IDL_ULLONG: ti->_d = DDS_XTypes_TK_UINT64; break;
-    case IDL_FLOAT: ti->_d = DDS_XTypes_TK_FLOAT32; break;
-    case IDL_DOUBLE: ti->_d = DDS_XTypes_TK_FLOAT64; break;
-    case IDL_LDOUBLE: ti->_d = DDS_XTypes_TK_FLOAT128; break;
-    case IDL_CHAR: ti->_d = DDS_XTypes_TK_CHAR8; break;
-    case IDL_STRING: ti->_d = DDS_XTypes_TK_STRING8; break;
-    default:
-      abort ();
+  if (!array_element && idl_is_array (type_spec)) {
+    const idl_literal_t *literal = ((const idl_declarator_t *) type_spec)->const_expr;
+    assert (literal);
+    if (idl_array_size (type_spec) <= UINT8_MAX) {
+      ti->_d = DDS_XTypes_TI_PLAIN_ARRAY_SMALL;
+      for (; literal; literal = idl_next (literal)) {
+        add_to_seq ((dds_sequence_t *) &ti->_u.array_sdefn.array_bound_seq,
+          &literal->value.uint32, sizeof (literal->value.uint32));
+      }
+      ti->_u.array_sdefn.element_identifier = calloc (1, sizeof (*ti->_u.array_sdefn.element_identifier));
+      get_fully_descriptive_typeid (ti->_u.array_sdefn.element_identifier, type_spec, true);
+    } else {
+      ti->_d = DDS_XTypes_TI_PLAIN_ARRAY_LARGE;
+      ti->_u.array_ldefn.element_identifier = calloc (1, sizeof (*ti->_u.array_ldefn.element_identifier));
+      for (; literal; literal = idl_next (literal)) {
+        add_to_seq ((dds_sequence_t *) &ti->_u.array_ldefn.array_bound_seq,
+          &literal->value.uint32, sizeof (literal->value.uint32));
+      }
+      get_fully_descriptive_typeid (ti->_u.array_ldefn.element_identifier, type_spec, true);
+    }
+  } else {
+    switch (idl_type (type_spec))
+    {
+      case IDL_BOOL: ti->_d = DDS_XTypes_TK_BOOLEAN; break;
+      case IDL_UINT8: case IDL_OCTET: ti->_d = DDS_XTypes_TK_BYTE; break;
+      case IDL_INT16: case IDL_SHORT: ti->_d = DDS_XTypes_TK_INT16; break;
+      case IDL_INT32: case IDL_LONG: ti->_d = DDS_XTypes_TK_INT32; break;
+      case IDL_INT64: case IDL_LLONG: ti->_d = DDS_XTypes_TK_INT64; break;
+      case IDL_UINT16: case IDL_USHORT: ti->_d = DDS_XTypes_TK_UINT16; break;
+      case IDL_UINT32: case IDL_ULONG: ti->_d = DDS_XTypes_TK_UINT32; break;
+      case IDL_UINT64: case IDL_ULLONG: ti->_d = DDS_XTypes_TK_UINT64; break;
+      case IDL_FLOAT: ti->_d = DDS_XTypes_TK_FLOAT32; break;
+      case IDL_DOUBLE: ti->_d = DDS_XTypes_TK_FLOAT64; break;
+      case IDL_LDOUBLE: ti->_d = DDS_XTypes_TK_FLOAT128; break;
+      case IDL_CHAR: ti->_d = DDS_XTypes_TK_CHAR8; break;
+      case IDL_STRING: ti->_d = DDS_XTypes_TK_STRING8; break;
+      case IDL_SEQUENCE:
+      {
+        const idl_sequence_t *seq = (const idl_sequence_t *) type_spec;
+        if (seq->maximum <= UINT8_MAX) {
+          ti->_d = DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL;
+          ti->_u.seq_sdefn.bound = (uint8_t) seq->maximum;
+          ti->_u.seq_sdefn.element_identifier = calloc (1, sizeof (*ti->_u.seq_sdefn.element_identifier));
+          get_fully_descriptive_typeid (ti->_u.seq_sdefn.element_identifier, idl_type_spec (type_spec), false);
+        } else {
+          ti->_d = DDS_XTypes_TI_PLAIN_SEQUENCE_LARGE;
+          ti->_u.seq_ldefn.bound = seq->maximum;
+          ti->_u.seq_ldefn.element_identifier = calloc (1, sizeof (*ti->_u.seq_ldefn.element_identifier));
+          get_fully_descriptive_typeid (ti->_u.seq_ldefn.element_identifier, idl_type_spec (type_spec), false);
+        }
+        break;
+      }
+      default:
+        abort ();
+    }
   }
 }
 
@@ -182,25 +237,13 @@ get_hashed_typeid (struct descriptor_type_meta *dtm, DDS_XTypes_TypeIdentifier *
 static void
 get_namehash (DDS_XTypes_NameHash name_hash, const char *name)
 {
-  // FIXME: multi byte utf8 chars?
+  /* FIXME: multi byte utf8 chars? */
   char buf[16];
   ddsrt_md5_state_t md5st;
   ddsrt_md5_init (&md5st);
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) name, (uint32_t) strlen (name));
   ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) buf);
   memcpy (name_hash, buf, sizeof (DDS_XTypes_NameHash));
-}
-
-static idl_retcode_t
-add_to_seq (dds_sequence_t *seq, const void *obj, size_t sz)
-{
-  seq->_buffer = realloc (seq->_buffer, (seq->_length + 1) * sz);
-  if (seq->_buffer == NULL)
-    return -1;
-  seq->_length++;
-  seq->_maximum++;
-  memcpy (seq->_buffer + (seq->_length - 1) * sz, obj, sz);
-  return 0;
 }
 
 static DDS_XTypes_StructTypeFlag
@@ -230,7 +273,7 @@ get_struct_member_flags(const idl_member_t *member)
     flags |= DDS_XTypes_IS_EXTERNAL;
   if (member->key)
     flags |= DDS_XTypes_IS_KEY;
-  // FIXME: support for other flags
+  /* FIXME: support for other flags */
   return flags;
 }
 
@@ -259,7 +302,7 @@ get_union_discriminator_flags(const idl_switch_type_spec_t *switch_type_spec)
   DDS_XTypes_UnionDiscriminatorFlag flags = 0u;
   if (switch_type_spec->key)
     flags |= DDS_XTypes_IS_EXTERNAL;
-  // FIXME: support for other flags
+  /* FIXME: support for other flags */
   return flags;
 }
 
@@ -269,20 +312,35 @@ get_union_case_flags(const idl_case_t *_case)
   DDS_XTypes_UnionMemberFlag flags = 0u;
   if (_case->external)
     flags |= DDS_XTypes_IS_EXTERNAL;
-  // FIXME: support for other flags
+  /* FIXME: support for other flags */
   return flags;
 }
+
+static DDS_XTypes_CollectionElementFlag
+get_collection_element_flags(const idl_sequence_t *seq)
+{
+  DDS_XTypes_CollectionElementFlag flags = 0u;
+
+  (void) seq;
+  /* FIXME: support @external for sequence element type
+  if (seq->external)
+    flags |= DDS_XTypes_IS_EXTERNAL; */
+
+  /* FIXME: support for other flags */
+  return flags;
+}
+
 
 static idl_retcode_t
 get_type_spec_typeid(
   struct descriptor_type_meta *dtm,
-  idl_type_spec_t *type_spec,
+  const idl_type_spec_t *type_spec,
   DDS_XTypes_TypeIdentifier *ti_minimal,
   DDS_XTypes_TypeIdentifier *ti_complete)
 {
   if (is_fully_descriptive (type_spec)) {
-    get_fully_descriptive_typeid (ti_minimal, type_spec);
-    get_fully_descriptive_typeid (ti_complete, type_spec);
+    get_fully_descriptive_typeid (ti_minimal, type_spec, false);
+    get_fully_descriptive_typeid (ti_complete, type_spec, false);
   } else {
     if (get_hashed_typeid (dtm, ti_minimal, type_spec, false) < 0)
       return -1;
@@ -291,6 +349,57 @@ get_type_spec_typeid(
   }
   return 0;
 }
+
+static idl_retcode_t
+get_builtin_member_ann(
+  const idl_node_t *node,
+  DDS_XTypes_AppliedBuiltinMemberAnnotations *builtin_ann
+)
+{
+  /* FIXME: implement unit, min, max annotations */
+
+  if (idl_is_member (node) || idl_is_case (node))
+  {
+    for (idl_annotation_appl_t *a = ((idl_node_t *) node)->annotations; a; a = idl_next(a)) {
+      if (!strcmp (a->annotation->name->identifier, "hashid")) {
+        assert(idl_type(a->parameters->const_expr) == IDL_STRING);
+        assert(idl_is_literal(a->parameters->const_expr));
+        builtin_ann->hash_id = idl_strdup (((const idl_literal_t *)a->parameters->const_expr)->value.str);
+      }
+    }
+  }
+
+  return 0;
+}
+
+static idl_retcode_t
+get_complete_type_detail(
+  const idl_node_t *node,
+  DDS_XTypes_CompleteTypeDetail *detail)
+{
+  char *type;
+  if (IDL_PRINTA(&type, print_type, node) < 0)
+    return IDL_RETCODE_NO_MEMORY;
+  strcpy (detail->type_name, type);
+  /* FIXME:
+    dtm->stack->to_complete->_u.complete._u.struct_type.header.detail.ann_builtin.verbatim
+    dtm->stack->to_complete->_u.complete._u.struct_type.header.detail.ann_custom */
+  return 0;
+}
+
+static idl_retcode_t
+get_complete_member_detail(
+  const idl_node_t *node,
+  DDS_XTypes_CompleteMemberDetail *detail)
+{
+  strcpy (detail->name, idl_identifier (node));
+  get_builtin_member_ann (idl_parent (node), &detail->ann_builtin);
+  /* FIXME:
+    detail.ann_builtin
+    detail.ann_custom */
+  return 0;
+}
+
 
 static idl_retcode_t
 add_struct_member (struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minimal, DDS_XTypes_TypeObject *to_complete, const void *node)
@@ -310,7 +419,8 @@ add_struct_member (struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_m
   m.common.member_id = c.common.member_id = member->id.value;
   m.common.member_flags = c.common.member_flags = get_struct_member_flags (member);
   get_namehash (m.detail.name_hash, idl_identifier (node));
-  strcpy (c.detail.name, idl_identifier (node));
+  if (get_complete_member_detail (node, &c.detail) < 0)
+    return -1;
 
   add_to_seq ((dds_sequence_t *) &to_minimal->_u.minimal._u.struct_type.member_seq, &m, sizeof (m));
   add_to_seq ((dds_sequence_t *) &to_complete->_u.complete._u.struct_type.member_seq, &c, sizeof (c));
@@ -336,9 +446,12 @@ add_union_case(struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minim
   m.common.member_id = c.common.member_id = _case->id.value;
   m.common.member_flags = c.common.member_flags = get_union_case_flags (_case);
   get_namehash (m.detail.name_hash, idl_identifier (node));
-  strcpy (c.detail.name, idl_identifier (node));
+  if (get_complete_member_detail (node, &c.detail) < 0)
+    return -1;
+  get_builtin_member_ann (idl_parent (node), &c.detail.ann_builtin);
+  /* FIXME: c.detail.ann_custom */
 
-  // case labels
+  /* case labels */
   idl_case_t *case_node = (idl_case_t *) idl_parent (node);
   const idl_case_label_t *cl;
   uint32_t cnt, n;
@@ -364,7 +477,7 @@ emit_hashed_type(
   bool revisit,
   struct descriptor_type_meta *dtm)
 {
-  assert (!is_fully_descriptive (idl_type_spec (node)));
+  assert (!is_fully_descriptive (node));
   if (revisit) {
     get_type_hash (dtm->stack->ti_minimal->_u.equivalence_hash, dtm->stack->to_minimal);
     get_type_hash (dtm->stack->ti_complete->_u.equivalence_hash, dtm->stack->to_complete);
@@ -384,6 +497,80 @@ emit_hashed_type(
 }
 
 static idl_retcode_t
+add_typedef (
+  bool revisit,
+  const void *node,
+  void *user_data)
+{
+  idl_retcode_t ret;
+  struct descriptor_type_meta *dtm = (struct descriptor_type_meta *) user_data;
+  const idl_type_spec_t *type_spec = idl_type_spec (node);
+
+  if (revisit) {
+    /* alias_flags and related_flags unused, header empty */
+    if ((ret = get_type_spec_typeid (dtm, type_spec, &dtm->stack->to_minimal->_u.minimal._u.alias_type.body.common.related_type, &dtm->stack->to_complete->_u.complete._u.alias_type.body.common.related_type)) < 0)
+      return ret;
+  }
+  if ((ret = emit_hashed_type (DDS_XTypes_TK_ALIAS, node, revisit, dtm)) < 0)
+    return ret;
+  if (!revisit) {
+    if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.alias_type.header.detail)) < 0)
+      return ret;
+    if ((ret = get_builtin_member_ann (type_spec, &dtm->stack->to_complete->_u.complete._u.alias_type.body.ann_builtin)) < 0)
+      return ret;
+    if (is_fully_descriptive (type_spec))
+      return IDL_VISIT_REVISIT;
+    else
+      return IDL_VISIT_TYPE_SPEC | IDL_VISIT_REVISIT;
+  }
+  return IDL_RETCODE_OK;
+}
+
+static idl_retcode_t
+add_array (
+  bool revisit,
+  const void *node,
+  void *user_data)
+{
+  idl_retcode_t ret;
+  struct descriptor_type_meta *dtm = (struct descriptor_type_meta *) user_data;
+  const idl_type_spec_t *type_spec = idl_type_spec (node);
+
+  if (revisit) {
+    if ((ret = get_type_spec_typeid (dtm, type_spec,
+        &dtm->stack->to_minimal->_u.minimal._u.array_type.element.common.type,
+        &dtm->stack->to_complete->_u.complete._u.array_type.element.common.type)) < 0)
+    {
+      return ret;
+    }
+  }
+  if ((ret = emit_hashed_type (DDS_XTypes_TK_ARRAY, node, revisit, dtm)) < 0)
+    return ret;
+  if (!revisit) {
+    dtm->stack->to_minimal->_u.minimal._u.array_type.element.common.element_flags =
+      dtm->stack->to_complete->_u.complete._u.array_type.element.common.element_flags = get_collection_element_flags (node);
+    if ((ret = get_complete_type_detail (type_spec, &dtm->stack->to_complete->_u.complete._u.array_type.header.detail)) < 0)
+      return ret;
+
+    const idl_literal_t *literal = ((const idl_declarator_t *)node)->const_expr;
+    if (!literal)
+      return 0u;
+    for (; literal; literal = idl_next (literal)) {
+      add_to_seq ((dds_sequence_t *) &dtm->stack->to_minimal->_u.minimal._u.array_type.header.common.bound_seq,
+        &literal->value.uint32, sizeof (literal->value.uint32));
+      add_to_seq ((dds_sequence_t *) &dtm->stack->to_complete->_u.complete._u.array_type.header.common.bound_seq,
+        &literal->value.uint32, sizeof (literal->value.uint32));
+    }
+
+    if (is_fully_descriptive (type_spec))
+      return IDL_VISIT_REVISIT;
+    else
+      return IDL_VISIT_TYPE_SPEC | IDL_VISIT_REVISIT;
+  }
+  return IDL_RETCODE_OK;
+}
+
+static idl_retcode_t
 emit_struct(
   const idl_pstate_t *pstate,
   bool revisit,
@@ -392,15 +579,26 @@ emit_struct(
   void *user_data)
 {
   struct descriptor_type_meta * dtm = (struct descriptor_type_meta *) user_data;
+  const idl_struct_t * _struct = (const idl_struct_t *) node;
   idl_retcode_t ret;
 
   (void) pstate;
   (void) path;
+  if (revisit) {
+    if (_struct->inherit_spec) {
+      if ((ret = get_type_spec_typeid (dtm, _struct->inherit_spec->type_spec, &dtm->stack->to_minimal->_u.minimal._u.struct_type.header.base_type, &dtm->stack->to_complete->_u.complete._u.struct_type.header.base_type)) < 0)
+        return ret;
+    }
+    if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.struct_type.header.detail)) < 0)
+      return ret;
+  }
   if ((ret = emit_hashed_type (DDS_XTypes_TK_STRUCTURE, node, revisit, dtm)) < 0)
     return ret;
-  if (!revisit)
-    dtm->stack->to_minimal->_u.minimal._u.struct_type.struct_flags = get_struct_flags ((const idl_struct_t *) node);
-  return ret;
+  if (!revisit) {
+    dtm->stack->to_minimal->_u.minimal._u.struct_type.struct_flags = get_struct_flags (_struct);
+    return IDL_VISIT_REVISIT;
+  }
+  return IDL_RETCODE_OK;
 }
 
 static idl_retcode_t
@@ -418,9 +616,13 @@ emit_union(
   (void) path;
   if ((ret = emit_hashed_type (DDS_XTypes_TK_UNION, node, revisit, dtm)) < 0)
     return ret;
-  if (!revisit)
+  if (!revisit) {
     dtm->stack->to_minimal->_u.minimal._u.union_type.union_flags = get_union_flags ((const idl_union_t *) node);
-  return ret;
+    if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.union_type.header.detail)) < 0)
+      return ret;
+    return IDL_VISIT_REVISIT;
+  }
+  return IDL_RETCODE_OK;
 }
 
 static idl_retcode_t
@@ -448,14 +650,15 @@ emit_switch_type_spec(
   m_cdm->member_flags = c_cdm->member_flags = get_union_discriminator_flags (_union->switch_type_spec);
   if (get_type_spec_typeid (dtm, idl_type_spec (_union->switch_type_spec), &m_cdm->type_id, &c_cdm->type_id) < 0)
     return -1;
-
-  // FIXME: builtin and custom annotations
+  /* FIXME:
+    tm->to_complete->_u.complete._u.union_type.discriminator.ann_builtin
+    tm->to_complete->_u.complete._u.union_type.discriminator.ann_custom */
 
   return IDL_RETCODE_OK;
 }
 
 static idl_retcode_t
-emit_alias (
+emit_inherit_spec(
   const idl_pstate_t *pstate,
   bool revisit,
   const idl_path_t *path,
@@ -463,8 +666,12 @@ emit_alias (
   void *user_data)
 {
   (void) pstate;
+  (void) revisit;
   (void) path;
-  return emit_hashed_type (DDS_XTypes_TK_ALIAS, node, revisit, (struct descriptor_type_meta *) user_data);
+  (void) node;
+  (void) user_data;
+
+  return IDL_VISIT_TYPE_SPEC;
 }
 
 static idl_retcode_t
@@ -479,9 +686,17 @@ emit_declarator (
   struct type_meta *tm = dtm->stack;
   assert(tm);
 
-  const idl_type_spec_t *type_spec = idl_type_spec (node);
-  if (idl_is_typedef (idl_parent (type_spec))) {
-    return emit_alias(pstate, revisit, path, node, user_data);
+  (void) pstate;
+  (void) path;
+  if (idl_is_typedef (idl_parent (node)))
+    return add_typedef (revisit, node, user_data);
+  if (idl_is_array (node)) {
+    if (is_fully_descriptive (node)) {
+      if (!revisit)
+        return IDL_VISIT_REVISIT;
+    } else {
+      return add_array (revisit, node, user_data);
+    }
   }
 
   if (revisit) {
@@ -497,6 +712,7 @@ emit_declarator (
       abort ();
     }
   } else {
+    const idl_type_spec_t *type_spec = idl_type_spec (node);
     if (is_fully_descriptive (type_spec))
       return IDL_VISIT_REVISIT;
     else
@@ -514,9 +730,21 @@ emit_enum (
   const void *node,
   void *user_data)
 {
+  struct descriptor_type_meta *dtm = (struct descriptor_type_meta *) user_data;
+  const idl_enum_t *_enum = (const idl_enum_t *) node;
+  idl_retcode_t ret;
+
   (void)pstate;
   (void)path;
-  return emit_hashed_type (DDS_XTypes_TK_ENUM, node, revisit, (struct descriptor_type_meta *) user_data);
+  if ((ret = emit_hashed_type (DDS_XTypes_TK_ENUM, node, revisit, (struct descriptor_type_meta *) user_data)) < 0)
+    return ret;
+  if (!revisit) {
+    dtm->stack->to_minimal->_u.minimal._u.enumerated_type.header.common.bit_bound = dtm->stack->to_complete->_u.complete._u.enumerated_type.header.common.bit_bound = _enum->bit_bound;
+    if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.enumerated_type.header.detail)) < 0)
+      return ret;
+    return IDL_VISIT_REVISIT;
+  }
+  return IDL_RETCODE_OK;
 }
 
 static idl_retcode_t
@@ -546,7 +774,8 @@ emit_enumerator (
   assert (enumerator->value <= INT32_MAX);
   m.common.value = c.common.value = (int32_t) enumerator->value;
   get_namehash (m.detail.name_hash, idl_identifier (enumerator));
-  strcpy (c.detail.name, idl_identifier (enumerator));
+  if (get_complete_member_detail (node, &c.detail) < 0)
+    return -1;
 
   add_to_seq ((dds_sequence_t *) &tm->to_minimal->_u.minimal._u.enumerated_type.literal_seq, &m, sizeof (m));
   add_to_seq ((dds_sequence_t *) &tm->to_complete->_u.complete._u.enumerated_type.literal_seq, &c, sizeof (c));
@@ -562,9 +791,21 @@ emit_bitmask(
   const void *node,
   void *user_data)
 {
+  struct descriptor_type_meta *dtm = (struct descriptor_type_meta *) user_data;
+  const idl_bitmask_t *_bitmask = (const idl_bitmask_t *) node;
+  idl_retcode_t ret;
+
   (void) pstate;
   (void) path;
-  return emit_hashed_type (DDS_XTypes_TK_BITMASK, node, revisit, (struct descriptor_type_meta *) user_data);
+  if ((ret = emit_hashed_type (DDS_XTypes_TK_BITMASK, node, revisit, (struct descriptor_type_meta *) user_data)) < 0)
+    return ret;
+  if (!revisit) {
+    dtm->stack->to_minimal->_u.minimal._u.bitmask_type.header.common.bit_bound = dtm->stack->to_complete->_u.complete._u.bitmask_type.header.common.bit_bound = _bitmask->bit_bound;
+    if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.bitmask_type.header.detail)) < 0)
+      return ret;
+    return IDL_VISIT_REVISIT;
+  }
+  return IDL_RETCODE_OK;
 }
 
 static idl_retcode_t
@@ -593,11 +834,48 @@ emit_bit_value (
   const idl_bit_value_t *bit_value = (idl_bit_value_t *) node;
   m.common.position = c.common.position = bit_value->position;
   get_namehash (m.detail.name_hash, idl_identifier (bit_value));
-  strcpy (c.detail.name, idl_identifier (bit_value));
+  if (get_complete_member_detail (node, &c.detail) < 0)
+    return -1;
 
   add_to_seq ((dds_sequence_t *) &tm->to_minimal->_u.minimal._u.bitmask_type.flag_seq, &m, sizeof (m));
   add_to_seq ((dds_sequence_t *) &tm->to_complete->_u.complete._u.bitmask_type.flag_seq, &c, sizeof (c));
 
+  return IDL_RETCODE_OK;
+}
+
+static idl_retcode_t
+emit_sequence(
+  const idl_pstate_t *pstate,
+  bool revisit,
+  const idl_path_t *path,
+  const void *node,
+  void *user_data)
+{
+  struct descriptor_type_meta * dtm = (struct descriptor_type_meta *) user_data;
+  const idl_sequence_t * seq = (const idl_sequence_t *) node;
+  idl_retcode_t ret;
+
+  (void) pstate;
+  (void) path;
+  if (revisit) {
+    if ((ret = get_type_spec_typeid (dtm, idl_type_spec(node),
+        &dtm->stack->to_minimal->_u.minimal._u.sequence_type.element.common.type,
+        &dtm->stack->to_complete->_u.complete._u.sequence_type.element.common.type)) < 0)
+    {
+      return ret;
+    }
+  }
+  if ((ret = emit_hashed_type (DDS_XTypes_TK_SEQUENCE, node, revisit, dtm)) < 0)
+    return ret;
+  if (!revisit) {
+    dtm->stack->to_minimal->_u.minimal._u.sequence_type.element.common.element_flags =
+      dtm->stack->to_complete->_u.complete._u.sequence_type.element.common.element_flags = get_collection_element_flags (node);
+    dtm->stack->to_minimal->_u.minimal._u.sequence_type.header.common.bound =
+      dtm->stack->to_complete->_u.complete._u.sequence_type.header.common.bound = seq->maximum;
+    if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.struct_type.header.detail)) < 0)
+      return ret;
+    return IDL_VISIT_REVISIT | IDL_VISIT_TYPE_SPEC;
+  }
   return IDL_RETCODE_OK;
 }
 
@@ -629,13 +907,13 @@ get_typeid_with_size (
     DDS_XTypes_TypeIdentifier *ti,
     DDS_XTypes_TypeObject *to)
 {
+  assert (ti);
+  assert (to);
   memcpy (&typeid_with_size->type_id, ti, sizeof (typeid_with_size->type_id));
-  if (to) {
-    dds_ostream_t os;
-    xcdr2_ser (to, &DDS_XTypes_TypeObject_desc, &os);
-    typeid_with_size->typeobject_serialized_size = os.m_index;
-    dds_ostream_fini (&os);
-  }
+  dds_ostream_t os;
+  xcdr2_ser (to, &DDS_XTypes_TypeObject_desc, &os);
+  typeid_with_size->typeobject_serialized_size = os.m_index;
+  dds_ostream_fini (&os);
 }
 
 idl_retcode_t
@@ -652,7 +930,7 @@ print_type_meta_ser (
   memset (&dtm, 0, sizeof (dtm));
   memset (&visitor, 0, sizeof (visitor));
 
-  visitor.visit = IDL_STRUCT | IDL_UNION | IDL_DECLARATOR | IDL_BITMASK | IDL_BIT_VALUE | IDL_ENUM | IDL_ENUMERATOR | IDL_SWITCH_TYPE_SPEC;
+  visitor.visit = IDL_STRUCT | IDL_UNION | IDL_DECLARATOR | IDL_BITMASK | IDL_BIT_VALUE | IDL_ENUM | IDL_ENUMERATOR | IDL_SWITCH_TYPE_SPEC | IDL_INHERIT_SPEC | IDL_SEQUENCE;
   visitor.accept[IDL_ACCEPT_STRUCT] = &emit_struct;
   visitor.accept[IDL_ACCEPT_UNION] = &emit_union;
   visitor.accept[IDL_ACCEPT_SWITCH_TYPE_SPEC] = &emit_switch_type_spec;
@@ -661,6 +939,8 @@ print_type_meta_ser (
   visitor.accept[IDL_ACCEPT_BIT_VALUE] = &emit_bit_value;
   visitor.accept[IDL_ACCEPT_ENUM] = &emit_enum;
   visitor.accept[IDL_ACCEPT_ENUMERATOR] = &emit_enumerator;
+  visitor.accept[IDL_ACCEPT_INHERIT_SPEC] = &emit_inherit_spec;
+  visitor.accept[IDL_ACCEPT_SEQUENCE] = &emit_sequence;
 
   /* must be invoked for topics only, so structs and unions */
   assert (idl_is_struct (node) || idl_is_union (node));
@@ -702,7 +982,7 @@ print_type_meta_ser (
   /* type id/obj seq for min and complete */
   DDS_XTypes_TypeMapping mapping;
   memset (&mapping, 0, sizeof (mapping));
-  for (struct type_meta *tm = dtm.admin->admin_next; tm; tm = tm->admin_next) {
+  for (struct type_meta *tm = dtm.admin; tm; tm = tm->admin_next) {
     DDS_XTypes_TypeIdentifierTypeObjectPair mp, cp;
     memcpy (&mp.type_identifier, tm->ti_minimal, sizeof (mp.type_identifier));
     memcpy (&mp.type_object, tm->to_minimal, sizeof (mp.type_object));

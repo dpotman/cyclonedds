@@ -311,7 +311,7 @@ struct idl_member {
 typedef struct idl_inherit_spec idl_inherit_spec_t;
 struct idl_inherit_spec {
   idl_node_t node;
-  void *base;
+  idl_type_spec_t *type_spec;
 };
 
 /* keylist directives can use dotted names, e.g. "#pragma keylist foo bar.baz"
