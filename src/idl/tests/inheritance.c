@@ -38,6 +38,6 @@ CU_Test(idl_inheritance, base_struct)
   s2 = idl_next(s1);
   CU_ASSERT_FATAL(idl_is_struct(s2));
   CU_ASSERT_STRING_EQUAL(idl_identifier(s2), "s2");
-  CU_ASSERT(s2->inherit_spec && s2->inherit_spec->base == s1);
+  CU_ASSERT(s2->inherit_spec && s2->inherit_spec->type_spec == s1);
   idl_delete_pstate(pstate);
 }

@@ -1023,7 +1023,7 @@ idl_create_struct(
     goto err_declare;
 
   if (inherit_spec) {
-    const idl_struct_t *base = inherit_spec->base;
+    const idl_struct_t *base = inherit_spec->type_spec;
 
     if (!(idl_mask(base) & IDL_STRUCT)) {
       idl_error(pstate, idl_location(base),
@@ -1126,7 +1126,7 @@ bool idl_is_inherit_spec(const void *ptr)
   if (!(idl_mask(node) & IDL_INHERIT_SPEC))
     return false;
   /* inheritance specifier must define a base type */
-  assert(idl_mask(node->base) & IDL_STRUCT);
+  assert(idl_mask(node->type_spec) & IDL_STRUCT);
   /* inheritance specifier must have a parent of type struct  */
   assert(!node->node.parent || (idl_mask(node->node.parent) & IDL_STRUCT));
   return true;
@@ -1135,7 +1135,7 @@ bool idl_is_inherit_spec(const void *ptr)
 static void delete_inherit_spec(void *ptr)
 {
   idl_inherit_spec_t *node = ptr;
-  idl_unreference_node(node->base);
+  idl_unreference_node(node->type_spec);
   free(node);
 }
 
@@ -1162,7 +1162,7 @@ idl_create_inherit_spec(
 
   if ((ret = create_node(pstate, size, mask, location, &methods, &node)))
     return ret;
-  node->base = base;
+  node->type_spec = base;
   *((idl_inherit_spec_t **)nodep) = node;
   return IDL_RETCODE_OK;
 }
@@ -3062,6 +3062,8 @@ idl_type_spec_t *idl_type_spec(const void *node)
     return ((const idl_switch_type_spec_t *)node)->type_spec;
   if (mask & IDL_CONST)
     return ((const idl_const_t *)node)->type_spec;
+  if (mask & IDL_INHERIT_SPEC)
+    return ((const idl_inherit_spec_t *)node)->type_spec;
   return NULL;
 }
 
