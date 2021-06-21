@@ -2281,7 +2281,7 @@ void dds_stream_free_sample (void * __restrict data, const uint32_t * __restrict
  **
  *******************************************************************************************/
 
-static void dds_stream_extract_key_from_key_prim_op (dds_istream_t * __restrict is, dds_ostream_t * __restrict os, const uint32_t * __restrict op)
+static void dds_stream_extract_key_from_key_prim_op (dds_istream_t * __restrict is, dds_ostream_t * __restrict os, const uint32_t * __restrict op, uint16_t key_offset_count, const uint32_t * key_offset_insn)
 {
   assert ((*op & DDS_OP_FLAG_KEY) && ((DDS_OP (*op)) == DDS_OP_ADR));
   switch (DDS_OP_TYPE (*op))
@@ -2309,7 +2309,13 @@ static void dds_stream_extract_key_from_key_prim_op (dds_istream_t * __restrict 
       is->m_index += num * align;
       break;
     }
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: case DDS_OP_VAL_EXT: {
+    case DDS_OP_VAL_EXT: {
+      assert (key_offset_count > 0);
+      const uint32_t *jsr_ops = op + DDS_OP_ADR_JSR (op[2]) + *key_offset_insn;
+      dds_stream_extract_key_from_key_prim_op (is, os, jsr_ops, --key_offset_count, ++key_offset_insn);
+      break;
+    }
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
       abort ();
       break;
     }
@@ -2350,7 +2356,7 @@ static void dds_stream_swap_copy (void * __restrict vdst, const void * __restric
 }
 #endif
 
-static void dds_stream_extract_key_from_key_prim_opBE (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const uint32_t * __restrict op)
+static void dds_stream_extract_key_from_key_prim_opBE (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const uint32_t * __restrict op, uint16_t key_offset_count, const uint32_t * key_offset_insn)
 {
   assert ((*op & DDS_OP_FLAG_KEY) && ((DDS_OP (*op)) == DDS_OP_ADR));
   switch (DDS_OP_TYPE (*op))
@@ -2384,7 +2390,13 @@ static void dds_stream_extract_key_from_key_prim_opBE (dds_istream_t * __restric
       is->m_index += num * align;
       break;
     }
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: case DDS_OP_VAL_EXT: {
+    case DDS_OP_VAL_EXT: {
+      assert (key_offset_count > 0);
+      const uint32_t *jsr_ops = op + DDS_OP_ADR_JSR (op[2]) + *key_offset_insn;
+      dds_stream_extract_key_from_key_prim_opBE (is, os, jsr_ops, --key_offset_count, ++key_offset_insn);
+      break;
+    }
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
       abort ();
       break;
     }
@@ -2400,11 +2412,12 @@ static void dds_stream_extract_key_from_keyBE (dds_istream_t * __restrict is, dd
     switch (DDS_OP (*op))
     {
       case DDS_OP_KOF: {
-        dds_stream_extract_key_from_key_prim_opBE (is, os, desc->ops.ops + op[1]);
+        uint16_t n_offs = DDS_OP_LENGTH (*op);
+        dds_stream_extract_key_from_key_prim_opBE (is, os, desc->ops.ops + op[1], --n_offs, op + 2);
         break;
       }
       case DDS_OP_ADR: {
-        dds_stream_extract_key_from_key_prim_opBE (is, os, op);
+        dds_stream_extract_key_from_key_prim_opBE (is, os, op, 0, NULL);
         break;
       }
       default:
@@ -2565,25 +2578,51 @@ void dds_stream_read_sample (dds_istream_t * __restrict is, void * __restrict da
   }
 }
 
+static void dds_stream_read_key_impl (dds_istream_t * __restrict is, char * __restrict sample, const uint32_t *insnp, uint16_t key_offset_count, const uint32_t * key_offset_insn)
+{
+  char *dst = sample + insnp[1];
+  assert (insn_key_ok_p (*insnp));
+  switch (DDS_OP_TYPE (*insnp))
+  {
+    case DDS_OP_VAL_1BY: *((uint8_t *) dst) = dds_is_get1 (is); break;
+    case DDS_OP_VAL_2BY: *((uint16_t *) dst) = dds_is_get2 (is); break;
+    case DDS_OP_VAL_4BY: case DDS_OP_VAL_ENU: *((uint32_t *) dst) = dds_is_get4 (is); break;
+    case DDS_OP_VAL_8BY: *((uint64_t *) dst) = dds_is_get8 (is); break;
+    case DDS_OP_VAL_STR: *((char **) dst) = dds_stream_reuse_string (is, *((char **) dst)); break;
+    case DDS_OP_VAL_BST: (void) dds_stream_reuse_string_bound (is, dst, insnp[2], false); break;
+    case DDS_OP_VAL_BSP: *((char **) dst) = dds_stream_reuse_string_bound (is, dst, insnp[2], true); break;
+    case DDS_OP_VAL_ARR: dds_is_get_bytes (is, dst, insnp[2], get_type_size (DDS_OP_SUBTYPE (*insnp))); break;
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: abort (); break;
+    case DDS_OP_VAL_EXT:
+    {
+      assert (key_offset_count > 0);
+      const uint32_t *jsr_ops = insnp + DDS_OP_ADR_JSR (insnp[2]) + *key_offset_insn;
+      dds_stream_read_key_impl (is, dst, jsr_ops, --key_offset_count, ++key_offset_insn);
+      break;
+    }
+  }
+}
+
 void dds_stream_read_key (dds_istream_t * __restrict is, char * __restrict sample, const struct ddsi_sertype_default * __restrict type)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
   for (uint32_t i = 0; i < desc->keys.nkeys; i++)
   {
     const uint32_t *op = desc->ops.ops + desc->keys.keys[i];
-    char *dst = sample + op[1];
-    assert (insn_key_ok_p (*op));
-    switch (DDS_OP_TYPE (*op))
+    switch (DDS_OP (*op))
     {
-      case DDS_OP_VAL_1BY: *((uint8_t *) dst) = dds_is_get1 (is); break;
-      case DDS_OP_VAL_2BY: *((uint16_t *) dst) = dds_is_get2 (is); break;
-      case DDS_OP_VAL_4BY: case DDS_OP_VAL_ENU: *((uint32_t *) dst) = dds_is_get4 (is); break;
-      case DDS_OP_VAL_8BY: *((uint64_t *) dst) = dds_is_get8 (is); break;
-      case DDS_OP_VAL_STR: *((char **) dst) = dds_stream_reuse_string (is, *((char **) dst)); break;
-      case DDS_OP_VAL_BST: (void) dds_stream_reuse_string_bound (is, dst, op[2], false); break;
-      case DDS_OP_VAL_BSP: *((char **) dst) = dds_stream_reuse_string_bound (is, dst, op[2], true); break;
-      case DDS_OP_VAL_ARR: dds_is_get_bytes (is, dst, op[2], get_type_size (DDS_OP_SUBTYPE (*op))); break;
-      case DDS_OP_VAL_SEQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: case DDS_OP_VAL_EXT: abort (); break;
+      case DDS_OP_KOF: {
+        uint16_t n_offs = DDS_OP_LENGTH (*op);
+        dds_stream_read_key_impl (is, sample, desc->ops.ops + op[1], --n_offs, op + 2);
+        break;
+      }
+      case DDS_OP_ADR: {
+        dds_stream_read_key_impl (is, sample, op, 0, NULL);
+        break;
+      }
+      default:
+        abort ();
+        break;
     }
   }
 }
@@ -2635,12 +2674,12 @@ static void dds_stream_swap_insituBE (void * __restrict vbuf, uint32_t size, uin
 #include "ddsi_cdrstream_keys.part.c"
 #undef NAME_BO_EXT
 
-#else
+#else /* DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN */
 void dds_stream_write_keyBE (dds_ostreamBE_t * __restrict os, const char * __restrict sample, const struct ddsi_sertype_default * __restrict type)
 {
   dds_stream_write_key (&os->x, sample, type);
 }
-#endif
+#endif /* DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN */
 
 /*******************************************************************************************
  **
