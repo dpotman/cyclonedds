@@ -882,7 +882,7 @@ emit_sequence(
 static idl_retcode_t
 print_ser_data(FILE *fp, const char *kind, const char *type, unsigned char *data, uint32_t sz)
 {
-  char *sep = ", ", *lsep = "\n  ", *fmt;
+  char *sep = ", ", *lsep = "\\\n  ", *fmt;
 
   fmt = "#define %1$s_%2$s (unsigned char []){ ";
   if (idl_fprintf(fp, fmt, kind, type) < 0)
@@ -893,7 +893,7 @@ print_ser_data(FILE *fp, const char *kind, const char *type, unsigned char *data
     if (idl_fprintf(fp, fmt, n > 0 ? sep : "", !(n % 16) ? lsep : "", data[n]) < 0)
       return -1;
 
-  fmt = "\n}\n"
+  fmt = "\\\n}\n"
         "#define %1$s_SZ_%2$s %3$"PRIu32"u\n";
   if (idl_fprintf(fp, fmt, kind, type, sz) < 0)
     return -1;
@@ -999,7 +999,8 @@ print_type_meta_ser (
     dds_ostream_fini (&os);
   }
 
-  return ret;
+  // FIXME: free allocated memory in dtm?
+  return IDL_RETCODE_OK;
 
 err_emit:
   return ret;
