@@ -33,6 +33,11 @@ struct ddsi_typeid_t;
 #define DDSI_SERTYPE_REGISTERED  0x80000000u // set after setting gv
 #define DDSI_SERTYPE_REFC_MASK   0x0fffffffu
 
+typedef struct ddsi_sertype_cdr_data {
+  uint32_t sz;
+  uint8_t *data;
+} ddsi_sertype_cdr_data_t;
+
 struct ddsi_sertype {
   const struct ddsi_sertype_ops *ops;
   const struct ddsi_serdata_ops *serdata_ops;
@@ -91,9 +96,11 @@ typedef uint32_t (*ddsi_sertype_hash_t) (const struct ddsi_sertype *tp);
 /* Gets the type identifier of the requested kind (minimal or complete) for this sertype */
 typedef ddsi_typeid_t * (*ddsi_sertype_typeid_t) (const struct ddsi_sertype *tp, bool minimal);
 
-/* Gets the type object of the requested kind (minimal or complete) for this sertype,
-   and sets the serialized size of the type object in the sersz output parameter */
-typedef ddsi_typeobj_t * (*ddsi_sertype_typeobj_t) (const struct ddsi_sertype *tp, bool minimal, uint32_t *sersz);
+/* Gets the type map for this sertype */
+typedef ddsi_typemap_t * (*ddsi_sertype_typemap_t) (const struct ddsi_sertype *tp);
+
+/* Gets the CDR blob for the type information of this sertype */
+typedef const ddsi_sertype_cdr_data_t * (*ddsi_sertype_typeinfo_ser_t) (const struct ddsi_sertype *tp);
 
 /* Called when the refcount dropped to zero */
 typedef void (*ddsi_sertype_free_t) (struct ddsi_sertype *tp);
@@ -141,7 +148,8 @@ struct ddsi_sertype_ops {
   ddsi_sertype_equal_t equal;
   ddsi_sertype_hash_t hash;
   ddsi_sertype_typeid_t typeid;
-  ddsi_sertype_typeobj_t typeobj;
+  ddsi_sertype_typemap_t typemap;
+  ddsi_sertype_typeinfo_ser_t typeinfo_ser;
   ddsi_sertype_serialized_size_t serialized_size;
   ddsi_sertype_serialize_t serialize;
   ddsi_sertype_deserialize_t deserialize;
@@ -213,15 +221,17 @@ DDS_EXPORT inline ddsi_typeid_t * ddsi_sertype_typeid (const struct ddsi_sertype
     return NULL;
   return tp->ops->typeid (tp, minimal);
 }
-DDS_EXPORT inline ddsi_typeobj_t * ddsi_sertype_typeobj (const struct ddsi_sertype *tp, bool minimal, uint32_t *sersz)
+DDS_EXPORT inline ddsi_typemap_t * ddsi_sertype_typemap (const struct ddsi_sertype *tp)
 {
-  if (!tp->ops->typeobj)
-  {
-    if (sersz)
-      *sersz = 0;
+  if (!tp->ops->typemap)
     return NULL;
-  }
-  return tp->ops->typeobj (tp, minimal, sersz);
+  return tp->ops->typemap (tp);
+}
+DDS_EXPORT inline const ddsi_sertype_cdr_data_t * ddsi_sertype_typeinfo_ser (const struct ddsi_sertype *tp)
+{
+  if (!tp->ops->typeinfo_ser)
+    return NULL;
+  return tp->ops->typeinfo_ser (tp);
 }
 DDS_EXPORT inline bool ddsi_sertype_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b) {
   /* If one of the types does not have a assignability check function

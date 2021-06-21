@@ -153,25 +153,8 @@ static dds_builtintopic_endpoint_t *make_builtintopic_endpoint (
   if (tlm != NULL && (!ddsi_typeid_is_none (&tlm->type_id) || !ddsi_typeid_is_none (&tlm->type_id_minimal)))
   {
     ep->qos->present |= QP_TYPE_INFORMATION;
-    ep->qos->type_information = ddsrt_calloc (1, sizeof (*ep->qos->type_information));
-    if (!ddsi_typeid_is_none (&tlm->type_id))
-    {
-      ddsi_typeid_copy (&ep->qos->type_information->complete.typeid_with_size.type_id, &tlm->type_id);
-      if (tlm->sertype != NULL)
-      {
-        ddsi_typeobj_t *tobj = ddsi_sertype_typeobj (tlm->sertype, false, &ep->qos->type_information->complete.typeid_with_size.typeobject_serialized_size);
-        ddsrt_free (tobj);
-      }
-    }
-    else if (!ddsi_typeid_is_none (&tlm->type_id_minimal))
-    {
-      ddsi_typeid_copy (&ep->qos->type_information->minimal.typeid_with_size.type_id, &tlm->type_id_minimal);
-      if (tlm->sertype != NULL)
-      {
-        ddsi_typeobj_t *tobj = ddsi_sertype_typeobj (tlm->sertype, true, &ep->qos->type_information->minimal.typeid_with_size.typeobject_serialized_size);
-        ddsrt_free (tobj);
-      }
-    }
+    const ddsi_sertype_cdr_data_t *ti_ser = ddsi_sertype_typeinfo_ser (tlm->sertype);
+    ddsi_typeinfo_deser (ti_ser->data, ti_ser->sz, &ep->qos->type_information);
   }
 #endif
 

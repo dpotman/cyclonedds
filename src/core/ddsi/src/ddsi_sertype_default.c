@@ -27,6 +27,7 @@
 #include "dds/ddsi/ddsi_serdata_default.h"
 #include "dds/ddsi/ddsi_type_lookup.h"
 #include "dds/ddsi/ddsi_xt_wrap.h"
+#include "dds/ddsi/ddsi_xt_typeinfo.h"
 
 
 static bool sertype_default_equal (const struct ddsi_sertype *acmn, const struct ddsi_sertype *bcmn)
@@ -63,28 +64,43 @@ static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn,
 {
   assert (tpcmn);
   const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
-  const ddsi_sertype_default_cdr_data_t *ser = NULL;
-  ser = minimal ? &tp->type.typeid_minimal_ser : &tp->type.typeid_ser;
-  if (ser->sz == 0 || ser->data == NULL)
+  if (tp->type.typeinfo_ser.sz == 0 || tp->type.typeinfo_ser.data == NULL)
     return NULL;
-  ddsi_typeid_t *tid = ddsrt_calloc (1, sizeof (*tid));
-  ddsi_typeid_deser (ser->data, ser->sz, &tid);
+  ddsi_typeinfo_t *ti = NULL;
+  ddsi_typeid_t *tid = NULL;
+  ddsi_typeinfo_deser (tp->type.typeinfo_ser.data, tp->type.typeinfo_ser.sz, &ti);
+  assert (ti);
+  if (minimal && !ddsi_typeid_is_none (&ti->minimal.typeid_with_size.type_id))
+  {
+    tid = ddsrt_malloc (sizeof (*tid));
+    ddsi_typeid_copy (tid, &ti->minimal.typeid_with_size.type_id);
+  }
+  else if (!ddsi_typeid_is_none (&ti->complete.typeid_with_size.type_id))
+  {
+    tid = ddsrt_malloc (sizeof (*tid));
+    ddsi_typeid_copy (tid, &ti->complete.typeid_with_size.type_id);
+  }
   return tid;
 }
 
-static ddsi_typeobj_t * sertype_default_typeobj (const struct ddsi_sertype *tpcmn, bool minimal, uint32_t *sersz)
+static ddsi_typemap_t * sertype_default_typemap (const struct ddsi_sertype *tpcmn)
 {
   assert (tpcmn);
   const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
-  const ddsi_sertype_default_cdr_data_t *ser = NULL;
-  ser = minimal ? &tp->type.typeobj_minimal_ser : &tp->type.typeobj_ser;
-  if (sersz)
-    *sersz = ser->sz;
-  if (ser->sz == 0 || ser->data == NULL)
+  if (tp->type.typemap_ser.sz == 0 || tp->type.typemap_ser.data == NULL)
     return NULL;
-  ddsi_typeobj_t *tobj = ddsrt_calloc (1, sizeof (*tobj));
-  ddsi_typeobj_deser (ser->data, ser->sz, &tobj);
-  return tobj;
+  ddsi_typemap_t *tmap = NULL;
+  ddsi_typemap_deser (tp->type.typemap_ser.data, tp->type.typemap_ser.sz, &tmap);
+  return tmap;
+}
+
+static const ddsi_sertype_cdr_data_t * sertype_default_typeinfo_ser (const struct ddsi_sertype *tpcmn)
+{
+  assert (tpcmn);
+  const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
+  if (tp->type.typeinfo_ser.sz == 0 || tp->type.typeinfo_ser.data == NULL)
+    return NULL;
+  return &tp->type.typeinfo_ser;
 }
 
 static uint32_t sertype_default_hash (const struct ddsi_sertype *tpcmn)
@@ -215,7 +231,8 @@ const struct ddsi_sertype_ops ddsi_sertype_ops_default = {
   .equal = sertype_default_equal,
   .hash = sertype_default_hash,
   .typeid = sertype_default_typeid,
-  .typeobj = sertype_default_typeobj,
+  .typemap = sertype_default_typemap,
+  .typeinfo_ser = sertype_default_typeinfo_ser,
   .free = sertype_default_free,
   .zero_samples = sertype_default_zero_samples,
   .realloc_samples = sertype_default_realloc_samples,

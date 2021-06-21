@@ -633,7 +633,7 @@ static bool equal_type_information (const void *srcx, const void *srcy, size_t s
 {
   ddsi_typeinfo_t const * const * x = deser_generic_src (srcx, &srcoff, alignof (ddsi_typeinfo_t *));
   ddsi_typeinfo_t const * const * y = deser_generic_src (srcy, &srcoff, alignof (ddsi_typeinfo_t *));
-  return ddsi_type_information_equal (*x, *y);
+  return ddsi_typeinfo_equal (*x, *y);
 }
 
 static dds_return_t unalias_type_information (void * __restrict dst, size_t * __restrict dstoff)

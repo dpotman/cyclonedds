@@ -18,8 +18,8 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "dds/ddsi/ddsi_xt.h"
 #include "dds/ddsi/ddsi_xt_typeinfo.h"
+#include "dds/ddsi/ddsi_xt_typemap.h"
 #include "dds/ddsc/dds_opcodes.h"
 
 #if defined (__cplusplus)
@@ -32,6 +32,7 @@ extern "C" {
 typedef DDS_XTypes_TypeIdentifier ddsi_typeid_t;
 typedef DDS_XTypes_TypeObject ddsi_typeobj_t;
 typedef DDS_XTypes_TypeInformation ddsi_typeinfo_t;
+typedef DDS_XTypes_TypeMapping ddsi_typemap_t;
 
 DDS_EXPORT void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src);
 DDS_EXPORT int ddsi_typeid_compare (const ddsi_typeid_t *a, const ddsi_typeid_t *b);
@@ -47,7 +48,13 @@ void ddsi_typeobj_deser (unsigned char *buf, uint32_t sz, ddsi_typeobj_t **typeo
 bool ddsi_typeobj_is_minimal (const ddsi_typeobj_t *typeobj);
 bool ddsi_typeobj_is_complete (const ddsi_typeobj_t *typeobj);
 
-bool ddsi_type_information_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b);
+bool ddsi_typeinfo_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b);
+void ddsi_typeinfo_ser (const ddsi_typeinfo_t *typeinfo, unsigned char **buf, uint32_t *sz);
+void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typeinfo);
+
+const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const ddsi_typeid_t *tid);
+void ddsi_typemap_ser (const ddsi_typemap_t *typemap, unsigned char **buf, uint32_t *sz);
+void ddsi_typemap_deser (unsigned char *buf, uint32_t sz, ddsi_typemap_t **typemap);
 
 #if defined (__cplusplus)
 }
