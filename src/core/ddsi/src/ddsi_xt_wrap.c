@@ -352,7 +352,7 @@ static ddsi_typeid_t * xt_minimal_typeid (const struct xt_type *xt)
 {
   /* FIXME */
   (void) xt;
-  abort ();
+//  abort ();
   return NULL;
 }
 
