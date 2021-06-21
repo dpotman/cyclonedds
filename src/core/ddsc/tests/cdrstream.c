@@ -26,7 +26,9 @@
 #define DDS_DOMAINID2 1
 #define DDS_CONFIG "${CYCLONEDDS_URI}${CYCLONEDDS_URI:+,}<Discovery><ExternalDomainId>0</ExternalDomainId></Discovery>"
 
+typedef void * (*sample_empty) (void);
 typedef void * (*sample_init) (void);
+typedef bool (*keys_equal) (void *s1, void *s2);
 typedef bool (*sample_equal) (void *s1, void *s2);
 typedef void (*sample_free) (void *);
 typedef void (*sample_free2) (void *, void *);
@@ -506,6 +508,12 @@ static const dds_key_descriptor_t TestIdl_MsgKeysNested_keys[3] =
 
 const dds_topic_descriptor_t TestIdl_MsgKeysNested_desc = { sizeof (TestIdl_MsgKeysNested), sizeof (char *), DDS_TOPIC_FIXED_KEY | DDS_TOPIC_NO_OPTIMIZE, 3u, "TestIdl::MsgKeysNested", TestIdl_MsgKeysNested_keys, 8, TestIdl_MsgKeysNested_ops, "" };
 
+static void * sample_empty_keysnested (void)
+{
+  TestIdl_MsgKeysNested *msg = ddsrt_calloc (1, sizeof (*msg));
+  return msg;
+}
+
 static void * sample_init_keysnested (void)
 {
   TestIdl_SubMsgKeysNested sseq[] = { { .submsg_field1 = 2100, .submsg_field2 = 2200, .submsg_field3 = 2300, .submsg_field4.submsg2_field1 = 2310, .submsg_field4.submsg2_field2 = 2320 },
@@ -515,6 +523,15 @@ static void * sample_init_keysnested (void)
           .msg_field2 = { ._length = 2, ._maximum = 2, ._buffer = ddsrt_memdup (sseq, 2 * sizeof (TestIdl_SubMsgKeysNested)) }
   };
   return ddsrt_memdup (&msg, sizeof (TestIdl_MsgKeysNested));
+}
+
+static bool keys_equal_keysnested (void *s1, void *s2)
+{
+  TestIdl_MsgKeysNested *msg1 = (TestIdl_MsgKeysNested *) s1, *msg2 = (TestIdl_MsgKeysNested *) s2;
+  return
+      msg1->msg_field1.submsg_field2 == msg2->msg_field1.submsg_field2
+      && msg1->msg_field1.submsg_field3 == msg2->msg_field1.submsg_field3
+      && msg1->msg_field1.submsg_field4.submsg2_field2 == msg2->msg_field1.submsg_field4.submsg2_field2;
 }
 
 static bool sample_equal_keysnested (void *s1, void *s2)
@@ -1214,6 +1231,21 @@ static void write_key_sample (void * msg)
   ddsi_sertype_unref (stype);
 }
 
+// static void read_key ()
+// {
+//   struct dds_topic *x;
+//   if (dds_topic_pin (tp1, &x) < 0) abort();
+//   struct ddsi_sertype *stype = ddsi_sertype_ref (x->m_stype);
+//   dds_topic_unpin (x);
+//   struct ddsi_serdata *sd = ddsi_serdata_from_sample (stype, SDK_KEY, msg);
+//   ddsi_serdata_unref (sd);
+
+//   dds_istream_from_serdata_default(&is, d);
+//   dds_stream_read_key (&is, sample, tp);
+
+//   ddsi_sertype_unref (stype);
+// }
+
 static void cdrstream_fini (void)
 {
   dds_delete (d1);
@@ -1221,7 +1253,9 @@ static void cdrstream_fini (void)
 }
 
 #define D(n) TestIdl_Msg ## n ## _desc
+#define E(n) sample_empty_ ## n
 #define I(n) sample_init_ ## n
+#define K(n) keys_equal_ ## n
 #define C(n) sample_equal_ ## n
 #define F(n) sample_free_ ## n
 
@@ -1233,13 +1267,15 @@ CU_TheoryDataPoints (ddsc_cdrstream, ser_des) = {
   /*                                             |           |        |          |             */"appendable",
   /*                                             |           |        |          |              |              */"keys nested",
   /*                                             |           |        |          |              |               |              */"arrays" ),
-  CU_DataPoints (const dds_topic_descriptor_t *, &D(Nested), &D(Str), &D(Union), &D(Recursive), &D(Appendable), &D(KeysNested), &D(Arr) ),
+  CU_DataPoints (const dds_topic_descriptor_t *, &D(Nested), &D(Str), &D(Union), &D(Recursive), &D(Appendable), &D(KeysNested), &D(Arr)  ),
+  CU_DataPoints (sample_empty,                   0,           0,       0,         0,             0,              E(keysnested),  0       ),
   CU_DataPoints (sample_init,                    I(nested),   I(str),  I(union),  I(recursive),  I(appendable),  I(keysnested),  I(arr)  ),
+  CU_DataPoints (keys_equal,                     0,           0,       0,         0,             0,              K(keysnested),  0       ),
   CU_DataPoints (sample_equal,                   C(nested),   C(str),  C(union),  C(recursive),  C(appendable),  C(keysnested),  C(arr)  ),
   CU_DataPoints (sample_free,                    F(nested),   F(str),  F(union),  F(recursive),  F(appendable),  F(keysnested),  F(arr)  ),
 };
 
-CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_init sample_init_fn, sample_equal sample_equal_fn, sample_free sample_free_fn),
+CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_empty sample_empty_fn, sample_init sample_init_fn, keys_equal keys_equal_fn, sample_equal sample_equal_fn, sample_free sample_free_fn),
     ddsc_cdrstream, ser_des, .init = cdrstream_init, .fini = cdrstream_fini)
 {
   dds_return_t ret;
@@ -1257,6 +1293,17 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_init s
 
   ret = dds_write (wr, msg);
   CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
+  if (desc->m_nkeys > 0)
+  {
+    assert (sample_empty_fn);
+    assert (keys_equal_fn);
+    void * key_data = sample_empty_fn ();
+    dds_instance_handle_t ih = dds_lookup_instance (wr, msg);
+    CU_ASSERT_PTR_NOT_NULL_FATAL (ih);
+    ret = dds_instance_get_key(wr, ih, key_data);
+    bool eq = keys_equal_fn (msg, key_data);
+    CU_ASSERT_FATAL (eq);
+  }
 
   dds_attach_t triggered;
   ret = dds_waitset_wait (ws, &triggered, 1, DDS_SECS(5));
@@ -1268,10 +1315,24 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_init s
   CU_ASSERT_EQUAL_FATAL (ret, 1);
   bool eq = sample_equal_fn (msg, rds[0]);
   CU_ASSERT_FATAL (eq);
+  dds_return_loan (rd, rds, 1);
+
+  /* In case type has keys, write a dispose so that write key
+     and read key code from cdrstream serializer is used */
+  if (desc->m_nkeys > 0)
+  {
+    ret = dds_dispose (wr, msg);
+    CU_ASSERT_EQUAL_FATAL (ret, 0);
+    ret = dds_waitset_wait (ws, &triggered, 1, DDS_SECS(5));
+    CU_ASSERT_EQUAL_FATAL (ret, 1);
+    ret = dds_read (rd, rds, si, 1, 1);
+    CU_ASSERT_EQUAL_FATAL (ret, 1);
+    CU_ASSERT_EQUAL_FATAL (si->instance_state, DDS_IST_NOT_ALIVE_DISPOSED);
+    dds_return_loan (rd, rds, 1);
+  }
 
   // cleanup
   sample_free_fn (msg);
-  dds_return_loan (rd, rds, 1);
 }
 
 
@@ -1361,6 +1422,8 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_to
 }
 
 #undef D
+#undef E
 #undef I
+#undef K
 #undef C
 #undef F

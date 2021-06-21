@@ -89,7 +89,7 @@ static void dds_stream_extract_key_from_data1BO (dds_istream_t * __restrict is, 
         }
         else if (is_key)
         {
-          dds_stream_extract_key_from_key_prim_opBO (is, os, ops);
+          dds_stream_extract_key_from_key_prim_opBO (is, os, ops, 0, NULL);
           if (--(*keys_remaining) == 0)
             return;
           ops += 2 + (type == DDS_OP_VAL_BST || type == DDS_OP_VAL_BSP || type == DDS_OP_VAL_ARR || type == DDS_OP_VAL_ENU);
