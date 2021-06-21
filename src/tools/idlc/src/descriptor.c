@@ -1934,7 +1934,7 @@ static int print_descriptor(FILE *fp, struct descriptor *descriptor, bool type_i
 
   if (type_info) {
     fmt = "  { .data = TYPE_INFO_CDR_%1$s, .sz = TYPE_INFO_CDR_SZ_%1$s },\n" /* TypeInformation */
-          "  { .data = TYPE_MAP_CDR_%1$s, .sz = TYPE_MAP_CDR_%1$s },\n"; /* TypeMapping */
+          "  { .data = TYPE_MAP_CDR_%1$s, .sz = TYPE_MAP_CDR_SZ_%1$s },\n"; /* TypeMapping */
   } else {
     fmt = "  { .data = NULL, .sz = 0u },\n" /* TypeInformation */
           "  { .data = NULL, .sz = 0u },\n"; /* TypeMapping */
