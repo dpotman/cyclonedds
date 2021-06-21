@@ -260,7 +260,7 @@ struct participant
 
 #ifdef DDS_HAS_TOPIC_DISCOVERY
 struct ddsi_topic_definition {
-  unsigned char key[16]; /* key for this topic definition (MD5 hash of the type_id and qos) */
+  // unsigned char key[16]; /* key for this topic definition (MD5 hash of the type_id and qos) */
   struct tl_meta *tlm;
   struct dds_qos *xqos; /* contains also the topic name and type name */
   uint32_t refc;

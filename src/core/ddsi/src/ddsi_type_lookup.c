@@ -139,9 +139,10 @@ static struct tl_meta * tlm_ref_impl (struct ddsi_domaingv *gv, const ddsi_typei
   bool resolved = false;
   assert (type_id || type);
   GVTRACE (" ref tl_meta");
-  const ddsi_typeid_t *tid = NULL, *tid_min = NULL;
+  ddsi_typeid_t *tid = NULL, *tid_min = NULL;
   struct tl_meta *tlm = NULL;
   const char *tname;
+  bool tid_from_st = false; /* FIXME: find a better approach for this... */
 
   ddsrt_mutex_lock (&gv->tl_admin_lock);
   if (type != NULL)
@@ -151,17 +152,18 @@ static struct tl_meta * tlm_ref_impl (struct ddsi_domaingv *gv, const ddsi_typei
     if (type->tlm != NULL)
     {
       tlm = type->tlm;
-      tid = &type->tlm->type_id;
-      tid_min = &type->tlm->type_id_minimal;
+      tid = (ddsi_typeid_t *) &type->tlm->type_id;
+      tid_min = (ddsi_typeid_t *) &type->tlm->type_id_minimal;
     }
     else
     {
       tid = ddsi_sertype_typeid (type, false);
       tid_min = ddsi_sertype_typeid (type, true);
+      tid_from_st = true;
     }
-    if (ddsi_typeid_is_none (tid))
+    if (!tid || ddsi_typeid_is_none (tid))
     {
-      if (!ddsi_typeid_is_none (tid_min))
+      if (tid_min && !ddsi_typeid_is_none (tid_min))
         tid = tid_min;
       else
       {
@@ -172,12 +174,13 @@ static struct tl_meta * tlm_ref_impl (struct ddsi_domaingv *gv, const ddsi_typei
   }
   else
   {
+    assert (type_id);
     assert (type_name);
     tname = type_name;
     if (ddsi_typeid_is_complete (type_id))
-      tid = type_id;
+      tid = (ddsi_typeid_t *) type_id;
     else if (ddsi_typeid_is_minimal (type_id))
-      tid_min = type_id;
+      tid_min = (ddsi_typeid_t *) type_id;
   }
 
   if (!tlm
@@ -219,30 +222,38 @@ static struct tl_meta * tlm_ref_impl (struct ddsi_domaingv *gv, const ddsi_typei
     GVTRACE (" resolved");
     resolved = true;
   }
-  if (tlm->xt == NULL)
+
+  ddsi_typemap_t *tmap = NULL;
+  if (tlm->xt == NULL || (ddsi_typeid_is_complete (tid) && !tlm->xt->has_complete_obj))
   {
-    ddsi_typeobj_t *tobj = ddsi_sertype_typeobj (tlm->sertype, ddsi_typeid_is_minimal (tid), NULL);
-    tlm->xt = ddsi_xt_type_init (tid, tobj); // tobj can be null, in that case only the type identifier will be added to xt
-    if (tobj != NULL)
-      ddsrt_free (tobj);
-  }
-  else
-  {
-    if (ddsi_typeid_is_complete (tid) && !tlm->xt->has_complete_obj)
+    const ddsi_typeobj_t *tobj = NULL;
+    if (ddsi_typeid_is_hash (tid))
     {
-      ddsi_typeobj_t *tobj = ddsi_sertype_typeobj (tlm->sertype, false, NULL);
-      ddsi_xt_type_add (tlm->xt, tid, tobj);
-      if (tobj)
-        ddsrt_free (tobj);
+      tmap = ddsi_sertype_typemap (tlm->sertype);
+      tobj = ddsi_typemap_typeobj (tmap, tid);
     }
+    if (tlm->xt == NULL)
+      tlm->xt = ddsi_xt_type_init (tid, tobj); // tobj can be null, in that case only the type identifier will be added to xt
+    else
+      ddsi_xt_type_add (tlm->xt, tid, tobj);
   }
   if (tid_min != NULL && tid_min != tid && !tlm->xt->has_minimal_id)
   {
-    ddsi_typeobj_t *tobj_min = ddsi_sertype_typeobj (tlm->sertype, true, NULL);
-    ddsi_xt_type_add (tlm->xt, tid_min, tobj_min);
-    if (tobj_min)
-      ddsrt_free (tobj_min);
+    const ddsi_typeobj_t *tobj = NULL;
+    if (ddsi_typeid_is_hash (tid_min))
+    {
+      if (tmap == NULL)
+        tmap = ddsi_sertype_typemap (tlm->sertype);
+      tobj = ddsi_typemap_typeobj (tmap, tid);
+    }
+    ddsi_xt_type_add (tlm->xt, tid_min, tobj);
   }
+  if (tmap != NULL)
+    ddsrt_free (tmap);
+  if (tid_from_st && tid)
+    ddsrt_free (tid);
+  if (tid_from_st && tid_min)
+    ddsrt_free (tid_min);
 
   tlm->refc++;
   GVTRACE (" state %d refc %u\n", tlm->state, tlm->refc);
@@ -314,8 +325,6 @@ static void tlm_unref_impl (struct ddsi_domaingv *gv, const struct tl_meta *tlm,
   assert (tlm1 != NULL);
   tlm_unref_impl_locked (gv, tlm1, proxy_guid);
   ddsrt_mutex_unlock (&gv->tl_admin_lock);
-  if (tlm == NULL)
-    ddsrt_free (tid);
   GVTRACE ("\n");
 }
 

@@ -18,6 +18,7 @@
 #include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_type_lookup.h"
 #include "dds/ddsi/ddsi_xt.h"
+#include "dds/ddsi/ddsi_xt_typemap.h"
 #include "dds/ddsi/ddsi_xt_wrap.h"
 #include "dds/ddsc/dds_public_impl.h"
 
@@ -224,6 +225,7 @@ void ddsi_typeid_deser (unsigned char *buf, uint32_t sz, ddsi_typeid_t **typeid)
     data = buf;
 
   dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
+  *typeid = ddsrt_calloc (1, sizeof (**typeid));
   dds_stream_read (&is, (void *) *typeid, DDS_XTypes_TypeIdentifier_desc.m_ops);
 }
 
@@ -269,6 +271,7 @@ static bool type_id_with_deps_equal (const struct DDS_XTypes_TypeIdentifierWithD
     && type_id_with_sizeseq_equal (&a->dependent_typeids, &b->dependent_typeids);
 }
 
+
 void ddsi_typeobj_ser (const ddsi_typeobj_t *typeobj, unsigned char **buf, uint32_t *sz)
 {
   dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
@@ -291,6 +294,7 @@ void ddsi_typeobj_deser (unsigned char *buf, uint32_t sz, ddsi_typeobj_t **typeo
     data = buf;
 
   dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
+  *typeobj = ddsrt_calloc (1, sizeof (**typeobj));
   dds_stream_read (&is, (void *) *typeobj, DDS_XTypes_TypeObject_desc.m_ops);
 }
 
@@ -304,10 +308,79 @@ bool ddsi_typeobj_is_complete (const ddsi_typeobj_t *typeobj)
   return typeobj != NULL && typeobj->_d == DDS_XTypes_EK_COMPLETE;
 }
 
-bool ddsi_type_information_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b)
+
+bool ddsi_typeinfo_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b)
 {
   if (a == NULL || b == NULL)
     return a == b;
   return type_id_with_deps_equal (&a->minimal, &b->minimal) && type_id_with_deps_equal (&a->complete, &b->complete);
 }
 
+void ddsi_typeinfo_ser (const ddsi_typeinfo_t *typeinfo, unsigned char **buf, uint32_t *sz)
+{
+  dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
+  dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
+  *buf = os.m_buffer;
+  *sz = os.m_index;
+}
+
+void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typeinfo)
+{
+  unsigned char *data;
+  uint32_t srcoff = 0;
+  bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
+  if (bswap)
+  {
+    data = ddsrt_memdup (buf, sz);
+    dds_stream_normalize1 ((char *) data, &srcoff, sz, bswap, CDR_ENC_VERSION_2, DDS_XTypes_TypeInformation_desc.m_ops);
+  }
+  else
+    data = buf;
+
+  dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
+  *typeinfo = ddsrt_calloc (1, sizeof (**typeinfo));
+  dds_stream_read (&is, (void *) *typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
+}
+
+const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const ddsi_typeid_t *tid)
+{
+  assert (tid);
+  assert (tmap);
+  if (!ddsi_typeid_is_hash (tid))
+    return NULL;
+  const dds_sequence_DDS_XTypes_TypeIdentifierTypeObjectPair *list = ddsi_typeid_is_minimal (tid) ?
+    &tmap->identifier_object_pair_minimal : &tmap->identifier_object_pair_complete;
+  for (uint32_t i = 0; i < list->_length; i++)
+  {
+    DDS_XTypes_TypeIdentifierTypeObjectPair *pair = &list->_buffer[i];
+    if (!ddsi_typeid_compare (tid, &pair->type_identifier))
+      return &pair->type_object;
+  }
+  return NULL;
+}
+
+void ddsi_typemap_ser (const ddsi_typemap_t *typemap, unsigned char **buf, uint32_t *sz)
+{
+  dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
+  dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typemap, DDS_XTypes_TypeMapping_desc.m_ops);
+  *buf = os.m_buffer;
+  *sz = os.m_index;
+}
+
+void ddsi_typemap_deser (unsigned char *buf, uint32_t sz, ddsi_typemap_t **typemap)
+{
+  unsigned char *data;
+  uint32_t srcoff = 0;
+  bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
+  if (bswap)
+  {
+    data = ddsrt_memdup (buf, sz);
+    dds_stream_normalize1 ((char *) data, &srcoff, sz, bswap, CDR_ENC_VERSION_2, DDS_XTypes_TypeMapping_desc.m_ops);
+  }
+  else
+    data = buf;
+
+  dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
+  *typemap = ddsrt_calloc (1, sizeof (**typemap));
+  dds_stream_read (&is, (void *) *typemap, DDS_XTypes_TypeMapping_desc.m_ops);
+}

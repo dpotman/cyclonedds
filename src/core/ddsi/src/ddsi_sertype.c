@@ -311,5 +311,6 @@ extern inline void ddsi_sertype_zero_sample (const struct ddsi_sertype *tp, void
 extern inline void *ddsi_sertype_alloc_sample (const struct ddsi_sertype *tp);
 extern inline void ddsi_sertype_free_sample (const struct ddsi_sertype *tp, void *sample, dds_free_op_t op);
 extern inline ddsi_typeid_t * ddsi_sertype_typeid (const struct ddsi_sertype *tp, bool minimal);
-extern inline ddsi_typeobj_t * ddsi_sertype_typeobj (const struct ddsi_sertype *tp, bool minimal, uint32_t *sersz);
+extern inline ddsi_typemap_t * ddsi_sertype_typemap (const struct ddsi_sertype *tp);
+extern inline const ddsi_sertype_cdr_data_t * ddsi_sertype_typeinfo_ser (const struct ddsi_sertype *tp);
 extern inline bool ddsi_sertype_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b);

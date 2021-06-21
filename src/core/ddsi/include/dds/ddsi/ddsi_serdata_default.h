@@ -107,12 +107,6 @@ typedef struct ddsi_sertype_default_desc_op_seq {
   uint32_t *ops;    /* Marshalling meta data */
 } ddsi_sertype_default_desc_op_seq_t;
 
-typedef struct ddsi_sertype_default_cdr_data {
-  uint32_t sz;
-  uint8_t *data;
-} ddsi_sertype_default_cdr_data_t;
-
-
 /* Reduced version of dds_topic_descriptor_t */
 struct ddsi_sertype_default_desc {
   uint32_t size;    /* Size of topic type */
@@ -122,10 +116,8 @@ struct ddsi_sertype_default_desc {
   ddsi_sertype_default_desc_key_seq_t keys;
   ddsi_sertype_default_desc_op_seq_t ops;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  ddsi_sertype_default_cdr_data_t typeid_minimal_ser;
-  ddsi_sertype_default_cdr_data_t typeid_ser;
-  ddsi_sertype_default_cdr_data_t typeobj_minimal_ser;
-  ddsi_sertype_default_cdr_data_t typeobj_ser;
+  ddsi_sertype_cdr_data_t typeinfo_ser;
+  ddsi_sertype_cdr_data_t typemap_ser;
 #endif
 };
 
