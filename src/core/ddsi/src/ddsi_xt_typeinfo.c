@@ -611,17 +611,17 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   DDS_OP_JEQ | DDS_OP_TYPE_UNI | 65490 /* MinimalTypeObject */, 241, offsetof (DDS_XTypes_TypeObject, _u.minimal),
   DDS_OP_RTS,
 
-  /* TypeIdentfierWithSize */
+  /* TypeIdentifierWithSize */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentfierWithSize, type_id), (3u << 16u) + 64622u /* TypeIdentifier */,
-  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_TypeIdentfierWithSize, typeobject_serialized_size),
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithSize, type_id), (3u << 16u) + 64622u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_TypeIdentifierWithSize, typeobject_serialized_size),
   DDS_OP_RTS,
 
   /* TypeIdentifierWithDependencies */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, typeid_with_size), (3u << 16u) + 65528u /* TypeIdentfierWithSize */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, typeid_with_size), (3u << 16u) + 65528u /* TypeIdentifierWithSize */,
   DDS_OP_ADR | DDS_OP_TYPE_4BY | DDS_OP_FLAG_SGN, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, dependent_typeid_count),
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, dependent_typeids), sizeof (DDS_XTypes_TypeIdentfierWithSize), (4u << 16u) + 65523u /* TypeIdentfierWithSize */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, dependent_typeids), sizeof (DDS_XTypes_TypeIdentifierWithSize), (4u << 16u) + 65523u /* TypeIdentifierWithSize */,
   DDS_OP_RTS
 };
 
@@ -1242,17 +1242,17 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   DDS_OP_PLC,
   DDS_OP_RTS,
 
-  /* TypeIdentfierWithSize */
+  /* TypeIdentifierWithSize */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentfierWithSize, type_id), (3u << 16u) + 64723u /* TypeIdentifier */,
-  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_TypeIdentfierWithSize, typeobject_serialized_size),
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithSize, type_id), (3u << 16u) + 64723u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_TypeIdentifierWithSize, typeobject_serialized_size),
   DDS_OP_RTS,
 
   /* TypeIdentifierWithDependencies */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, typeid_with_size), (3u << 16u) + 65528u /* TypeIdentfierWithSize */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, typeid_with_size), (3u << 16u) + 65528u /* TypeIdentifierWithSize */,
   DDS_OP_ADR | DDS_OP_TYPE_4BY | DDS_OP_FLAG_SGN, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, dependent_typeid_count),
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, dependent_typeids), sizeof (DDS_XTypes_TypeIdentfierWithSize), (4u << 16u) + 65523u /* TypeIdentfierWithSize */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, dependent_typeids), sizeof (DDS_XTypes_TypeIdentifierWithSize), (4u << 16u) + 65523u /* TypeIdentifierWithSize */,
   DDS_OP_RTS
 };
 
@@ -1284,15 +1284,15 @@ static const uint32_t DDS_XTypes_TypeInformation_ops [] =
 
   /* TypeIdentifierWithDependencies */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, typeid_with_size), (3u << 16u) + 10u /* TypeIdentfierWithSize */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, typeid_with_size), (3u << 16u) + 10u /* TypeIdentifierWithSize */,
   DDS_OP_ADR | DDS_OP_TYPE_4BY | DDS_OP_FLAG_SGN, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, dependent_typeid_count),
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, dependent_typeids), sizeof (DDS_XTypes_TypeIdentfierWithSize), (4u << 16u) + 5u /* TypeIdentfierWithSize */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_TypeIdentifierWithDependencies, dependent_typeids), sizeof (DDS_XTypes_TypeIdentifierWithSize), (4u << 16u) + 5u /* TypeIdentifierWithSize */,
   DDS_OP_RTS,
 
-  /* TypeIdentfierWithSize */
+  /* TypeIdentifierWithSize */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentfierWithSize, type_id), (3u << 16u) + 6u /* TypeIdentifier */,
-  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_TypeIdentfierWithSize, typeobject_serialized_size),
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithSize, type_id), (3u << 16u) + 6u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_TypeIdentifierWithSize, typeobject_serialized_size),
   DDS_OP_RTS,
 
   /* TypeIdentifier */
