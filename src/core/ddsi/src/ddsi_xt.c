@@ -249,12 +249,12 @@ bool ddsi_typeid_is_complete (const ddsi_typeid_t *typeid)
   return typeid != NULL && typeid->_d == DDS_XTypes_EK_COMPLETE;
 }
 
-static bool type_id_with_size_equal (const struct DDS_XTypes_TypeIdentfierWithSize *a, const struct DDS_XTypes_TypeIdentfierWithSize *b)
+static bool type_id_with_size_equal (const struct DDS_XTypes_TypeIdentifierWithSize *a, const struct DDS_XTypes_TypeIdentifierWithSize *b)
 {
   return !ddsi_typeid_compare (&a->type_id, &b->type_id) && a->typeobject_serialized_size == b->typeobject_serialized_size;
 }
 
-static bool type_id_with_sizeseq_equal (const struct dds_sequence_DDS_XTypes_TypeIdentfierWithSize *a, const struct dds_sequence_DDS_XTypes_TypeIdentfierWithSize *b)
+static bool type_id_with_sizeseq_equal (const struct dds_sequence_DDS_XTypes_TypeIdentifierWithSize *a, const struct dds_sequence_DDS_XTypes_TypeIdentifierWithSize *b)
 {
     if (a->_length != b->_length)
       return false;

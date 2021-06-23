@@ -933,7 +933,7 @@ print_ser_data(FILE *fp, const char *kind, const char *type, unsigned char *data
 
 static void
 get_typeid_with_size (
-    DDS_XTypes_TypeIdentfierWithSize *typeid_with_size,
+    DDS_XTypes_TypeIdentifierWithSize *typeid_with_size,
     DDS_XTypes_TypeIdentifier *ti,
     DDS_XTypes_TypeObject *to)
 {
@@ -991,7 +991,7 @@ print_type_meta_ser (
 
   /* dependent type ids, skip first (top-level) */
   for (struct type_meta *tm = dtm.admin->admin_next; tm; tm = tm->admin_next) {
-    DDS_XTypes_TypeIdentfierWithSize tidws;
+    DDS_XTypes_TypeIdentifierWithSize tidws;
 
     get_typeid_with_size (&tidws, tm->ti_minimal, tm->to_minimal);
     add_to_seq ((dds_sequence_t *) &type_information.minimal.dependent_typeids, &tidws, sizeof (tidws));
