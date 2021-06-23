@@ -277,7 +277,10 @@ dds_return_t dds_builtintopic_get_endpoint_typeid (dds_builtintopic_endpoint_t *
     return DDS_RETCODE_BAD_PARAMETER;
   *type_identifier = NULL;
   if (builtintopic_endpoint->qos->present & QP_TYPE_INFORMATION)
+  {
+    *type_identifier = ddsrt_malloc (sizeof (**type_identifier));
     ddsi_typeid_copy (*type_identifier, &builtintopic_endpoint->qos->type_information->minimal.typeid_with_size.type_id);
+  }
   return DDS_RETCODE_OK;
 }
 #endif

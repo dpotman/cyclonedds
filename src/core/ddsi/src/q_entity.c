@@ -5653,6 +5653,7 @@ static void set_topic_definition_hash (struct ddsi_topic_definition *tpd)
   assert (sqos_sz <= UINT32_MAX);
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) sqos, (uint32_t) sqos_sz);
   nn_xmsg_free (mqos);
+
   ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) &tpd->key);
 }
 
@@ -5717,7 +5718,7 @@ static struct ddsi_topic_definition *lookup_topic_definition_locked (struct ddsi
   struct ddsi_topic_definition templ;
   memset (&templ, 0, sizeof (templ));
   templ.xqos = qos;
-  templ.tlm = ddsrt_malloc (sizeof (*templ.tlm));
+  templ.tlm = ddsrt_calloc (1, sizeof (*templ.tlm));
   memcpy (&templ.tlm->type_id, type_id, sizeof (templ.tlm->type_id));
   templ.gv = gv;
   set_topic_definition_hash (&templ);
@@ -5820,12 +5821,19 @@ struct proxy_topic *lookup_proxy_topic (struct proxy_participant *proxypp, const
   return ptp;
 }
 
-void new_proxy_topic (struct proxy_participant *proxypp, seqno_t seq, const ddsi_guid_t *guid, const ddsi_typeid_t *type_id, struct dds_qos *qos, ddsrt_wctime_t timestamp)
+void new_proxy_topic (struct proxy_participant *proxypp, seqno_t seq, const ddsi_guid_t *guid, const ddsi_typeid_t *type_id_minimal, const ddsi_typeid_t *type_id, struct dds_qos *qos, ddsrt_wctime_t timestamp)
 {
   assert (proxypp != NULL);
   struct ddsi_domaingv *gv = proxypp->e.gv;
   bool new_tpd = false;
-  struct ddsi_topic_definition *tpd = lookup_topic_definition (gv, qos, type_id, NULL, &new_tpd);
+  struct ddsi_topic_definition *tpd;
+  if (!ddsi_typeid_is_none (type_id))
+    tpd = lookup_topic_definition (gv, qos, type_id, NULL, &new_tpd);
+  else
+  {
+    assert (!ddsi_typeid_is_none (type_id_minimal));
+    tpd = lookup_topic_definition (gv, qos, type_id_minimal, NULL, &new_tpd);
+  }
 #ifndef NDEBUG
   bool found_proxytp = lookup_proxy_topic (proxypp, guid);
   assert (!found_proxytp);

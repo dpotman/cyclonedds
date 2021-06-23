@@ -1749,7 +1749,7 @@ static void handle_sedp_alive_topic (const struct receiver_state *rst, seqno_t s
   ddsi_guid_t ppguid;
   dds_qos_t *xqos;
   int reliable;
-  ddsi_typeid_t type_id;
+  ddsi_typeid_t type_id_minimal, type_id;
 
   assert (datap);
   assert (datap->present & PP_CYCLONE_TOPIC_GUID);
@@ -1774,7 +1774,8 @@ static void handle_sedp_alive_topic (const struct receiver_state *rst, seqno_t s
              "topic", xqos->topic_name, xqos->type_name);
   if (xqos->present & QP_TYPE_INFORMATION)
   {
-    ddsi_typeid_copy (&type_id, &xqos->type_information->minimal.typeid_with_size.type_id);
+    ddsi_typeid_copy (&type_id_minimal, &xqos->type_information->minimal.typeid_with_size.type_id);
+    ddsi_typeid_copy (&type_id, &xqos->type_information->complete.typeid_with_size.type_id);
     // FIXME
     // GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(type_id));
   }
@@ -1798,7 +1799,7 @@ static void handle_sedp_alive_topic (const struct receiver_state *rst, seqno_t s
     else
     {
       GVLOGDISC (" NEW proxy-topic");
-      new_proxy_topic (proxypp, seq, &datap->topic_guid, &type_id, xqos, timestamp);
+      new_proxy_topic (proxypp, seq, &datap->topic_guid, &type_id_minimal, &type_id, xqos, timestamp);
     }
   }
 }

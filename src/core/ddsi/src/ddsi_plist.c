@@ -589,7 +589,8 @@ static dds_return_t deser_type_information (void * __restrict dst, struct flagse
   size_t dstoff = 0;
   uint32_t srcoff = 0;
   unsigned char *buf;
-  ddsi_typeinfo_t * const * x = deser_generic_dst (dst, &dstoff, alignof (ddsi_typeinfo_t *));
+  ddsi_typeinfo_t const ** x = deser_generic_dst (dst, &dstoff, alignof (ddsi_typeinfo_t *));
+  *x = ddsrt_calloc (1, sizeof (**x));
   if (dd->bswap)
   {
     buf = ddsrt_memdup (dd->buf, dd->bufsz);
