@@ -723,6 +723,7 @@ static struct constructed_type *
 find_ctype_byname(const struct descriptor *descriptor, const idl_scope_t *scope, const idl_name_t *name)
 {
   struct constructed_type *ctype = descriptor->constructed_types;
+  // FIXME: need to compare scope by name (identifier) and not pointers?
   while (ctype && (strcmp(name->identifier, ctype->name->identifier) || ctype->scope != scope))
     ctype = ctype->next;
   return ctype;
