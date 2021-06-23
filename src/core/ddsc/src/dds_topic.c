@@ -349,11 +349,9 @@ static int ktopic_type_guid_equal (const void *ktp_guid_a, const void *ktp_guid_
 
 static uint32_t ktopic_type_guid_hash (const void *ktp_guid)
 {
-  struct ktopic_type_guid *x = (struct ktopic_type_guid *)ktp_guid;
-  // FIXME
-  (void) x;
-  // return (uint32_t) *x->type_id->hash;
-  return 0;
+  struct ktopic_type_guid *x = (struct ktopic_type_guid *) ktp_guid;
+  assert (ddsi_typeid_is_hash (x->type_id));
+  return * (uint32_t *) x->type_id->_u.equivalence_hash;
 }
 
 #endif /* DDS_HAS_TOPIC_DISCOVERY */
@@ -496,8 +494,9 @@ dds_entity_t dds_create_topic_impl (
       const struct ddsi_guid * ppguid = dds_entity_participant_guid (&pp->m_entity);
       struct participant * pp_ddsi = entidx_lookup_participant_guid (gv->entity_index, ppguid);
 
-      m = ddsrt_malloc (sizeof (*m));
-      m->type_id = tid;
+      m = ddsrt_calloc (1, sizeof (*m));
+      m->type_id = ddsrt_malloc (sizeof (*m->type_id));
+      ddsi_typeid_copy (m->type_id, tid);
       m->refc = 1;
       rc = ddsi_new_topic (&m->tp, &m->guid, pp_ddsi, ktp->name, sertype_registered, ktp->qos, is_builtin, &new_topic_def);
       assert (rc == DDS_RETCODE_OK); /* FIXME: can be out-of-resources at the very least */
