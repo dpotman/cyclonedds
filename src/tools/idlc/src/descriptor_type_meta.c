@@ -57,15 +57,20 @@ push_type (struct descriptor_type_meta *dtm, const void *node)
   tm->ti_complete = calloc (1, sizeof (*tm->ti_complete));
   tm->to_complete = calloc (1, sizeof (*tm->to_complete));
 
-  // Add to admin
-  // FIXME: check for duplicates?
+  // Check if node exist in admin
   tmp = dtm->admin;
-  if (tmp == NULL)
-    dtm->admin = tm;
-  else {
-    while (tmp->admin_next)
-      tmp = tmp->admin_next;
-    tmp->admin_next = tm;
+  while (tmp && tmp->node != node)
+    tmp = tmp->admin_next;
+  if (!tmp) {
+    // Add to admin
+    tmp = dtm->admin;
+    if (tmp == NULL)
+      dtm->admin = tm;
+    else {
+      while (tmp->admin_next)
+        tmp = tmp->admin_next;
+      tmp->admin_next = tm;
+    }
   }
 
   // Add to stack
@@ -125,14 +130,22 @@ add_to_seq (dds_sequence_t *seq, const void *obj, size_t sz)
 }
 
 static bool
-is_fully_descriptive (const idl_type_spec_t *type_spec)
+is_fully_descriptive_impl (const idl_type_spec_t *type_spec, bool array_type_spec)
 {
   if (idl_is_string (type_spec) || idl_is_base_type (type_spec))
     return true;
-  if (idl_is_sequence (type_spec) || idl_is_array (type_spec)) {
-    return is_fully_descriptive (idl_type_spec (type_spec));
+  if (idl_is_sequence (type_spec))
+    return is_fully_descriptive_impl (idl_type_spec (type_spec), false);
+  if (idl_is_array (type_spec) && !array_type_spec) {
+    return is_fully_descriptive_impl (type_spec, true);
   }
   return false;
+}
+
+static bool
+is_fully_descriptive (const idl_type_spec_t *type_spec)
+{
+  return is_fully_descriptive_impl (type_spec, false);
 }
 
 static void
@@ -219,6 +232,19 @@ get_hashed_typeid (struct descriptor_type_meta *dtm, DDS_XTypes_TypeIdentifier *
 {
   assert (ti);
   assert (!is_fully_descriptive (type_spec));
+
+  /* resolve forward decls to the actual type */
+  if (idl_is_forward (type_spec)) {
+    struct type_meta *tm1 = dtm->admin;
+    assert (idl_identifier (type_spec));
+    while (tm1 && (!idl_identifier (tm1->node)
+      || strcmp (idl_identifier (tm1->node), idl_identifier (type_spec))
+      || idl_parent (tm1->node) != idl_parent (type_spec)))
+      tm1 = tm1->admin_next;
+    assert (tm1);
+    type_spec = tm1->node;
+  }
+
   struct type_meta *tm = dtm->admin;
   while (tm && tm->node != type_spec)
     tm = tm->admin_next;
@@ -360,11 +386,15 @@ get_builtin_member_ann(
 
   if (idl_is_member (node) || idl_is_case (node))
   {
-    for (idl_annotation_appl_t *a = ((idl_node_t *) node)->annotations; a; a = idl_next(a)) {
+    for (idl_annotation_appl_t *a = ((idl_node_t *) node)->annotations; a; a = idl_next (a)) {
       if (!strcmp (a->annotation->name->identifier, "hashid")) {
-        assert(idl_type(a->parameters->const_expr) == IDL_STRING);
-        assert(idl_is_literal(a->parameters->const_expr));
-        builtin_ann->hash_id = idl_strdup (((const idl_literal_t *)a->parameters->const_expr)->value.str);
+        if (a->parameters) {
+          assert (idl_type(a->parameters->const_expr) == IDL_STRING);
+          assert (idl_is_literal(a->parameters->const_expr));
+          builtin_ann->hash_id = idl_strdup (((const idl_literal_t *)a->parameters->const_expr)->value.str);
+        } else {
+          builtin_ann->hash_id = idl_strdup ("");
+        }
       }
     }
   }
