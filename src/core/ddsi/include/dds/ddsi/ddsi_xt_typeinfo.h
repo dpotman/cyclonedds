@@ -1197,47 +1197,47 @@ typedef struct DDS_XTypes_TypeIdentifierPairSeq
 
 #define DDS_XTypes_TypeIdentifierPairSeq_allocbuf(l) \
 ((DDS_XTypes_TypeIdentifierPair *) dds_alloc ((l) * sizeof (DDS_XTypes_TypeIdentifierPair)))
-typedef struct DDS_XTypes_TypeIdentfierWithSize
+typedef struct DDS_XTypes_TypeIdentifierWithSize
 {
   DDS_XTypes_TypeIdentifier type_id;
   uint32_t typeobject_serialized_size;
-} DDS_XTypes_TypeIdentfierWithSize;
+} DDS_XTypes_TypeIdentifierWithSize;
 
-typedef struct DDS_XTypes_TypeIdentfierWithSizeSeq
+typedef struct DDS_XTypes_TypeIdentifierWithSizeSeq
 {
   uint32_t _maximum;
   uint32_t _length;
-  DDS_XTypes_TypeIdentfierWithSize *_buffer;
+  DDS_XTypes_TypeIdentifierWithSize *_buffer;
   bool _release;
-} DDS_XTypes_TypeIdentfierWithSizeSeq;
+} DDS_XTypes_TypeIdentifierWithSizeSeq;
 
-#define DDS_XTypes_TypeIdentfierWithSizeSeq__alloc() \
-((DDS_XTypes_TypeIdentfierWithSizeSeq*) dds_alloc (sizeof (DDS_XTypes_TypeIdentfierWithSizeSeq)));
+#define DDS_XTypes_TypeIdentifierWithSizeSeq__alloc() \
+((DDS_XTypes_TypeIdentifierWithSizeSeq*) dds_alloc (sizeof (DDS_XTypes_TypeIdentifierWithSizeSeq)));
 
-#define DDS_XTypes_TypeIdentfierWithSizeSeq_allocbuf(l) \
-((DDS_XTypes_TypeIdentfierWithSize *) dds_alloc ((l) * sizeof (DDS_XTypes_TypeIdentfierWithSize)))
-#ifndef DDS_SEQUENCE_DDS_XTYPES_TYPEIDENTFIERWITHSIZE_DEFINED
-#define DDS_SEQUENCE_DDS_XTYPES_TYPEIDENTFIERWITHSIZE_DEFINED
-typedef struct dds_sequence_DDS_XTypes_TypeIdentfierWithSize
+#define DDS_XTypes_TypeIdentifierWithSizeSeq_allocbuf(l) \
+((DDS_XTypes_TypeIdentifierWithSize *) dds_alloc ((l) * sizeof (DDS_XTypes_TypeIdentifierWithSize)))
+#ifndef DDS_SEQUENCE_DDS_XTYPES_TYPEIDENTIFIERWITHSIZE_DEFINED
+#define DDS_SEQUENCE_DDS_XTYPES_TYPEIDENTIFIERWITHSIZE_DEFINED
+typedef struct dds_sequence_DDS_XTypes_TypeIdentifierWithSize
 {
   uint32_t _maximum;
   uint32_t _length;
-  DDS_XTypes_TypeIdentfierWithSize *_buffer;
+  DDS_XTypes_TypeIdentifierWithSize *_buffer;
   bool _release;
-} dds_sequence_DDS_XTypes_TypeIdentfierWithSize;
+} dds_sequence_DDS_XTypes_TypeIdentifierWithSize;
 
-#define dds_sequence_DDS_XTypes_TypeIdentfierWithSize__alloc() \
-((dds_sequence_DDS_XTypes_TypeIdentfierWithSize*) dds_alloc (sizeof (dds_sequence_DDS_XTypes_TypeIdentfierWithSize)));
+#define dds_sequence_DDS_XTypes_TypeIdentifierWithSize__alloc() \
+((dds_sequence_DDS_XTypes_TypeIdentifierWithSize*) dds_alloc (sizeof (dds_sequence_DDS_XTypes_TypeIdentifierWithSize)));
 
-#define dds_sequence_DDS_XTypes_TypeIdentfierWithSize_allocbuf(l) \
-((DDS_XTypes_TypeIdentfierWithSize *) dds_alloc ((l) * sizeof (DDS_XTypes_TypeIdentfierWithSize)))
-#endif /* DDS_SEQUENCE_DDS_XTYPES_TYPEIDENTFIERWITHSIZE_DEFINED */
+#define dds_sequence_DDS_XTypes_TypeIdentifierWithSize_allocbuf(l) \
+((DDS_XTypes_TypeIdentifierWithSize *) dds_alloc ((l) * sizeof (DDS_XTypes_TypeIdentifierWithSize)))
+#endif /* DDS_SEQUENCE_DDS_XTYPES_TYPEIDENTIFIERWITHSIZE_DEFINED */
 
 typedef struct DDS_XTypes_TypeIdentifierWithDependencies
 {
-  DDS_XTypes_TypeIdentfierWithSize typeid_with_size;
+  DDS_XTypes_TypeIdentifierWithSize typeid_with_size;
   int32_t dependent_typeid_count;
-  dds_sequence_DDS_XTypes_TypeIdentfierWithSize dependent_typeids;
+  dds_sequence_DDS_XTypes_TypeIdentifierWithSize dependent_typeids;
 } DDS_XTypes_TypeIdentifierWithDependencies;
 
 typedef struct DDS_XTypes_TypeIdentifierWithDependenciesSeq
