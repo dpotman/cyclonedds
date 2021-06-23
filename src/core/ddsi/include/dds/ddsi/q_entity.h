@@ -260,7 +260,7 @@ struct participant
 
 #ifdef DDS_HAS_TOPIC_DISCOVERY
 struct ddsi_topic_definition {
-  // unsigned char key[16]; /* key for this topic definition (MD5 hash of the type_id and qos) */
+  unsigned char key[16]; /* key for this topic definition (MD5 hash of the type_id and qos) */
   struct tl_meta *tlm;
   struct dds_qos *xqos; /* contains also the topic name and type name */
   uint32_t refc;
@@ -798,7 +798,7 @@ dds_return_t delete_topic (struct ddsi_domaingv *gv, const struct ddsi_guid *gui
 int topic_definition_equal (const struct ddsi_topic_definition *tpd_a, const struct ddsi_topic_definition *tpd_b);
 uint32_t topic_definition_hash (const struct ddsi_topic_definition *tpd);
 dds_return_t lookup_topic_definition_by_name (struct ddsi_domaingv *gv, const char * topic_name, struct ddsi_topic_definition **tpd);
-void new_proxy_topic (struct proxy_participant *proxypp, seqno_t seq, const ddsi_guid_t *guid, const ddsi_typeid_t *type_id, struct dds_qos *qos, ddsrt_wctime_t timestamp);
+void new_proxy_topic (struct proxy_participant *proxypp, seqno_t seq, const ddsi_guid_t *guid, const ddsi_typeid_t *type_id_minimal, const ddsi_typeid_t *type_id, struct dds_qos *qos, ddsrt_wctime_t timestamp);
 struct proxy_topic *lookup_proxy_topic (struct proxy_participant *proxypp, const ddsi_guid_t *guid);
 void update_proxy_topic (struct proxy_participant *proxypp, struct proxy_topic *proxytp, seqno_t seq, struct dds_qos *xqos, ddsrt_wctime_t timestamp);
 int delete_proxy_topic_locked (struct proxy_participant *proxypp, struct proxy_topic *proxytp, ddsrt_wctime_t timestamp);

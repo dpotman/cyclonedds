@@ -227,7 +227,10 @@ static struct tl_meta * tlm_ref_impl (struct ddsi_domaingv *gv, const ddsi_typei
   if (tlm->xt == NULL || (ddsi_typeid_is_complete (tid) && !tlm->xt->has_complete_obj))
   {
     const ddsi_typeobj_t *tobj = NULL;
-    if (ddsi_typeid_is_hash (tid))
+    /* In case the identifier is a hash type identifier and the sertype is known,
+       get the typeid->typeobj mapping from the type and resolve the type object
+       for this type identifier */
+    if (ddsi_typeid_is_hash (tid) && tlm->sertype)
     {
       tmap = ddsi_sertype_typemap (tlm->sertype);
       tobj = ddsi_typemap_typeobj (tmap, tid);
@@ -240,7 +243,7 @@ static struct tl_meta * tlm_ref_impl (struct ddsi_domaingv *gv, const ddsi_typei
   if (tid_min != NULL && tid_min != tid && !tlm->xt->has_minimal_id)
   {
     const ddsi_typeobj_t *tobj = NULL;
-    if (ddsi_typeid_is_hash (tid_min))
+    if (ddsi_typeid_is_hash (tid_min) && tlm->sertype)
     {
       if (tmap == NULL)
         tmap = ddsi_sertype_typemap (tlm->sertype);
@@ -586,8 +589,20 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample
 
 ddsi_typeinfo_t *ddsi_tl_meta_to_typeinfo (const struct tl_meta *tlm)
 {
+  assert (tlm);
+
+  // FIXME: use serialized type information from sertype
   ddsi_typeinfo_t *ti = ddsrt_calloc (1, sizeof (*ti));
-  // FIXME: implement
-  (void) tlm;
+  if (!ddsi_typeid_is_none (&tlm->type_id))
+  {
+    ddsi_typeid_copy (&ti->complete.typeid_with_size.type_id, &tlm->type_id);
+    // ti->complete.typeid_with_size.typeobject_serialized_size =
+  }
+  if (!ddsi_typeid_is_none (&tlm->type_id_minimal))
+  {
+    ddsi_typeid_copy (&ti->minimal.typeid_with_size.type_id, &tlm->type_id_minimal);
+    // ti->complete.typeid_with_size.typeobject_serialized_size =
+  }
+
   return ti;
 }
