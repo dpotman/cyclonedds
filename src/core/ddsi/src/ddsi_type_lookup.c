@@ -166,8 +166,8 @@ static void tlm_init_xt_type (struct tl_meta *tlm, ddsi_typeid_t *tid_min, ddsi_
 static struct tl_meta * get_tlm (struct ddsi_domaingv *gv, const char *type_name, ddsi_typeid_t *tid_min, ddsi_typeid_t *tid)
 {
   struct tl_meta *tlm = NULL;
-  if ((tid_min && !(tlm = ddsi_tl_meta_lookup_locked (gv, tid_min, type_name)))
-    || (tid && !(tlm = ddsi_tl_meta_lookup_locked (gv, tid, type_name))))
+  if ((ddsi_typeid_is_none (tid_min) || !(tlm = ddsi_tl_meta_lookup_locked (gv, tid_min, type_name)))
+    && (ddsi_typeid_is_none (tid) || !(tlm = ddsi_tl_meta_lookup_locked (gv, tid, type_name))))
   {
     if (!tlm)
     {
@@ -176,23 +176,20 @@ static struct tl_meta * get_tlm (struct ddsi_domaingv *gv, const char *type_name
       tlm->type_name = ddsrt_strdup (type_name);
       GVTRACE (" new %p", tlm);
     }
-    else
-    {
-      assert (tlm);
-      assert (!strcmp (tlm->type_name, type_name));
-    }
-    if (tid_min && ddsi_typeid_is_none (&tlm->type_id_minimal))
-    {
-      ddsi_typeid_copy (&tlm->type_id_minimal, tid_min);
-      ddsrt_avl_insert (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, tlm);
-    }
-    if (tid && ddsi_typeid_is_none (&tlm->type_id))
-    {
-      ddsi_typeid_copy (&tlm->type_id, tid);
-      ddsrt_avl_insert (&ddsi_tl_meta_treedef, &gv->tl_admin, tlm);
-    }
-    tlm_init_xt_type (tlm, tid_min, tid);
   }
+  assert (tlm);
+  assert (!strcmp (tlm->type_name, type_name));
+  if (!ddsi_typeid_is_none (tid_min) && ddsi_typeid_is_none (&tlm->type_id_minimal))
+  {
+    ddsi_typeid_copy (&tlm->type_id_minimal, tid_min);
+    ddsrt_avl_insert (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, tlm);
+  }
+  if (!ddsi_typeid_is_none (tid) && ddsi_typeid_is_none (&tlm->type_id))
+  {
+    ddsi_typeid_copy (&tlm->type_id, tid);
+    ddsrt_avl_insert (&ddsi_tl_meta_treedef, &gv->tl_admin, tlm);
+  }
+  tlm_init_xt_type (tlm, tid_min, tid);
   return tlm;
 }
 
