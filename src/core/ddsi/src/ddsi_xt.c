@@ -93,6 +93,13 @@ void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src)
   }
 }
 
+ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src)
+{
+  ddsi_typeid_t *tid = ddsrt_malloc (sizeof (*tid));
+  ddsi_typeid_copy (tid, src);
+  return tid;
+}
+
 static int plain_collection_header_compare (struct DDS_XTypes_PlainCollectionHeader a, struct DDS_XTypes_PlainCollectionHeader b)
 {
   if (a.equiv_kind != b.equiv_kind)

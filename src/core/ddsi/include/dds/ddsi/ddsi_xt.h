@@ -29,12 +29,18 @@ extern "C" {
 #define PTYPEIDFMT "%u"
 #define PTYPEID(x) ((x)._d)
 
+typedef enum ddsi_typeid_kind {
+  TYPE_ID_KIND_MINIMAL,
+  TYPE_ID_KIND_COMPLETE
+} ddsi_typeid_kind_t;
+
 typedef DDS_XTypes_TypeIdentifier ddsi_typeid_t;
 typedef DDS_XTypes_TypeObject ddsi_typeobj_t;
 typedef DDS_XTypes_TypeInformation ddsi_typeinfo_t;
 typedef DDS_XTypes_TypeMapping ddsi_typemap_t;
 
 DDS_EXPORT void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src);
+DDS_EXPORT ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src);
 DDS_EXPORT int ddsi_typeid_compare (const ddsi_typeid_t *a, const ddsi_typeid_t *b);
 DDS_EXPORT void ddsi_typeid_ser (const ddsi_typeid_t *typeid, unsigned char **buf, uint32_t *sz);
 DDS_EXPORT void ddsi_typeid_deser (unsigned char *buf, uint32_t sz, ddsi_typeid_t **typeid);

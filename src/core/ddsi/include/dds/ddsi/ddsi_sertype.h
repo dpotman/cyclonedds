@@ -94,7 +94,7 @@ typedef bool (*ddsi_sertype_equal_t) (const struct ddsi_sertype *a, const struct
 typedef uint32_t (*ddsi_sertype_hash_t) (const struct ddsi_sertype *tp);
 
 /* Gets the type identifier of the requested kind (minimal or complete) for this sertype */
-typedef ddsi_typeid_t * (*ddsi_sertype_typeid_t) (const struct ddsi_sertype *tp, bool minimal);
+typedef ddsi_typeid_t * (*ddsi_sertype_typeid_t) (const struct ddsi_sertype *tp, ddsi_typeid_kind_t kind);
 
 /* Gets the type map for this sertype */
 typedef ddsi_typemap_t * (*ddsi_sertype_typemap_t) (const struct ddsi_sertype *tp);
@@ -215,11 +215,11 @@ DDS_EXPORT inline void *ddsi_sertype_alloc_sample (const struct ddsi_sertype *tp
 DDS_EXPORT inline void ddsi_sertype_free_sample (const struct ddsi_sertype *tp, void *sample, dds_free_op_t op) {
   ddsi_sertype_free_samples (tp, &sample, 1, op);
 }
-DDS_EXPORT inline ddsi_typeid_t * ddsi_sertype_typeid (const struct ddsi_sertype *tp, bool minimal)
+DDS_EXPORT inline ddsi_typeid_t * ddsi_sertype_typeid (const struct ddsi_sertype *tp, ddsi_typeid_kind_t kind)
 {
   if (!tp->ops->typeid)
     return NULL;
-  return tp->ops->typeid (tp, minimal);
+  return tp->ops->typeid (tp, kind);
 }
 DDS_EXPORT inline ddsi_typemap_t * ddsi_sertype_typemap (const struct ddsi_sertype *tp)
 {
