@@ -354,14 +354,15 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
 {
   bool new_topic_def = false;
   /* create or reference ktopic-sertype meta-data entry */
-  ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype_registered, false);
-  if (ddsi_typeid_is_none (tid))
+  ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype_registered, TYPE_ID_KIND_COMPLETE);
+  if (!tid)
   {
     // ddsi_typeid_none is true for both a null pointer and all-zero ids
     ddsrt_free (tid);
   }
   else
   {
+    assert (!ddsi_typeid_is_none (tid));
     struct ktopic_type_guid templ = { .type_id = tid }, *m;
     if ((m = ddsrt_hh_lookup (ktp->topic_guid_map, &templ)) == NULL)
     {
