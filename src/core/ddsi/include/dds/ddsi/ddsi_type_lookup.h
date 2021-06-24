@@ -42,18 +42,6 @@ struct participant;
 struct receiver_state;
 struct ddsi_serdata;
 
-typedef struct type_lookup_request {
-  ddsi_guid_t writer_guid;
-  seqno_t sequence_number;
-  struct DDS_XTypes_TypeIdentifierSeq type_ids;
-} type_lookup_request_t;
-
-typedef struct type_lookup_reply {
-  ddsi_guid_t writer_guid;
-  seqno_t sequence_number;
-  struct DDS_XTypes_TypeIdentifierTypeObjectPairSeq types;
-} type_lookup_reply_t;
-
 enum tl_meta_state
 {
   TL_META_NEW,
@@ -81,11 +69,6 @@ struct tl_meta {
   struct tlm_proxy_guid_list proxy_guids; /* administration for proxy endpoints (not proxy topics) that are using this type */
   uint32_t refc;                          /* refcount for this record */
 };
-
-extern const enum pserop typelookup_service_request_ops[];
-extern size_t typelookup_service_request_nops;
-extern const enum pserop typelookup_service_reply_ops[];
-extern size_t typelookup_service_reply_nops;
 
 /**
  * Reference the type lookup meta object identified by the provided type identifier

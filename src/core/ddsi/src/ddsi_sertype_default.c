@@ -60,9 +60,10 @@ static bool sertype_default_equal (const struct ddsi_sertype *acmn, const struct
   return true;
 }
 
-static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn, bool minimal)
+static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn, ddsi_typeid_kind_t kind)
 {
   assert (tpcmn);
+  assert (kind == TYPE_ID_KIND_MINIMAL || kind == TYPE_ID_KIND_COMPLETE);
   const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
   if (tp->type.typeinfo_ser.sz == 0 || tp->type.typeinfo_ser.data == NULL)
     return NULL;
@@ -70,7 +71,7 @@ static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn,
   ddsi_typeid_t *tid = NULL;
   ddsi_typeinfo_deser (tp->type.typeinfo_ser.data, tp->type.typeinfo_ser.sz, &ti);
   assert (ti);
-  if (minimal && !ddsi_typeid_is_none (&ti->minimal.typeid_with_size.type_id))
+  if (kind == TYPE_ID_KIND_MINIMAL && !ddsi_typeid_is_none (&ti->minimal.typeid_with_size.type_id))
   {
     tid = ddsrt_malloc (sizeof (*tid));
     ddsi_typeid_copy (tid, &ti->minimal.typeid_with_size.type_id);

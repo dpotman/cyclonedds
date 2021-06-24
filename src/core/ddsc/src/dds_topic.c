@@ -481,7 +481,7 @@ dds_entity_t dds_create_topic_impl (
 #ifdef DDS_HAS_TOPIC_DISCOVERY
   /* create or reference ktopic-sertype meta-data entry */
   struct ktopic_type_guid templ, *m;
-  ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype_registered, false);
+  ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype_registered, TYPE_ID_KIND_COMPLETE);
   if (tid)
   {
     assert (!ddsi_typeid_is_none (tid));

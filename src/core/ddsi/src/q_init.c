@@ -51,6 +51,8 @@
 #include "dds/ddsi/ddsi_threadmon.h"
 #include "dds/ddsi/ddsi_pmd.h"
 #include "dds/ddsi/ddsi_type_lookup.h"
+#include "dds/ddsi/ddsi_cdrstream.h"
+#include "dds/ddsi/ddsi_xt_typelookup.h"
 
 #include "dds/ddsi/ddsi_tran.h"
 #include "dds/ddsi/ddsi_udp.h"
@@ -860,6 +862,31 @@ static struct ddsi_sertype *make_special_type_plist (const char *typename, nn_pa
   return (struct ddsi_sertype *) st;
 }
 
+static struct ddsi_sertype *make_special_type_cdrstream (const struct ddsi_domaingv *gv, const char *typename, const dds_topic_descriptor_t *desc)
+{
+  struct ddsi_sertype_default *st = ddsrt_malloc (sizeof (*st));
+  memset (st, 0, sizeof (*st));
+
+  ddsi_sertype_init (&st->c, typename, &ddsi_sertype_ops_default, desc->m_nkeys ? &ddsi_serdata_ops_cdr : &ddsi_serdata_ops_cdr_nokey, (desc->m_nkeys == 0));
+#ifdef DDS_HAS_SHM
+  st->c.iox_size = desc->m_size;
+#endif
+  st->c.fixed_size = (st->c.fixed_size || (desc->m_flagset & DDS_TOPIC_FIXED_SIZE)) ? 1u : 0u;
+  st->encoding_format = ddsi_sertype_get_encoding_format (DDS_TOPIC_TYPE_EXTENSIBILITY (desc->m_flagset));
+  st->serpool = gv->serpool;
+  st->type.size = desc->m_size;
+  st->type.align = desc->m_align;
+  st->type.flagset = desc->m_flagset & DDS_TOPIC_FLAGS_MASK;
+  st->type.extensibility = (uint32_t) DDS_TOPIC_TYPE_EXTENSIBILITY (desc->m_flagset);
+  st->type.keys.nkeys = desc->m_nkeys;
+  st->type.keys.keys = ddsrt_malloc (st->type.keys.nkeys  * sizeof (*st->type.keys.keys));
+  for (uint32_t i = 0; i < st->type.keys.nkeys; i++)
+    st->type.keys.keys[i] = desc->m_keys[i].m_index;
+  st->type.ops.nops = dds_stream_countops (desc->m_ops, desc->m_nkeys, desc->m_keys);
+  st->type.ops.ops = ddsrt_memdup (desc->m_ops, st->type.ops.nops * sizeof (*st->type.ops.ops));
+  return (struct ddsi_sertype *) st;
+}
+
 static void free_special_types (struct ddsi_domaingv *gv)
 {
 #ifdef DDS_HAS_SECURITY
@@ -891,8 +918,8 @@ static void make_special_types (struct ddsi_domaingv *gv)
   gv->sedp_writer_type = make_special_type_plist ("PublicationBuiltinTopicData", PID_ENDPOINT_GUID);
   gv->pmd_type = make_special_type_pserop ("ParticipantMessageData", sizeof (ParticipantMessageData_t), participant_message_data_nops, participant_message_data_ops, participant_message_data_nops_key, participant_message_data_ops_key);
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  gv->tl_svc_request_type = make_special_type_pserop ("TypeLookup_Request", sizeof (type_lookup_request_t), typelookup_service_request_nops, typelookup_service_request_ops, 0, NULL);
-  gv->tl_svc_reply_type = make_special_type_pserop ("TypeLookup_Reply", sizeof (type_lookup_reply_t), typelookup_service_reply_nops, typelookup_service_reply_ops, 0, NULL);
+  gv->tl_svc_request_type = make_special_type_cdrstream (gv, "TypeLookup_Request", &DDS_Builtin_TypeLookup_Request_desc);
+  gv->tl_svc_reply_type = make_special_type_cdrstream (gv, "TypeLookup_Reply", &DDS_Builtin_TypeLookup_Reply_desc);
 #endif
 #ifdef DDS_HAS_TOPIC_DISCOVERY
   if (gv->config.enable_topic_discovery_endpoints)
@@ -1111,7 +1138,7 @@ static void free_conns (struct ddsi_domaingv *gv)
 static int iceoryx_init (struct ddsi_domaingv *gv)
 {
   shm_set_loglevel(gv->config.shm_log_lvl);
-  
+
   char *sptr;
   ddsrt_asprintf (&sptr, "iceoryx_rt_%"PRIdPID"_%"PRId64, ddsrt_getpid (), gv->tstart.v);
   GVLOG (DDS_LC_SHM, "Current process name for iceoryx is %s\n", sptr);
@@ -1148,7 +1175,7 @@ static int iceoryx_init (struct ddsi_domaingv *gv)
   else
   {
     int if_index;
-    
+
     // Try to avoid loopback interfaces for getting a MAC address, but if all
     // we have are loopback interfaces, then it really doesn't matter.
     for (if_index = 0; if_index < gv->n_interfaces; if_index++)

@@ -29,16 +29,14 @@ struct xt_type;
 struct ddsi_domaingv;
 
 struct xt_applied_type_annotations {
-  // FIXME
-  // struct AppliedBuiltinTypeAnnotations ann_builtin;
-  // struct AppliedAnnotationSeq ann_custom;
+  struct DDS_XTypes_AppliedBuiltinTypeAnnotations *ann_builtin;
+  struct DDS_XTypes_AppliedAnnotationSeq *ann_custom;
   long dummy;
 };
 
 struct xt_applied_member_annotations {
-  // FIXME
-  // struct AppliedBuiltinMemberAnnotations ann_builtin;
-  // struct AppliedAnnotationSeq ann_custom;
+  struct DDS_XTypes_AppliedBuiltinMemberAnnotations *ann_builtin;
+  struct DDS_XTypes_AppliedAnnotationSeq *ann_custom;
   long dummy;
 };
 
@@ -192,10 +190,11 @@ struct xt_bitmask {
 
 struct xt_type
 {
-  bool is_plain_collection;
   DDS_XTypes_EquivalenceHash minimal_hash;
   DDS_XTypes_EquivalenceHash complete_hash;
   struct DDS_XTypes_StronglyConnectedComponentId sc_component_id;
+  unsigned is_plain_collection : 1;
+  unsigned has_fully_descriptive_id : 1;
   unsigned has_minimal_id : 1;
   unsigned has_minimal_obj : 1;
   unsigned has_complete_id : 1;
@@ -251,6 +250,8 @@ void ddsi_xt_type_add (struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_t
 void ddsi_xt_type_fini (struct xt_type *xt);
 bool ddsi_xt_is_assignable_from (const struct ddsi_domaingv *gv, const struct xt_type *t1, const struct xt_type *t2);
 bool ddsi_xt_has_complete_typeid (const struct xt_type *xt);
+int ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeid_kind_t kind, ddsi_typeobj_t *to);
+int ddsi_xt_get_typeid (const struct xt_type *xt, ddsi_typeid_kind_t kind, ddsi_typeid_t *ti);
 
 #if defined (__cplusplus)
 }
