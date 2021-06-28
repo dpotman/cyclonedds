@@ -46,7 +46,6 @@ struct ddsi_sertype {
   uint32_t request_keyhash : 1;
   uint32_t fixed_size : 1;
   char *type_name;
-  struct tl_meta *tlm;
   ddsrt_atomic_voidp_t gv; /* set during registration */
   ddsrt_atomic_uint32_t flags_refc; /* counts refs from entities (topic, reader, writer), not from data */
   void *wrapped_sertopic; /* void pointer because that simplifies the required type-punning */

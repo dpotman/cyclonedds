@@ -4566,11 +4566,11 @@ dds_return_t ddsi_new_topic
   assert (tp_qos->aliased == 0);
 
   /* Set topic name, type name and type id in qos */
-  assert (type->tlm != NULL);
-  ddsi_typeid_t * tid = &type->tlm->type_id;
+  ddsi_typeid_t * tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE);
   assert (!ddsi_typeid_is_none (tid));
+  struct tl_meta *tlm = ddsi_tl_meta_lookup (gv, tid, NULL);
   tp_qos->present |= QP_TYPE_INFORMATION;
-  tp_qos->type_information = ddsi_tl_meta_to_typeinfo (type->tlm);
+  tp_qos->type_information = ddsi_tl_meta_to_typeinfo (tlm);
   set_topic_type_name (tp_qos, topic_name, type->type_name);
 
   if (gv->logconfig.c.mask & DDS_LC_DISCOVERY)
@@ -5642,13 +5642,10 @@ static struct ddsi_topic_definition * new_topic_definition (struct ddsi_domaingv
   ddsi_typeid_t *tid;
   if (type != NULL)
   {
-    if (type->tlm == NULL)
-      return NULL;
-    if (!ddsi_typeid_is_none (&type->tlm->type_id))
-      tid = &type->tlm->type_id;
-    else if (!ddsi_typeid_is_none (&type->tlm->type_id_minimal))
-      tid = &type->tlm->type_id_minimal;
-    else
+    tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE);
+    if (ddsi_typeid_is_none (tid))
+      tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_MINIMAL);
+    if (ddsi_typeid_is_none (tid))
       return NULL;
 #ifndef NDEBUG
     if (qos->present & QP_TYPE_INFORMATION)
