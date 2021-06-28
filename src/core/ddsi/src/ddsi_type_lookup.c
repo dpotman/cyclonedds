@@ -201,28 +201,22 @@ struct tl_meta * ddsi_tl_meta_local_ref (struct ddsi_domaingv *gv, const struct 
   GVTRACE (" ref tl_meta local ");
   ddsrt_mutex_lock (&gv->tl_admin_lock);
   GVTRACE (" sertype %p", type);
-  if (type->tlm != NULL)
+  ddsi_typeid_t *tid_min = ddsi_sertype_typeid (type, TYPE_ID_KIND_MINIMAL), *tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE);
+  if ((!tid_min && !tid) || !(tlm = get_tlm (gv, type->type_name, tid_min, tid)))
   {
-    tlm = type->tlm;
-    assert (!strcmp (tlm->type_name, type->type_name));
-  }
-  else
-  {
-    ddsi_typeid_t *tid_min = ddsi_sertype_typeid (type, TYPE_ID_KIND_MINIMAL), *tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE);
-    if ((!tid_min && !tid) || !(tlm = get_tlm (gv, type->type_name, tid_min, tid)))
-    {
-      ddsrt_mutex_unlock (&gv->tl_admin_lock);
-      ddsrt_free (tid_min);
-      ddsrt_free (tid);
-      return NULL;
-    }
-    tlm_init_xt_type (tlm, tid_min, tid);
+    ddsrt_mutex_unlock (&gv->tl_admin_lock);
     ddsrt_free (tid_min);
     ddsrt_free (tid);
+    return NULL;
   }
   assert (tlm);
   tlm->refc++;
   GVTRACE (" state %d refc %u", tlm->state, tlm->refc);
+
+  tlm_init_xt_type (tlm, tid_min, tid);
+  ddsrt_free (tid_min);
+  ddsrt_free (tid);
+
   if (tlm->sertype == NULL)
   {
     tlm->sertype = ddsi_sertype_ref (type);
@@ -284,46 +278,39 @@ static void tlm_unref_impl_locked (struct ddsi_domaingv *gv, struct tl_meta *tlm
   }
 }
 
-static void tlm_unref_impl (struct ddsi_domaingv *gv, const struct tl_meta *tlm, const struct ddsi_sertype *type, const ddsi_guid_t *proxy_guid)
+static void tlm_unref_impl (struct ddsi_domaingv *gv, struct tl_meta *tlm, const struct ddsi_sertype *type, const ddsi_guid_t *proxy_guid)
 {
   assert (tlm || type);
   GVTRACE ("unref tl_meta");
-  ddsi_typeid_t *tid = NULL;
-  if (tlm == NULL)
+  ddsrt_mutex_lock (&gv->tl_admin_lock);
+  GVTRACE (" sertype %p", type);
+  if (!tlm)
   {
-    GVTRACE (" sertype %p", type);
-    if (type->tlm == NULL)
-    {
-      GVTRACE (" no tlm\n");
-      return;
-    }
-    if (!ddsi_typeid_is_none (&type->tlm->type_id))
-      tid = &type->tlm->type_id;
-    else if (!ddsi_typeid_is_none (&type->tlm->type_id_minimal))
-      tid = &type->tlm->type_id_minimal;
-    else
+    ddsi_typeid_t *tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE);
+    if (ddsi_typeid_is_none (tid))
+      tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_MINIMAL);
+    if (ddsi_typeid_is_none (tid))
     {
       GVTRACE (" no typeid\n");
+      ddsrt_mutex_unlock (&gv->tl_admin_lock);
       return;
     }
+    const char *tname = tlm ? tlm->type_name : type->type_name;
+    tlm = ddsi_tl_meta_lookup_locked (gv, tid, tname);
   }
-
-  ddsrt_mutex_lock (&gv->tl_admin_lock);
-  const char *tname = tlm ? tlm->type_name : type->type_name;
-  struct tl_meta *tlm1 = tlm ? (struct tl_meta *) tlm : ddsi_tl_meta_lookup_locked (gv, tid, tname);
-  assert (tlm1 != NULL);
-  tlm_unref_impl_locked (gv, tlm1, proxy_guid);
+  assert (tlm);
+  tlm_unref_impl_locked (gv, tlm, proxy_guid);
   ddsrt_mutex_unlock (&gv->tl_admin_lock);
   GVTRACE ("\n");
 }
 
-void ddsi_tl_meta_proxy_unref (struct ddsi_domaingv *gv, const struct tl_meta *tlm, const ddsi_guid_t *proxy_guid)
+void ddsi_tl_meta_proxy_unref (struct ddsi_domaingv *gv, struct tl_meta *tlm, const ddsi_guid_t *proxy_guid)
 {
   if (tlm != NULL)
     tlm_unref_impl (gv, tlm, NULL, proxy_guid);
 }
 
-void ddsi_tl_meta_local_unref (struct ddsi_domaingv *gv, const struct tl_meta *tlm, const struct ddsi_sertype *type)
+void ddsi_tl_meta_local_unref (struct ddsi_domaingv *gv, struct tl_meta *tlm, const struct ddsi_sertype *type)
 {
   if (tlm != NULL || type != NULL)
     tlm_unref_impl (gv, tlm, type, NULL);
@@ -505,10 +492,13 @@ static void tlm_register_with_proxy_endpoints_locked (struct ddsi_domaingv *gv, 
 
 void ddsi_tl_meta_register_with_proxy_endpoints (struct ddsi_domaingv *gv, const struct ddsi_sertype *type)
 {
-  if (type->tlm != NULL && !ddsi_typeid_is_none (&type->tlm->type_id))
+  ddsi_typeid_t *tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE);
+  if (ddsi_typeid_is_none (tid))
+    tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_MINIMAL);
+  if (!ddsi_typeid_is_none (tid))
   {
     ddsrt_mutex_lock (&gv->tl_admin_lock);
-    struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, &type->tlm->type_id, type->type_name);
+    struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, tid, type->type_name);
     tlm_register_with_proxy_endpoints_locked (gv, tlm);
     ddsrt_mutex_unlock (&gv->tl_admin_lock);
   }

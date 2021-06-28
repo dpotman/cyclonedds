@@ -228,7 +228,7 @@ CU_Test(ddsc_typelookup, basic, .init = typelookup_init, .fini = typelookup_fini
 }
 
 
-CU_Test(ddsc_typelookup, api_resolve, .init = typelookup_init, .fini = typelookup_fini)
+CU_Test(ddsc_typelookup, api_resolve, .init = typelookup_init, .fini = typelookup_fini, .disabled = true)
 {
   char name[100];
   struct ddsi_sertype *sertype;
@@ -286,7 +286,7 @@ CU_Test(ddsc_typelookup, api_resolve, .init = typelookup_init, .fini = typelooku
   dds_free (type_id);
 }
 
-CU_Test(ddsc_typelookup, api_resolve_invalid, .init = typelookup_init, .fini = typelookup_fini)
+CU_Test(ddsc_typelookup, api_resolve_invalid, .init = typelookup_init, .fini = typelookup_fini, .disabled = true)
 {
   char name[100];
   struct ddsi_sertype *sertype;
@@ -321,15 +321,3 @@ CU_Test(ddsc_typelookup, api_resolve_invalid, .init = typelookup_init, .fini = t
   dds_free (type_id);
 }
 
-CU_Test(ddsc_typelookup, type_id_ser)
-{
-  ddsi_typeid_t tid = { ._d = DDS_XTypes_EK_MINIMAL, ._u.equivalence_hash = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14 } };
-  unsigned char *buf;
-  uint32_t sz;
-
-  ddsi_typeid_ser (&tid, &buf, &sz);
-  printf ("unsigned char tid[%u] = { ", sz);
-  for (uint32_t n = 0; n < sz; n++)
-    printf ("0x%02x, ", buf[n]);
-  printf ("};\n");
-}

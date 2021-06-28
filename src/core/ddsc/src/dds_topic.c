@@ -78,17 +78,14 @@ static dds_return_t dds_topic_status_validate (uint32_t mask)
 #ifdef DDS_HAS_TOPIC_DISCOVERY
 static struct ktopic_type_guid * topic_guid_map_refc_impl (const struct dds_ktopic * ktp, const struct ddsi_sertype *sertype, bool unref)
 {
-  if (sertype->tlm == NULL)
-    return NULL;
-  ddsi_typeid_t *tid = &sertype->tlm->type_id;
+  ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype, TYPE_ID_KIND_COMPLETE);
+  if (ddsi_typeid_is_none (tid))
+    tid = ddsi_sertype_typeid (sertype, TYPE_ID_KIND_MINIMAL);
   if (ddsi_typeid_is_none (tid))
     return NULL;
-  }
-
-  struct ktopic_type_guid templ;
-  memset (&templ, 0, sizeof (templ));
-  templ.type_id = tid;
-  struct ktopic_type_guid *m = ddsrt_hh_lookup (ktp->topic_guid_map, &templ);
+  struct ktopic_type_guid
+    templ = { .type_id = tid, .refc = 0, .guid = {.prefix.u = {0, 0, 0}, .entityid.u = 0}, .tp = NULL },
+    *m = ddsrt_hh_lookup (ktp->topic_guid_map, &templ);
   assert (m != NULL);
   if (unref)
     m->refc--;
@@ -531,7 +528,7 @@ dds_entity_t dds_create_topic_impl (
 
   const bool new_topic_def = register_topic_type_for_discovery (gv, pp, ktp, is_builtin, sertype_registered);
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  sertype_registered->tlm = ddsi_tl_meta_local_ref (gv, sertype_registered);
+  (void) ddsi_tl_meta_local_ref (gv, sertype_registered);
 #endif
   ddsrt_mutex_unlock (&pp->m_entity.m_mutex);
 

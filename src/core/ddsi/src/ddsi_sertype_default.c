@@ -210,15 +210,22 @@ static bool sertype_default_deserialize (struct ddsi_domaingv *gv, struct ddsi_s
 static bool sertype_default_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b)
 {
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  struct ddsi_sertype_default *a = (struct ddsi_sertype_default *) type_a;
-  struct ddsi_sertype_default *b = (struct ddsi_sertype_default *) type_b;
+  struct tl_meta *tlm_a, *tlm_b;
+  struct ddsi_domaingv *gv = ddsrt_atomic_ldvoidp (&type_a->gv);
 
   // If receiving type disables type checking, type b is assignable
+  struct ddsi_sertype_default *a = (struct ddsi_sertype_default *) type_a;
   if (a->type.flagset & DDS_TOPIC_DISABLE_TYPECHECK)
     return true;
 
-  struct ddsi_domaingv *gv = ddsrt_atomic_ldvoidp (&type_a->gv);
-  return ddsi_xt_is_assignable_from (gv, a->c.tlm->xt, b->c.tlm->xt);
+  if (!(tlm_a = ddsi_tl_meta_lookup (gv, sertype_default_typeid (type_a, TYPE_ID_KIND_MINIMAL), type_a->type_name)))
+    tlm_a = ddsi_tl_meta_lookup (gv, sertype_default_typeid (type_a, TYPE_ID_KIND_COMPLETE), type_a->type_name);
+
+  if (!(tlm_b = ddsi_tl_meta_lookup (gv, sertype_default_typeid (type_b, TYPE_ID_KIND_MINIMAL), type_b->type_name)))
+    tlm_b = ddsi_tl_meta_lookup (gv, sertype_default_typeid (type_b, TYPE_ID_KIND_COMPLETE), type_b->type_name);
+
+  assert (tlm_a && tlm_b);
+  return ddsi_xt_is_assignable_from (gv, tlm_a->xt, tlm_b->xt);
 #else
   DDSRT_UNUSED_ARG (type_a);
   DDSRT_UNUSED_ARG (type_b);
