@@ -618,8 +618,8 @@ static dds_return_t ser_type_information (struct nn_xmsg *xmsg, nn_parameterid_t
     dds_stream_writeBE ((dds_ostreamBE_t *) &os, (const void *) *x, DDS_XTypes_TypeInformation_desc.m_ops);
   else
     dds_stream_write (&os, (const void *) *x, DDS_XTypes_TypeInformation_desc.m_ops);
-  char * const p = nn_xmsg_addpar_bo (xmsg, pid, os.m_size, bo);
-  memcpy (p, os.m_buffer, os.m_size);
+  char * const p = nn_xmsg_addpar_bo (xmsg, pid, os.m_index, bo);
+  memcpy (p, os.m_buffer, os.m_index);
   return 0;
 }
 
