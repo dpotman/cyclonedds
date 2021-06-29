@@ -2012,8 +2012,6 @@ const uint32_t *dds_stream_normalize1 (char * __restrict data, uint32_t * __rest
   return ops;
 }
 
-static bool stream_normalize_key_impl (void * __restrict data, uint32_t size, uint32_t *offs, bool bswap, uint32_t xcdr_version, const uint32_t *insnp, uint16_t key_offset_count, const uint32_t * key_offset_insn);
-
 static bool stream_normalize_key_impl (void * __restrict data, uint32_t size, uint32_t *offs, bool bswap, uint32_t xcdr_version, const uint32_t *insnp, uint16_t key_offset_count, const uint32_t * key_offset_insn)
 {
   assert (insn_key_ok_p (*insnp));
@@ -3112,6 +3110,34 @@ size_t dds_stream_print_sample (dds_istream_t * __restrict is, const struct ddsi
   return bufsize;
 }
 
+static size_t dds_stream_print_key_impl (dds_istream_t * __restrict is, const uint32_t *op, uint16_t key_offset_count, const uint32_t * key_offset_insn,
+  char * __restrict buf, size_t bufsize, bool *cont)
+{
+  assert (insn_key_ok_p (*op));
+  assert (cont);
+  switch (DDS_OP_TYPE (*op))
+  {
+    case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: case DDS_OP_VAL_ENU:
+    case DDS_OP_VAL_STR: case DDS_OP_VAL_BST: case DDS_OP_VAL_BSP:
+      *cont = prtf_simple (&buf, &bufsize, is, DDS_OP_TYPE (*op), DDS_OP_FLAGS (*op));
+      break;
+    case DDS_OP_VAL_ARR:
+      *cont = prtf_simple_array (&buf, &bufsize, is, op[2], DDS_OP_SUBTYPE (*op), DDS_OP_FLAGS (*op));
+      break;
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
+      abort ();
+      break;
+    case DDS_OP_VAL_EXT:
+    {
+      assert (key_offset_count > 0);
+      const uint32_t *jsr_ops = op + DDS_OP_ADR_JSR (op[2]) + *key_offset_insn;
+      dds_stream_print_key_impl (is, jsr_ops, --key_offset_count, ++key_offset_insn, buf, bufsize, cont);
+      break;
+    }
+  }
+  return bufsize;
+}
+
 size_t dds_stream_print_key (dds_istream_t * __restrict is, const struct ddsi_sertype_default * __restrict type, char * __restrict buf, size_t bufsize)
 {
   const struct ddsi_sertype_default_desc *desc = &type->type;
@@ -3119,17 +3145,18 @@ size_t dds_stream_print_key (dds_istream_t * __restrict is, const struct ddsi_se
   for (uint32_t i = 0; cont && i < desc->keys.nkeys; i++)
   {
     const uint32_t *op = desc->ops.ops + desc->keys.keys[i];
-    assert (insn_key_ok_p (*op));
-    switch (DDS_OP_TYPE (*op))
+    switch (DDS_OP (*op))
     {
-      case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: case DDS_OP_VAL_ENU:
-      case DDS_OP_VAL_STR: case DDS_OP_VAL_BST: case DDS_OP_VAL_BSP:
-        cont = prtf_simple (&buf, &bufsize, is, DDS_OP_TYPE (*op), DDS_OP_FLAGS (*op));
+      case DDS_OP_KOF: {
+        uint16_t n_offs = DDS_OP_LENGTH (*op);
+        dds_stream_print_key_impl (is, desc->ops.ops + op[1], --n_offs, op + 2, buf, bufsize, &cont);
         break;
-      case DDS_OP_VAL_ARR:
-        cont = prtf_simple_array (&buf, &bufsize, is, op[2], DDS_OP_SUBTYPE (*op), DDS_OP_FLAGS (*op));
+      }
+      case DDS_OP_ADR: {
+        dds_stream_print_key_impl (is, op, 0, NULL, buf, bufsize, &cont);
         break;
-      case DDS_OP_VAL_SEQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: case DDS_OP_VAL_EXT:
+      }
+      default:
         abort ();
         break;
     }
