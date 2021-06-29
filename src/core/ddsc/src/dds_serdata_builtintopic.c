@@ -315,7 +315,7 @@ static bool to_sample_endpoint (const struct ddsi_serdata_builtintopic_endpoint 
       sample->qos->type_information = NULL;
       sample->qos->present |= QP_TYPE_INFORMATION;
     }
-    // FIXME: always overwrite value from dtp->common.xqos?
+    // FIXME: always overwrite value from dep->common.xqos?
     sample->qos->type_information = dds_mem_dup_reuse (sample->qos->type_information, &dep->type_id, sizeof (*sample->qos->type_information));
 #endif
   }
