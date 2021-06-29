@@ -113,7 +113,7 @@ static void topic_guid_map_unref (struct ddsi_domaingv * const gv, const struct 
     thread_state_awake (lookup_thread_state (), gv);
     (void) delete_topic (gv, &m->guid);
     thread_state_asleep (lookup_thread_state ());
-    ddsrt_free ((ddsi_typeid_t *) m->type_id);
+    ddsrt_free (m->type_id);
     ddsrt_free (m);
   }
 }
@@ -368,8 +368,8 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
       const struct ddsi_guid * ppguid = dds_entity_participant_guid (&pp->m_entity);
       struct participant * pp_ddsi = entidx_lookup_participant_guid (gv->entity_index, ppguid);
 
-      m->type_id = ddsrt_malloc (sizeof (*m->type_id));
-      ddsi_typeid_copy (m->type_id, tid);
+      m = ddsrt_malloc (sizeof (*m));
+      m->type_id = ddsi_typeid_dup (tid);
       m->refc = 1;
       dds_return_t rc = ddsi_new_topic (&m->tp, &m->guid, pp_ddsi, ktp->name, sertype_registered, ktp->qos, is_builtin, &new_topic_def);
       assert (rc == DDS_RETCODE_OK); /* FIXME: can be out-of-resources at the very least */
@@ -526,10 +526,11 @@ dds_entity_t dds_create_topic_impl (
   ddsi_sertype_unref (*sertype);
   *sertype = sertype_registered;
 
-  const bool new_topic_def = register_topic_type_for_discovery (gv, pp, ktp, is_builtin, sertype_registered);
 #ifdef DDS_HAS_TYPE_DISCOVERY
   (void) ddsi_tl_meta_local_ref (gv, sertype_registered);
 #endif
+
+  const bool new_topic_def = register_topic_type_for_discovery (gv, pp, ktp, is_builtin, sertype_registered);
   ddsrt_mutex_unlock (&pp->m_entity.m_mutex);
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
@@ -731,6 +732,7 @@ static dds_entity_t find_local_topic_pp (dds_participant *pp, const char *name, 
   // at our leisure.
   struct dds_topic *tp = NULL;
   ddsrt_avl_iter_t it;
+  struct ddsi_domaingv * const gv = &pp_topic->m_entity.m_domain->gv;
 
   ddsrt_mutex_lock (&pp->m_entity.m_mutex);
   for (dds_entity *e_pp_child = ddsrt_avl_iter_first (&dds_entity_children_td, &pp->m_entity.m_children, &it); e_pp_child != NULL; e_pp_child = ddsrt_avl_iter_next (&it))
@@ -788,7 +790,6 @@ static dds_entity_t find_local_topic_pp (dds_participant *pp, const char *name, 
     // get here and so it would no longer necessarily be accounted for in the refcount of
     // the sertype.
     {
-      struct ddsi_domaingv * const gv = &pp_topic->m_entity.m_domain->gv;
       ddsrt_mutex_lock (&gv->sertypes_lock);
       assert (ddsrt_hh_lookup (gv->sertypes, sertype) == sertype);
       ddsrt_mutex_unlock (&gv->sertypes_lock);
@@ -799,9 +800,6 @@ static dds_entity_t find_local_topic_pp (dds_participant *pp, const char *name, 
 #endif
 
     dds_topic_unpin (tp);
-#ifdef DDS_HAS_TYPE_DISCOVERY
-    ddsi_tl_meta_local_ref (gv, sertype);
-#endif
     return hdl;
   }
 }
