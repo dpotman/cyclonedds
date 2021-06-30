@@ -23,7 +23,7 @@
 extern "C" {
 #endif
 
-#define XT_FLAG_EXTENSIBILITY_MASK  0x4
+#define XT_FLAG_EXTENSIBILITY_MASK  0x7
 
 struct xt_type;
 struct ddsi_domaingv;
@@ -190,15 +190,17 @@ struct xt_bitmask {
 
 struct xt_type
 {
-  DDS_XTypes_EquivalenceHash minimal_hash;
-  DDS_XTypes_EquivalenceHash complete_hash;
+  ddsi_typeid_t type_id_minimal;
+  ddsi_typeid_t type_id;
   struct DDS_XTypes_StronglyConnectedComponentId sc_component_id;
   unsigned is_plain_collection : 1;
   unsigned has_fully_descriptive_id : 1;
   unsigned has_minimal_id : 1;
   unsigned has_minimal_obj : 1;
+  unsigned minimal_obj_req : 1;     // pending request for minimal type object
   unsigned has_complete_id : 1;
   unsigned has_complete_obj : 1;
+  unsigned complete_obj_req : 1;    // pending request for complete type object
 
   uint8_t _d;
   union {

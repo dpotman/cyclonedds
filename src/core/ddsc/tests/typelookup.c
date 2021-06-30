@@ -87,14 +87,14 @@ static void get_type(dds_entity_t entity, ddsi_typeid_t **type_id, char **type_n
   {
     struct generic_proxy_endpoint *gpe = (struct generic_proxy_endpoint *)ec;
     CU_ASSERT_FATAL (gpe->c.tlm != NULL);
-    ddsi_typeid_copy (*type_id, &gpe->c.tlm->type_id);
+    ddsi_typeid_copy (*type_id, &gpe->c.tlm->xt->type_id);
     *type_name = ddsrt_strdup (gpe->c.tlm->type_name);
   }
   else if (ec->kind == EK_READER || ec->kind == EK_WRITER)
   {
     struct generic_endpoint *ge = (struct generic_endpoint *)ec;
     CU_ASSERT_FATAL (ge->c.tlm != NULL);
-    ddsi_typeid_copy (*type_id, &ge->c.tlm->type_id);
+    ddsi_typeid_copy (*type_id, &ge->c.tlm->xt->type_id);
     *type_name = ddsrt_strdup (ge->c.tlm->type_name);
   }
   thread_state_asleep (lookup_thread_state ());
