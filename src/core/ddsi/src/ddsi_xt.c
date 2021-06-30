@@ -107,7 +107,7 @@ static int plain_collection_header_compare (struct DDS_XTypes_PlainCollectionHea
   return a.element_flags > b.element_flags ? 1 : -1;
 }
 
-static int equivalence_hash_compare (const DDS_XTypes_EquivalenceHash *a, const DDS_XTypes_EquivalenceHash *b)
+static int equivalence_hash_compare (const DDS_XTypes_EquivalenceHash a, const DDS_XTypes_EquivalenceHash b)
 {
   return memcmp (a, b, sizeof (*a));
 }
@@ -116,7 +116,7 @@ static int type_object_hashid_compare (struct DDS_XTypes_TypeObjectHashId a, str
 {
   if (a._d != b._d)
     return a._d > b._d ? 1 : -1;
-  return equivalence_hash_compare (&a._u.hash, &b._u.hash);
+  return equivalence_hash_compare (a._u.hash, b._u.hash);
 }
 
 static int strong_connected_component_id_compare (struct DDS_XTypes_StronglyConnectedComponentId a, struct DDS_XTypes_StronglyConnectedComponentId b)
@@ -203,7 +203,7 @@ int ddsi_typeid_compare (const ddsi_typeid_t *a, const ddsi_typeid_t *b)
       return strong_connected_component_id_compare (a->_u.sc_component_id, b->_u.sc_component_id);
     case DDS_XTypes_EK_COMPLETE:
     case DDS_XTypes_EK_MINIMAL:
-      return equivalence_hash_compare (&a->_u.equivalence_hash, &b->_u.equivalence_hash);
+      return equivalence_hash_compare (a->_u.equivalence_hash, b->_u.equivalence_hash);
     default:
       assert (false);
       return 1;

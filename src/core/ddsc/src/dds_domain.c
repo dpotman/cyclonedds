@@ -140,7 +140,7 @@ static dds_entity_t dds_domain_init (dds_domain *domain, dds_domainid_t domain_i
   // TODO: isolate the shm runtime creation in a separate function
 
   // create the shared memory monitor based on iceoryx
-  if (domain->gv.config.enable_shm) 
+  if (domain->gv.config.enable_shm)
   {
     shm_monitor_init(&domain->m_shm_monitor);
   }
@@ -464,7 +464,7 @@ dds_return_t dds_domain_resolve_type (dds_entity_t entity, const ddsi_typeid_t *
     rc = DDS_RETCODE_PRECONDITION_NOT_MET;
     goto failed;
   }
-  if (tlm->state == TL_META_RESOLVED)
+  if (tlm->sertype)
   {
     *sertype = ddsi_sertype_ref (tlm->sertype);
     ddsrt_mutex_unlock (&gv->tl_admin_lock);
@@ -488,12 +488,15 @@ dds_return_t dds_domain_resolve_type (dds_entity_t entity, const ddsi_typeid_t *
     const dds_time_t abstimeout = (DDS_INFINITY - timeout <= tnow) ? DDS_NEVER : (tnow + timeout);
     *sertype = NULL;
     ddsrt_mutex_lock (&gv->tl_admin_lock);
-    while (tlm->state != TL_META_RESOLVED)
+
+    while ((ddsi_typeid_is_minimal (type_id) && !tlm->xt->has_minimal_obj)
+            || (ddsi_typeid_is_complete (type_id) && !tlm->xt->has_complete_obj))
     {
       if (!ddsrt_cond_waituntil (&gv->tl_resolved_cond, &gv->tl_admin_lock, abstimeout))
         break;
     }
-    if (tlm->state == TL_META_RESOLVED)
+    // FIXME: tlm->xt->has_complete_object should result in tlm getting a (dynamiccaly generated) sertype
+    if (tlm->xt->has_complete_obj)
     {
       assert (tlm->sertype != NULL);
       *sertype = ddsi_sertype_ref (tlm->sertype);

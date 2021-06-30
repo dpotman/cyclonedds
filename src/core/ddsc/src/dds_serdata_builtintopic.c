@@ -123,7 +123,7 @@ static void from_entity_rd (struct ddsi_serdata_builtintopic_endpoint *d, const 
   d->pphandle = rd->c.pp->e.iid;
 #ifdef DDS_HAS_TYPE_DISCOVERY
   if (rd->c.tlm)
-    d->type_id = rd->c.tlm->type_id;
+    d->type_id = rd->c.tlm->xt->type_id;
 #endif
   from_qos (&d->common, rd->xqos);
 }
@@ -133,7 +133,7 @@ static void from_entity_wr (struct ddsi_serdata_builtintopic_endpoint *d, const 
   d->pphandle = wr->c.pp->e.iid;
 #ifdef DDS_HAS_TYPE_DISCOVERY
   if (wr->c.tlm)
-    d->type_id = wr->c.tlm->type_id;
+    d->type_id = wr->c.tlm->xt->type_id;
 #endif
   from_qos (&d->common, wr->xqos);
 }
@@ -143,7 +143,7 @@ static void from_proxy_endpoint_common (struct ddsi_serdata_builtintopic_endpoin
   d->pphandle = pec->proxypp->e.iid;
 #ifdef DDS_HAS_TYPE_DISCOVERY
   if (pec->tlm)
-    d->type_id = pec->tlm->type_id;
+    d->type_id = pec->tlm->xt->type_id;
 #endif
   from_qos (&d->common, pec->xqos);
 }
@@ -430,7 +430,7 @@ struct ddsi_serdata *dds_serdata_builtin_from_topic_definition (const struct dds
   memcpy (&d->common.key.raw, key, sizeof (d->common.key.raw));
   if (tpd != NULL && kind == SDK_DATA)
   {
-    d->type_id = tpd->tlm->type_id;
+    d->type_id = tpd->tlm->xt->type_id;
     from_qos (&d->common, tpd->xqos);
   }
   return fix_serdata_builtin (&d->common, DSBT_TOPIC, tp->c.serdata_basehash);

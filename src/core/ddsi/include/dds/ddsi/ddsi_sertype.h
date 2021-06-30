@@ -28,6 +28,7 @@ struct ddsi_serdata_ops;
 struct ddsi_sertype_ops;
 struct ddsi_domaingv;
 struct ddsi_typeid_t;
+struct xt_type;
 
 #define DDSI_SERTYPE_REGISTERING 0x40000000u // set prior to setting gv
 #define DDSI_SERTYPE_REGISTERED  0x80000000u // set after setting gv
@@ -124,7 +125,7 @@ typedef bool (*ddsi_sertype_serialize_t) (const struct ddsi_sertype *d, size_t *
 typedef bool (*ddsi_sertype_deserialize_t) (struct ddsi_domaingv *gv, struct ddsi_sertype *d, size_t src_sz, const unsigned char *src_data, size_t *src_offset);
 
 /* Check if (an object of) type a is assignable from (an object of) the type b */
-typedef bool (*ddsi_sertype_assignable_from_t) (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b);
+typedef bool (*ddsi_sertype_assignable_from_t) (const struct ddsi_sertype *type_a, const struct xt_type *xt_b);
 
 struct ddsi_sertype_v0;
 typedef void (*ddsi_sertype_v0_t) (struct ddsi_sertype_v0 *dummy);
@@ -232,19 +233,22 @@ DDS_EXPORT inline const ddsi_sertype_cdr_data_t * ddsi_sertype_typeinfo_ser (con
     return NULL;
   return tp->ops->typeinfo_ser (tp);
 }
-DDS_EXPORT inline bool ddsi_sertype_assignable_from (const struct ddsi_sertype *type_a, const struct ddsi_sertype *type_b) {
-  /* If one of the types does not have a assignability check function
+DDS_EXPORT inline bool ddsi_sertype_assignable_from (const struct ddsi_sertype *type_a, const struct xt_type *xt_b) {
+  /* If type_a does not have a assignability check function
      (e.g. because it is an older sertype implementation), consider
      the types as assignable */
-  if (!type_a->ops->assignable_from || !type_b->ops->assignable_from)
+  if (!type_a->ops->assignable_from)
     return true;
+
   /* In case the types have a different assignable_from function,
      we currently don't have a proper way to check type assignability,
      so we'll consider the types as not-assignable */
-  if (type_a->ops->assignable_from != type_b->ops->assignable_from)
-    return false;
 
-  return type_a->ops->assignable_from (type_a, type_b);
+  // FIXME: remove this???
+  // if (type_a->ops->assignable_from != type_b->ops->assignable_from)
+  //   return false;
+
+  return type_a->ops->assignable_from (type_a, xt_b);
 }
 
 #if defined (__cplusplus)

@@ -19,8 +19,8 @@
 #include "dds/ddsrt/time.h"
 #include "dds/ddsrt/hopscotch.h"
 #include "dds/ddsrt/mh3.h"
-#include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_serdata.h"
+#include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_plist_generic.h"
 #include "dds/ddsi/ddsi_guid.h"
 #include "dds/ddsi/ddsi_xqos.h"
@@ -41,13 +41,7 @@ struct nn_xpack;
 struct participant;
 struct receiver_state;
 struct ddsi_serdata;
-
-enum tl_meta_state
-{
-  TL_META_NEW,
-  TL_META_REQUESTED,
-  TL_META_RESOLVED
-};
+struct ddsi_sertype;
 
 #define NOARG
 DDSI_LIST_TYPES_TMPL(tlm_proxy_guid_list, ddsi_guid_t, NOARG, 32)
@@ -59,11 +53,8 @@ extern const ddsrt_avl_treedef_t ddsi_tl_meta_treedef;
 struct tl_meta {
   ddsrt_avl_node_t avl_node_minimal;
   ddsrt_avl_node_t avl_node;
-  ddsi_typeid_t type_id_minimal;
-  ddsi_typeid_t type_id;
   const char *type_name;
   struct xt_type *xt;                     /* type wrapper */
-  enum tl_meta_state state;               /* state of this record */
   const struct ddsi_sertype *sertype;     /* sertype associated with the type identifier, NULL if type is unresolved or not a top-level type */
   seqno_t request_seqno;                  /* sequence number of the last type lookup request message */
   struct tlm_proxy_guid_list proxy_guids; /* administration for proxy endpoints (not proxy topics) that are using this type */
@@ -74,7 +65,7 @@ struct tl_meta {
  * Reference the type lookup meta object identified by the provided type identifier
  * and register the proxy endpoint with this entry.
  */
-struct tl_meta * ddsi_tl_meta_proxy_ref (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id, const char *type_name, const ddsi_guid_t *proxy_ep_guid);
+struct tl_meta * ddsi_tl_meta_proxy_ref (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id_minimal, const ddsi_typeid_t *type_id, const char *type_name, const ddsi_guid_t *proxy_guid);
 
 /**
  * Reference the type lookup meta object identifier by the provided type identifier
