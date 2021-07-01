@@ -31,13 +31,11 @@ struct ddsi_domaingv;
 struct xt_applied_type_annotations {
   struct DDS_XTypes_AppliedBuiltinTypeAnnotations *ann_builtin;
   struct DDS_XTypes_AppliedAnnotationSeq *ann_custom;
-  long dummy;
 };
 
 struct xt_applied_member_annotations {
   struct DDS_XTypes_AppliedBuiltinMemberAnnotations *ann_builtin;
   struct DDS_XTypes_AppliedAnnotationSeq *ann_custom;
-  long dummy;
 };
 
 struct xt_type_detail {
@@ -47,6 +45,7 @@ struct xt_type_detail {
 
 struct xt_member_detail {
   DDS_XTypes_MemberName name;
+  DDS_XTypes_NameHash name_hash;
   struct xt_applied_member_annotations annotations;
 };
 
@@ -91,6 +90,12 @@ struct xt_annotation_member {
   struct xt_type *member_type;
   struct DDS_XTypes_AnnotationParameterValue default_value;
 };
+struct xt_annotation_parameter {
+  struct xt_type *member_type;
+  DDS_XTypes_MemberName name;
+  DDS_XTypes_NameHash name_hash;
+  struct DDS_XTypes_AnnotationParameterValue default_value;
+};
 struct xt_annotation_parameter_seq {
   uint32_t length;
   struct xt_annotation_parameter *seq;
@@ -104,7 +109,6 @@ struct xt_struct_member {
   DDS_XTypes_MemberId id;
   DDS_XTypes_StructMemberFlag flags;
   struct xt_type *type;
-  DDS_XTypes_NameHash name_hash;
   struct xt_member_detail detail;
 };
 struct xt_struct_member_seq {
@@ -123,7 +127,6 @@ struct xt_union_member {
   DDS_XTypes_UnionMemberFlag flags;
   struct xt_type *type;
   struct DDS_XTypes_UnionCaseLabelSeq label_seq;
-  DDS_XTypes_NameHash name_hash;
   struct xt_member_detail detail;
 };
 struct xt_union_member_seq {
@@ -143,7 +146,6 @@ struct xt_bitfield {
   uint16_t position;
   uint8_t bitcount;
   DDS_XTypes_TypeKind holder_type; // Must be primitive integer type
-  DDS_XTypes_NameHash name_hash;
   struct xt_member_detail detail;
 };
 struct xt_bitfield_seq {
@@ -158,7 +160,6 @@ struct xt_bitset {
 struct xt_enum_literal {
   int32_t value;
   DDS_XTypes_EnumeratedLiteralFlag flags;
-  DDS_XTypes_NameHash name_hash;
   struct xt_member_detail detail;
 };
 struct xt_enum_literal_seq {
@@ -166,7 +167,7 @@ struct xt_enum_literal_seq {
   struct xt_enum_literal *seq;
 };
 struct xt_enum {
-  DDS_XTypes_EnumTypeFlag flags;
+  DDS_XTypes_EnumTypeFlag flags;  // spec says unused, but this flag is actually used for extensibility
   DDS_XTypes_BitBound bit_bound;
   struct xt_enum_literal_seq literals;
   struct xt_type_detail detail;
@@ -174,7 +175,6 @@ struct xt_enum {
 
 struct xt_bitflag {
   uint16_t position;
-  DDS_XTypes_NameHash name_hash;
   struct xt_member_detail detail;
 };
 struct xt_bitflag_seq {
@@ -182,7 +182,7 @@ struct xt_bitflag_seq {
   struct xt_bitflag *seq;
 };
 struct xt_bitmask {
-  DDS_XTypes_BitmaskTypeFlag flags;
+  DDS_XTypes_BitmaskTypeFlag flags;  // spec says unused, but this flag is actually used for extensibility
   DDS_XTypes_BitBound bit_bound;
   struct xt_bitflag_seq bitflags;
   struct xt_type_detail detail;
@@ -252,8 +252,7 @@ void ddsi_xt_type_add (struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_t
 void ddsi_xt_type_fini (struct xt_type *xt);
 bool ddsi_xt_is_assignable_from (const struct ddsi_domaingv *gv, const struct xt_type *t1, const struct xt_type *t2);
 bool ddsi_xt_has_complete_typeid (const struct xt_type *xt);
-int ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeid_kind_t kind, ddsi_typeobj_t *to);
-int ddsi_xt_get_typeid (const struct xt_type *xt, ddsi_typeid_kind_t kind, ddsi_typeid_t *ti);
+void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeid_kind_t kind, ddsi_typeobj_t *to);
 
 #if defined (__cplusplus)
 }

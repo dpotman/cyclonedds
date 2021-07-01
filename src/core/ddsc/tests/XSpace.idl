@@ -13,14 +13,14 @@
 module XSpace {
     @appendable
     struct XType1 {
-	    long	long_1;
-	    long	long_2;
+	    @id(1) long long_1;
+	    @id(2) long long_2;
+	    @id(3) long long_3;
     };
 
     @appendable
     struct XType2 {
-    	long	long_1;
-	    long	long_2;
-	    long	long_3;
+    	@id(1) long long_1;
+	    @id(2) long long_2;
     };
 };

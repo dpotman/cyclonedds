@@ -188,7 +188,15 @@ get_fully_descriptive_typeid (DDS_XTypes_TypeIdentifier *ti, const idl_type_spec
       case IDL_DOUBLE: ti->_d = DDS_XTypes_TK_FLOAT64; break;
       case IDL_LDOUBLE: ti->_d = DDS_XTypes_TK_FLOAT128; break;
       case IDL_CHAR: ti->_d = DDS_XTypes_TK_CHAR8; break;
-      case IDL_STRING: ti->_d = DDS_XTypes_TK_STRING8; break;
+      case IDL_STRING:
+      {
+        const idl_string_t *str = (const idl_string_t *) type_spec;
+        if (str->maximum == 0 /* FIXME: unbounded == 0 ? */ || str->maximum < 256)
+          ti->_d = DDS_XTypes_TI_STRING8_SMALL;
+        else
+          ti->_d = DDS_XTypes_TI_STRING8_LARGE;
+        break;
+      }
       case IDL_SEQUENCE:
       {
         const idl_sequence_t *seq = (const idl_sequence_t *) type_spec;
