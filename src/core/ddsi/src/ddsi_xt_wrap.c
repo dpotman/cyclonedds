@@ -312,8 +312,8 @@ static void ddsi_xt_get_typeid (const struct xt_type *xt, ddsi_typeid_kind_t kin
     ddsi_typeid_copy (ti, &xt->type_id);
   else
   {
-    assert ((kind == TYPE_ID_KIND_MINIMAL && !xt->has_minimal_id)
-        || (kind == TYPE_ID_KIND_COMPLETE && !xt->has_complete_id));
+    assert ((kind == TYPE_ID_KIND_MINIMAL && xt->has_minimal_id)
+        || (kind == TYPE_ID_KIND_COMPLETE && xt->has_complete_id));
     if (kind == TYPE_ID_KIND_MINIMAL)
       ddsi_typeid_copy (ti, &xt->type_id_minimal);
     else if (kind == TYPE_ID_KIND_COMPLETE)
