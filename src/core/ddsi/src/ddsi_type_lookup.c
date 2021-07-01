@@ -318,12 +318,6 @@ void ddsi_tl_meta_local_unref (struct ddsi_domaingv *gv, struct tl_meta *tlm, co
     tlm_unref_impl (gv, tlm, type, NULL);
 }
 
-static int ddsi_tl_meta_get_typeobject (const struct tl_meta *tlm, ddsi_typeid_kind_t kind, ddsi_typeobj_t *type_obj)
-{
-  assert (type_obj);
-  return ddsi_xt_get_typeobject (tlm->xt, kind, type_obj);
-}
-
 static struct writer *get_typelookup_writer (const struct ddsi_domaingv *gv, uint32_t wr_eid)
 {
   struct participant *pp;
@@ -458,7 +452,7 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
     {
       types._buffer = ddsrt_realloc (types._buffer, (types._length + 1) * sizeof (*types._buffer));
       ddsi_typeid_copy (&types._buffer[types._length].type_identifier, tid);
-      ddsi_tl_meta_get_typeobject (tlm, ddsi_typeid_is_minimal (tid) ? TYPE_ID_KIND_MINIMAL : TYPE_ID_KIND_COMPLETE, &types._buffer[types._length].type_object);
+      ddsi_xt_get_typeobject (tlm->xt, ddsi_typeid_is_minimal (tid) ? TYPE_ID_KIND_MINIMAL : TYPE_ID_KIND_COMPLETE, &types._buffer[types._length].type_object);
       types._length++;
     }
   }
@@ -517,6 +511,30 @@ void ddsi_tl_meta_register_with_proxy_endpoints (struct ddsi_domaingv *gv, const
   }
 }
 
+static void get_gpe_matches (struct ddsi_domaingv *gv, struct tl_meta *tlm, struct generic_proxy_endpoint ***gpe_match_upd, uint32_t *n_match_upd, bool *resolved)
+{
+  if (tlm_proxy_guid_list_count (&tlm->proxy_guids) > 0)
+  {
+    *gpe_match_upd = ddsrt_realloc (*gpe_match_upd, (*n_match_upd + tlm_proxy_guid_list_count (&tlm->proxy_guids)) * sizeof (**gpe_match_upd));
+    struct tlm_proxy_guid_list_iter it;
+    for (ddsi_guid_t guid = tlm_proxy_guid_list_iter_first (&tlm->proxy_guids, &it); !is_null_guid (&guid); guid = tlm_proxy_guid_list_iter_next (&it))
+    {
+      if (!is_topic_entityid (guid.entityid))
+      {
+        struct entity_common *ec = entidx_lookup_guid_untyped (gv->entity_index, &guid);
+        if (ec != NULL)
+        {
+          assert (ec->kind == EK_PROXY_READER || ec->kind == EK_PROXY_WRITER);
+          (*gpe_match_upd)[(*n_match_upd)++] = (struct generic_proxy_endpoint *) ec;
+        }
+      }
+    }
+    tlm_register_with_proxy_endpoints_locked (gv, tlm);
+    if (resolved)
+      *resolved = true;
+  }
+}
+
 void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
 {
   struct generic_proxy_endpoint **gpe_match_upd = NULL;
@@ -538,19 +556,36 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
     // FIXME: in case of minimal type id resolved, update all records with this id if more exist?
     // FIXME: in case tlm record exists with minimal type info, update if complete type info received
 
-    struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, &r.type_identifier, NULL);
-    if (tlm
-      && ((ddsi_typeid_is_minimal (&r.type_identifier) && tlm->xt->minimal_obj_req)
-          || (ddsi_typeid_is_complete (&r.type_identifier) && tlm->xt->complete_obj_req))
-      && tlm_proxy_guid_list_count (&tlm->proxy_guids) > 0)
+    if (ddsi_typeid_is_minimal (&r.type_identifier))
     {
-      // FIXME
-      // GVTRACE (" type "PTYPEIDFMT, PTYPEID (*r.type_identifier));
-
-      ddsi_xt_type_add (tlm->xt, &r.type_identifier, &r.type_object);
-
-      if (ddsi_typeid_is_complete (&r.type_identifier))
+      ddsrt_avl_iter_t it;
+      struct tl_meta templ;
+      memset (&templ, 0, sizeof (templ));
+      templ.xt = ddsrt_malloc (sizeof (*templ.xt));
+      for (struct tl_meta *tlm = ddsrt_avl_iter_succ_eq (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, &it, &templ); tlm != NULL; tlm = ddsrt_avl_iter_next (&it))
       {
+        if (tlm->xt->minimal_obj_req || !tlm->xt->has_minimal_obj)
+        {
+          // FIXME
+          // GVTRACE (" type "PTYPEIDFMT, PTYPEID (*r.type_identifier));
+          ddsi_xt_type_add (tlm->xt, &r.type_identifier, &r.type_object);
+          tlm->xt->minimal_obj_req = 0;
+
+          /* don't set resolved when a minimal type object is received, because
+             only when getting a complete type object a sertype (and thus a topic)
+             can be constructed, so find_topic should be triggered */
+          get_gpe_matches (gv, tlm, &gpe_match_upd, &n_match_upd, NULL);
+        }
+      }
+    }
+    else
+    {
+      struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, &r.type_identifier, NULL);
+      if (tlm && (tlm->xt->complete_obj_req || !tlm->xt->has_complete_obj))
+      {
+        // FIXME
+        // GVTRACE (" type "PTYPEIDFMT, PTYPEID (*r.type_identifier));
+        ddsi_xt_type_add (tlm->xt, &r.type_identifier, &r.type_object);
         tlm->xt->complete_obj_req = 0;
 
         // FIXME: create sertype from received (complete) type object, check if it exists and register if not
@@ -566,27 +601,9 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
         // ddsi_sertype_unref_locked (gv, &st->c); // unref because both init_from_ser and sertype_lookup/register refcounts the type
         // ddsrt_mutex_unlock (&gv->sertypes_lock);
         // tlm->sertype = &st->c; // refcounted by sertype_register/lookup
+
+        get_gpe_matches (gv, tlm, &gpe_match_upd, &n_match_upd, &resolved);
       }
-      else
-      {
-        tlm->xt->minimal_obj_req = 0;
-      }
-      gpe_match_upd = ddsrt_realloc (gpe_match_upd, (n_match_upd + tlm_proxy_guid_list_count (&tlm->proxy_guids)) * sizeof (*gpe_match_upd));
-      struct tlm_proxy_guid_list_iter it;
-      for (ddsi_guid_t guid = tlm_proxy_guid_list_iter_first (&tlm->proxy_guids, &it); !is_null_guid (&guid); guid = tlm_proxy_guid_list_iter_next (&it))
-      {
-        if (!is_topic_entityid (guid.entityid))
-        {
-          struct entity_common *ec = entidx_lookup_guid_untyped (gv->entity_index, &guid);
-          if (ec != NULL)
-          {
-            assert (ec->kind == EK_PROXY_READER || ec->kind == EK_PROXY_WRITER);
-            gpe_match_upd[n_match_upd++] = (struct generic_proxy_endpoint *) ec;
-          }
-        }
-      }
-      tlm_register_with_proxy_endpoints_locked (gv, tlm);
-      resolved = true;
     }
     n++;
   }
