@@ -1257,7 +1257,15 @@ static inline const uint32_t *dds_stream_read_adr (uint32_t insn, dds_istream_t 
     case DDS_OP_VAL_EXT: {
       const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
       const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
-      (void) dds_stream_read (is, addr, jsr_ops);
+      uint32_t flags = DDS_OP_FLAGS (insn);
+      if (flags & DDS_OP_FLAG_EXT)
+      {
+        uint32_t sz = ops[3];
+        *((char **) addr) = ddsrt_malloc (sz);
+        (void) dds_stream_read (is, *((char **) addr), jsr_ops);
+      }
+      else
+        (void) dds_stream_read (is, addr, jsr_ops);
       ops += jmp ? jmp : 3;
       break;
     }
