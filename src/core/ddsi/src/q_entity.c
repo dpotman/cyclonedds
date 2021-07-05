@@ -2710,6 +2710,30 @@ static void reader_qos_mismatch (struct reader * rd, dds_qos_policy_id_t reason)
   }
 }
 
+static uint32_t get_dependent_typeids (const ddsi_typeinfo_t *type_info, const ddsi_typeid_t *** dep_ids, ddsi_typeid_kind_t kind)
+{
+  assert (dep_ids);
+  int32_t cnt = (kind == TYPE_ID_KIND_MINIMAL) ? type_info->minimal.dependent_typeid_count : type_info->complete.dependent_typeid_count;
+  if (cnt <= 0)
+  {
+    *dep_ids = NULL;
+    return 0;
+  }
+
+  *dep_ids = ddsrt_malloc ((uint32_t) cnt * sizeof (**dep_ids));
+  if (kind == TYPE_ID_KIND_MINIMAL)
+  {
+    for (int32_t n = 0; n < type_info->minimal.dependent_typeid_count; n++)
+      (*dep_ids)[n] = &type_info->minimal.dependent_typeids._buffer[n].type_id;
+  }
+  else
+  {
+    for (int32_t n = 0; n < type_info->complete.dependent_typeid_count; n++)
+      (*dep_ids)[n] = &type_info->complete.dependent_typeids._buffer[n].type_id;
+  }
+  return (uint32_t) cnt;
+}
+
 static bool topickind_qos_match_p_lock (
     struct ddsi_domaingv *gv,
     struct entity_common *rd,
@@ -2749,10 +2773,21 @@ static bool topickind_qos_match_p_lock (
     /* In case qos_match_p returns false, one of rd_type_look and wr_type_lookup could
        be set to indicate that type information is missing. At this point, we know this
        is the case so pass either rd_tlm->type_id_minimal or wr_tlm->type_id_minimal to the tl_request_type function. */
+    const ddsi_typeid_t ** dep_ids = NULL;
+    uint32_t dep_id_cnt = 0;
     if (rd_type_lookup)
-      (void) ddsi_tl_request_type (gv, &rd_tlm->xt->type_id_minimal, rdqos->type_name);
+    {
+      if (rdqos->present & QP_TYPE_INFORMATION)
+        dep_id_cnt = get_dependent_typeids (rdqos->type_information, &dep_ids, TYPE_ID_KIND_MINIMAL);
+      (void) ddsi_tl_request_type (gv, &rd_tlm->xt->type_id_minimal, rdqos->type_name, dep_ids, dep_id_cnt);
+    }
     else
-      (void) ddsi_tl_request_type (gv, &wr_tlm->xt->type_id_minimal, wrqos->type_name);
+    {
+      if (wrqos->present & QP_TYPE_INFORMATION)
+        dep_id_cnt = get_dependent_typeids (wrqos->type_information, &dep_ids, TYPE_ID_KIND_MINIMAL);
+      (void) ddsi_tl_request_type (gv, &wr_tlm->xt->type_id_minimal, wrqos->type_name, dep_ids, dep_id_cnt);
+    }
+    ddsrt_free (dep_ids);
     return false;
   }
 #endif
@@ -4595,9 +4630,14 @@ dds_return_t ddsi_new_topic
   /* Set topic name, type name and type id in qos */
   ddsi_typeid_t * tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE);
   assert (!ddsi_typeid_is_none (tid));
-  struct tl_meta *tlm = ddsi_tl_meta_lookup (gv, tid, NULL);
-  tp_qos->present |= QP_TYPE_INFORMATION;
-  tp_qos->type_information = ddsi_tl_meta_to_typeinfo (tlm);
+
+  const ddsi_sertype_cdr_data_t *type_info_ser = ddsi_sertype_typeinfo_ser (type);
+  if (type_info_ser)
+  {
+    tp_qos->present |= QP_TYPE_INFORMATION;
+    ddsi_typeinfo_deser (type_info_ser->data, type_info_ser->sz, &tp_qos->type_information);
+  }
+
   set_topic_type_name (tp_qos, topic_name, type->type_name);
 
   if (gv->logconfig.c.mask & DDS_LC_DISCOVERY)

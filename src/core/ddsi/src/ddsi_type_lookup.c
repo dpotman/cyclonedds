@@ -182,10 +182,8 @@ static void tlm_init_xt_type (struct ddsi_domaingv *gv, struct tl_meta *tlm, con
     if (!in_admin_minimal)
       ddsrt_avl_insert (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, tlm);
   }
-
-  if (tmap != NULL)
-    ddsrt_free (tmap);
-  assert (tlm->xt);
+  // FIXME: ddsi_typemap_free ?
+  ddsrt_free (tmap);
 }
 
 static struct tl_meta * get_tlm (struct ddsi_domaingv *gv, const char *type_name, const ddsi_typeid_t *tid_min, const ddsi_typeid_t *tid, const struct ddsi_sertype *type, bool *resolved)
@@ -332,13 +330,13 @@ static struct writer *get_typelookup_writer (const struct ddsi_domaingv *gv, uin
   return wr;
 }
 
-bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t *type_id, const char *type_name)
+bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t *type_id, const char *type_name, const ddsi_typeid_t ** dependent_type_ids, uint32_t dependent_type_id_count)
 {
   assert (ddsi_typeid_is_hash (type_id));
   ddsrt_mutex_lock (&gv->tl_admin_lock);
   struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, type_id, type_name);
   GVTRACE ("tl-req ");
-  if (tlm && (
+  if (tlm && !dependent_type_id_count && (
     (ddsi_typeid_is_minimal (type_id) && (tlm->xt->minimal_obj_req || tlm->xt->has_minimal_obj))
     || (ddsi_typeid_is_complete (type_id) && (tlm->xt->complete_obj_req || tlm->xt->has_complete_obj))))
   {
@@ -366,8 +364,11 @@ bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t 
   request.header.requestId.sequence_number.low = (uint32_t) tlm->request_seqno;
   // FIXME: request.header.instanceName = ...
   request.data._d = DDS_Builtin_TypeLookup_getTypes_HashId;
-  request.data._u.getTypes.type_ids._length = 1;
-  request.data._u.getTypes.type_ids._buffer = ddsi_typeid_dup (type_id);
+  request.data._u.getTypes.type_ids._length = 1 + dependent_type_id_count;
+  request.data._u.getTypes.type_ids._buffer = ddsrt_malloc ((dependent_type_id_count + 1) * sizeof (*request.data._u.getTypes.type_ids._buffer));
+  ddsi_typeid_copy (&request.data._u.getTypes.type_ids._buffer[0], type_id);
+  for (uint32_t n = 0; n < dependent_type_id_count; n++)
+    ddsi_typeid_copy (&request.data._u.getTypes.type_ids._buffer[n + 1], dependent_type_ids[n]);
 
   struct ddsi_serdata *serdata = ddsi_serdata_from_sample_xcdr_version (gv->tl_svc_request_type, SDK_DATA, CDR_ENC_VERSION_2, &request);
   ddsrt_free (request.data._u.getTypes.type_ids._buffer);
@@ -436,8 +437,6 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
   ddsi_serdata_to_sample (d, &req, NULL, NULL);
 
   GVTRACE (" handle-tl-req wr "PGUIDFMT " seqnr %"PRIi64" ntypeids %"PRIu32, PGUID (from_guid (&req.header.requestId.writer_guid)), from_seqno (&req.header.requestId.sequence_number), req.data._u.getTypes.type_ids._length);
-
-  // FIXME: MINIMAL/COMPLETE response
 
   ddsrt_mutex_lock (&gv->tl_admin_lock);
   struct DDS_XTypes_TypeIdentifierTypeObjectPairSeq types = { 0, 0, NULL, false };
@@ -620,22 +619,3 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
   }
 }
 
-ddsi_typeinfo_t *ddsi_tl_meta_to_typeinfo (const struct tl_meta *tlm)
-{
-  assert (tlm);
-
-  // FIXME: use serialized type information from sertype
-  ddsi_typeinfo_t *ti = ddsrt_calloc (1, sizeof (*ti));
-  if (!ddsi_typeid_is_none (&tlm->xt->type_id))
-  {
-    ddsi_typeid_copy (&ti->complete.typeid_with_size.type_id, &tlm->xt->type_id);
-    // ti->complete.typeid_with_size.typeobject_serialized_size =
-  }
-  if (!ddsi_typeid_is_none (&tlm->xt->type_id_minimal))
-  {
-    ddsi_typeid_copy (&ti->minimal.typeid_with_size.type_id, &tlm->xt->type_id_minimal);
-    // ti->complete.typeid_with_size.typeobject_serialized_size =
-  }
-
-  return ti;
-}
