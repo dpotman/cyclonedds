@@ -456,12 +456,12 @@ stash_member_offset(struct instructions *instructions, uint32_t index, int16_t a
 
 static idl_retcode_t
 stash_size(
-  struct instructions *instructions, uint32_t index, const void *node)
+  struct instructions *instructions, uint32_t index, const void *node, bool ext)
 {
   const idl_type_spec_t *type_spec;
   struct instruction inst = { SIZE, { .size = { NULL } } };
 
-  if (idl_is_sequence(node)) {
+  if (idl_is_sequence(node) || ext) {
     type_spec = idl_type_spec(node);
 
     if (idl_is_string(type_spec) && idl_is_bounded(type_spec)) {
@@ -1112,7 +1112,7 @@ emit_sequence(
     off = stype->offset;
     cnt = ctype->instructions.count;
     /* generate data field [elem-size] */
-    if ((ret = stash_size(&ctype->instructions, off + 2, node)))
+    if ((ret = stash_size(&ctype->instructions, off + 2, node, false)))
       return ret;
     /* generate data field [next-insn, elem-insn] */
     if (idl_is_forward(type_spec) || idl_is_struct(type_spec) || idl_is_union(type_spec)) {
@@ -1206,13 +1206,13 @@ emit_array(
       if ((ret = stash_element_offset(&ctype->instructions, off + 3, type_spec, 5u, addr_offs)))
         return ret;
       /* generate data field [elem-size] */
-      if ((ret = stash_size(&ctype->instructions, off + 4, node)))
+      if ((ret = stash_size(&ctype->instructions, off + 4, node, false)))
         return ret;
     } else {
       if ((ret = stash_couple(&ctype->instructions, off + 3, (uint16_t)((cnt - off) + 3u), 5u)))
         return ret;
       /* generate data field [elem-size] */
-      if ((ret = stash_size(&ctype->instructions, off + 4, node)))
+      if ((ret = stash_size(&ctype->instructions, off + 4, node, false)))
         return ret;
       /* generate return from subroutine */
       if ((ret = stash_opcode(descriptor, &ctype->instructions, nop, DDS_OP_RTS, 0u)))
@@ -1316,12 +1316,17 @@ emit_declarator(
 
     assert(ctype->instructions.count <= INT16_MAX);
     int16_t addr_offs = (int16_t)ctype->instructions.count;
+    bool has_size = false;
     opcode = DDS_OP_ADR | typecode(type_spec, TYPE, true);
     if ((order = idl_is_topic_key(descriptor->topic, (pstate->flags & IDL_FLAG_KEYLIST) != 0, path)))
       opcode |= DDS_OP_FLAG_KEY;
     idl_node_t *parent = idl_parent(node);
     if (idl_is_member(parent) && ((idl_member_t *)parent)->external)
+    {
       opcode |= DDS_OP_FLAG_EXT;
+      if (opcode & DDS_OP_TYPE_EXT)
+        has_size = true;
+    }
 
     /* generate data field opcode */
     if ((ret = stash_opcode(descriptor, &ctype->instructions, nop, opcode, order)))
@@ -1334,7 +1339,12 @@ emit_declarator(
       if ((ret = stash_single(&ctype->instructions, nop, idl_bound(type_spec)+1)))
         return ret;
     } else if (idl_is_forward(type_spec) || idl_is_struct(type_spec) || idl_is_union(type_spec)) {
-      if ((ret = stash_element_offset(&ctype->instructions, nop, type_spec, 3, addr_offs)))
+      if ((ret = stash_element_offset(&ctype->instructions, nop, type_spec, 3 + (has_size ? 1 : 0), addr_offs)))
+        return ret;
+    }
+    /* generate data field element size */
+    if (has_size) {
+      if ((ret = stash_size(&ctype->instructions, nop, node, true)))
         return ret;
     }
 
@@ -1573,8 +1583,13 @@ static int print_opcodes(FILE *fp, const struct descriptor *descriptor, uint32_t
             brk = op + 1;
           else if (opcode == DDS_OP_JEQ)
             brk = op + 3;
-          else if (optype == DDS_OP_TYPE_BST || optype == DDS_OP_TYPE_EXT)
+          else if (optype == DDS_OP_TYPE_BST)
             brk = op + 3;
+          else if (optype == DDS_OP_TYPE_EXT) {
+            brk = op + 3;
+            if (inst->data.opcode.code & DDS_OP_FLAG_EXT)
+              brk++;
+          }
           else if (optype == DDS_OP_TYPE_ARR || optype == DDS_OP_TYPE_SEQ) {
             subtype = inst->data.opcode.code & (0xffu << 8);
             brk = op + (optype == DDS_OP_TYPE_SEQ ? 2 : 3);

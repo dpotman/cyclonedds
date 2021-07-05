@@ -67,12 +67,15 @@ enum dds_stream_opcode {
        followed by alen case labels: in JEQ format
 
      [ADR, EXT,   0, k] [offset] [next-insn, elem-insn]
+     [ADR, EXT,   0, k] [offset] [next-insn, elem-insn] [elem-size]
      [ADR, STU,   0, k] *** not supported
    where
      s            = subtype
-     k            = key/not key (DDS_OP_FLAG_KEY)
+     k            = flags:
+                    - key/not key (DDS_OP_FLAG_KEY)
+                    - external flag: stored as external data (pointer) (DDS_OP_FLAG_EXT)
      [offset]     = field offset from start of element in memory
-     [elem-size]  = element size in memory
+     [elem-size]  = element size in memory (in case of ADR_EXT, elem-size is only included in case 'external' flag is set)
      [bound]      = string bound + 1
      [max]        = max enum value
      [alen]       = array length, number of cases
