@@ -18,6 +18,7 @@
 
 #include <stdint.h>
 #include "dds/ddsi/ddsi_xt.h"
+#include "dds/ddsi/ddsi_type_lookup.h"
 
 #if defined (__cplusplus)
 extern "C" {
@@ -57,7 +58,7 @@ struct xt_collection_common {
   DDS_XTypes_CollectionTypeFlag flags;
   DDS_XTypes_EquivalenceKind ek;
   struct xt_type_detail detail;
-  struct xt_type *element_type;
+  struct tl_meta *element_type;
   DDS_XTypes_CollectionElementFlag element_flags;
   struct xt_applied_member_annotations element_annotations;
 };
@@ -76,22 +77,22 @@ struct xt_map {
   struct xt_collection_common c;
   DDS_XTypes_LBound bound;
   DDS_XTypes_CollectionElementFlag key_flags;
-  struct xt_type *key_type;
+  struct tl_meta *key_type;
   struct xt_applied_member_annotations key_annotations;
 };
 
 struct xt_alias {
-  struct xt_type *related_type;
+  struct tl_meta *related_type;
   struct xt_type_detail detail;
 };
 
 struct xt_annotation_member {
   DDS_XTypes_MemberName name;
-  struct xt_type *member_type;
+  struct tl_meta *member_type;
   struct DDS_XTypes_AnnotationParameterValue default_value;
 };
 struct xt_annotation_parameter {
-  struct xt_type *member_type;
+  struct tl_meta *member_type;
   DDS_XTypes_MemberName name;
   DDS_XTypes_NameHash name_hash;
   struct DDS_XTypes_AnnotationParameterValue default_value;
@@ -108,7 +109,7 @@ struct xt_annotation {
 struct xt_struct_member {
   DDS_XTypes_MemberId id;
   DDS_XTypes_StructMemberFlag flags;
-  struct xt_type *type;
+  struct tl_meta *type;
   struct xt_member_detail detail;
 };
 struct xt_struct_member_seq {
@@ -117,7 +118,7 @@ struct xt_struct_member_seq {
 };
 struct xt_struct {
   DDS_XTypes_StructTypeFlag flags;
-  struct xt_type *base_type;
+  struct tl_meta *base_type;
   struct xt_struct_member_seq members;
   struct xt_type_detail detail;
 };
@@ -125,7 +126,7 @@ struct xt_struct {
 struct xt_union_member {
   DDS_XTypes_MemberId id;
   DDS_XTypes_UnionMemberFlag flags;
-  struct xt_type *type;
+  struct tl_meta *type;
   struct DDS_XTypes_UnionCaseLabelSeq label_seq;
   struct xt_member_detail detail;
 };
@@ -135,7 +136,7 @@ struct xt_union_member_seq {
 };
 struct xt_union {
   DDS_XTypes_UnionTypeFlag flags;
-  struct xt_type *disc_type;
+  struct tl_meta *disc_type;
   DDS_XTypes_UnionDiscriminatorFlag disc_flags;
   struct xt_applied_type_annotations disc_annotations;
   struct xt_union_member_seq members;
@@ -247,10 +248,10 @@ struct xt_type
   } _u;
 };
 
-struct xt_type *ddsi_xt_type_init (const ddsi_typeid_t *ti, const ddsi_typeobj_t *to);
-void ddsi_xt_type_add (struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_typeobj_t *to);
-void ddsi_xt_type_fini (struct xt_type *xt);
-bool ddsi_xt_is_assignable_from (const struct ddsi_domaingv *gv, const struct xt_type *t1, const struct xt_type *t2);
+struct xt_type *ddsi_xt_type_init (struct ddsi_domaingv *gv, const ddsi_typeid_t *ti, const ddsi_typeobj_t *to);
+void ddsi_xt_type_add (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_typeobj_t *to);
+void ddsi_xt_type_fini (struct ddsi_domaingv *gv, struct xt_type *xt);
+bool ddsi_xt_is_assignable_from (struct ddsi_domaingv *gv, const struct xt_type *t1, const struct xt_type *t2);
 bool ddsi_xt_has_complete_typeid (const struct xt_type *xt);
 void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeid_kind_t kind, ddsi_typeobj_t *to);
 

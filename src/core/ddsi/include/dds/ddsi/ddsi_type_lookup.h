@@ -62,18 +62,27 @@ struct tl_meta {
 };
 
 /**
+ * Reference an existing meta object,
+ */
+struct tl_meta * ddsi_tl_meta_ref_locked (struct ddsi_domaingv *gv, struct tl_meta *tlm);
+
+/**
+ * Reference a type lookup meta object identifier by the provided type identifier. This function will
+ * try to reference an existing tlm object, and create a new tlm in case it was not found.
+ */
+struct tl_meta * ddsi_tl_meta_typeid_ref_locked (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id);
+
+/**
+ * Reference a type lookup meta object identifier by the provided sertype. This function will
+ * try to reference an existing tlm object, and create a new tlm in case it was not found.
+ */
+struct tl_meta * ddsi_tl_meta_local_ref (struct ddsi_domaingv *gv, const struct ddsi_sertype *type);
+
+/**
  * Reference the type lookup meta object identified by the provided type identifier
  * and register the proxy endpoint with this entry.
  */
 struct tl_meta * ddsi_tl_meta_proxy_ref (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id_minimal, const ddsi_typeid_t *type_id, const char *type_name, const ddsi_guid_t *proxy_guid);
-
-/**
- * Reference the type lookup meta object identifier by the provided type identifier
- * or the provided type object. In case a type object is provided and the type was not
- * yet registered with the type lookup meta object, this field will be set in the meta
- * object.
- */
-struct tl_meta * ddsi_tl_meta_local_ref (struct ddsi_domaingv *gv, const struct ddsi_sertype *type);
 
 /**
  * Dereference the type lookup meta object identified by the provided type identifier.
@@ -86,6 +95,11 @@ void ddsi_tl_meta_proxy_unref (struct ddsi_domaingv *gv, struct tl_meta *tlm, co
  * or the provided type object.
  */
 void ddsi_tl_meta_local_unref (struct ddsi_domaingv *gv, struct tl_meta *tlm, const struct ddsi_sertype *type);
+
+/**
+ * Dereference the type lookup meta object
+ */
+void ddsi_tl_meta_unref_locked (struct ddsi_domaingv *gv, struct tl_meta *tlm);
 
 /**
  * Returns the type lookup meta object for the provided type identifier.
