@@ -11,16 +11,25 @@
  */
 
 module XSpace {
-    @appendable
+    @bit_bound(20)
+    bitmask my_bitmask {
+        flag0,
+        flag1
+    };
+
+    @mutable
     struct XType1 {
 	    @id(1) long long_1;
 	    @id(2) long long_2;
 	    @id(3) long long_3;
+        @id(5) my_bitmask bm_5;
     };
 
-    @appendable
+    @mutable
     struct XType2 {
     	@id(1) long long_1;
 	    @id(2) long long_2;
+	    @id(4) long long_4;
+        @id(5) unsigned short bm_5;
     };
 };

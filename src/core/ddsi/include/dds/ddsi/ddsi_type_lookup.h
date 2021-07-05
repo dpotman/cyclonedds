@@ -117,7 +117,7 @@ void ddsi_tl_meta_register_with_proxy_endpoints (struct ddsi_domaingv *gv, const
  * Send a type lookup request message in order to request type information for the
  * provided type identifier.
  */
-bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t *type_id, const char *type_name);
+bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t *type_id, const char *type_name, const ddsi_typeid_t ** dependent_type_ids, uint32_t dependent_type_id_count);
 
 /**
  * Handle an incoming type lookup request message. For all types requested
@@ -139,11 +139,6 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *sample
  */
 int ddsi_tl_meta_compare_minimal (const struct tl_meta *a, const struct tl_meta *b);
 int ddsi_tl_meta_compare (const struct tl_meta *a, const struct tl_meta *b);
-
-/**
- * Returns a ddsi_typeinfo_t from the provided tl_meta
- */
-ddsi_typeinfo_t *ddsi_tl_meta_to_typeinfo (const struct tl_meta *tlm);
 
 #if defined (__cplusplus)
 }

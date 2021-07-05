@@ -195,11 +195,11 @@ struct xt_type
   struct DDS_XTypes_StronglyConnectedComponentId sc_component_id;
   unsigned is_plain_collection : 1;
   unsigned has_fully_descriptive_id : 1;
-  unsigned has_minimal_id : 1;
-  unsigned has_minimal_obj : 1;
+  unsigned has_minimal_id : 1;      // minimal type id set
+  unsigned has_minimal_obj : 1;     // contains data from minimal type object
   unsigned minimal_obj_req : 1;     // pending request for minimal type object
-  unsigned has_complete_id : 1;
-  unsigned has_complete_obj : 1;
+  unsigned has_complete_id : 1;     // complete type id set
+  unsigned has_complete_obj : 1;    // contains data from minimal type object
   unsigned complete_obj_req : 1;    // pending request for complete type object
 
   uint8_t _d;

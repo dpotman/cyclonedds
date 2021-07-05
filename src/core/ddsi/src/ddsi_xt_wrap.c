@@ -288,6 +288,8 @@ struct xt_type *ddsi_xt_type_init (const ddsi_typeid_t *ti, const ddsi_typeobj_t
     case DDS_XTypes_EK_MINIMAL:
       if (to != NULL)
         add_minimal_typeobj (xt, to);
+      else
+        printf("obj null\n");
       break;
     case DDS_XTypes_EK_COMPLETE:
       if (to != NULL)

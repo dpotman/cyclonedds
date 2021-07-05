@@ -478,7 +478,7 @@ dds_return_t dds_domain_resolve_type (dds_entity_t entity, const ddsi_typeid_t *
   else
   {
     ddsrt_mutex_unlock (&gv->tl_admin_lock);
-    if (!ddsi_tl_request_type (gv, type_id, type_name))
+    if (!ddsi_tl_request_type (gv, type_id, type_name, NULL, 0))
     {
       rc = DDS_RETCODE_PRECONDITION_NOT_MET;
       goto failed;
