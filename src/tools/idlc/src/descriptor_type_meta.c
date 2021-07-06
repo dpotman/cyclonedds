@@ -1022,12 +1022,19 @@ print_type_meta_ser (
   memset (&mapping, 0, sizeof (mapping));
   for (struct type_meta *tm = dtm.admin; tm; tm = tm->admin_next) {
     DDS_XTypes_TypeIdentifierTypeObjectPair mp, cp;
+    DDS_XTypes_TypeIdentifierPair ip;
+
     memcpy (&mp.type_identifier, tm->ti_minimal, sizeof (mp.type_identifier));
     memcpy (&mp.type_object, tm->to_minimal, sizeof (mp.type_object));
+    add_to_seq ((dds_sequence_t *) &mapping.identifier_object_pair_minimal, &mp, sizeof (mp));
+
     memcpy (&cp.type_identifier, tm->ti_complete, sizeof (cp.type_identifier));
     memcpy (&cp.type_object, tm->to_complete, sizeof (cp.type_object));
-    add_to_seq ((dds_sequence_t *) &mapping.identifier_object_pair_minimal, &mp, sizeof (mp));
     add_to_seq ((dds_sequence_t *) &mapping.identifier_object_pair_complete, &cp, sizeof (cp));
+
+    memcpy (&ip.type_identifier1, tm->ti_complete, sizeof (ip.type_identifier1));
+    memcpy (&ip.type_identifier2, tm->ti_minimal, sizeof (ip.type_identifier2));
+    add_to_seq ((dds_sequence_t *) &mapping.identifier_complete_minimal, &ip, sizeof (ip));
   }
 
   {

@@ -26,6 +26,7 @@
 #include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_serdata_default.h"
 #include "dds/ddsi/ddsi_type_lookup.h"
+#include "dds/ddsi/ddsi_xt.h"
 #include "dds/ddsi/ddsi_xt_wrap.h"
 #include "dds/ddsi/ddsi_xt_typeinfo.h"
 
@@ -64,24 +65,23 @@ static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn,
 {
   assert (tpcmn);
   assert (kind == TYPE_ID_KIND_MINIMAL || kind == TYPE_ID_KIND_COMPLETE);
-  const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
-  if (tp->type.typeinfo_ser.sz == 0 || tp->type.typeinfo_ser.data == NULL)
+  const struct ddsi_sertype_default *type = (struct ddsi_sertype_default *) tpcmn;
+  if (type->type.typeinfo_ser.sz == 0 || type->type.typeinfo_ser.data == NULL)
     return NULL;
-  ddsi_typeinfo_t *ti = NULL;
-  ddsi_typeid_t *tid = NULL;
-  ddsi_typeinfo_deser (tp->type.typeinfo_ser.data, tp->type.typeinfo_ser.sz, &ti);
-  assert (ti);
-  if (kind == TYPE_ID_KIND_MINIMAL && !ddsi_typeid_is_none (&ti->minimal.typeid_with_size.type_id))
+  ddsi_typeinfo_t *type_info = NULL;
+  ddsi_typeid_t *type_id = NULL;
+  ddsi_typeinfo_deser (type->type.typeinfo_ser.data, type->type.typeinfo_ser.sz, &type_info);
+  if (kind == TYPE_ID_KIND_MINIMAL && !ddsi_typeid_is_none (&type_info->minimal.typeid_with_size.type_id))
   {
-    tid = ddsrt_malloc (sizeof (*tid));
-    ddsi_typeid_copy (tid, &ti->minimal.typeid_with_size.type_id);
+    type_id = ddsrt_malloc (sizeof (*type_id));
+    ddsi_typeid_copy (type_id, &type_info->minimal.typeid_with_size.type_id);
   }
-  else if (!ddsi_typeid_is_none (&ti->complete.typeid_with_size.type_id))
+  else if (!ddsi_typeid_is_none (&type_info->complete.typeid_with_size.type_id))
   {
-    tid = ddsrt_malloc (sizeof (*tid));
-    ddsi_typeid_copy (tid, &ti->complete.typeid_with_size.type_id);
+    type_id = ddsrt_malloc (sizeof (*type_id));
+    ddsi_typeid_copy (type_id, &type_info->complete.typeid_with_size.type_id);
   }
-  return tid;
+  return type_id;
 }
 
 static ddsi_typemap_t * sertype_default_typemap (const struct ddsi_sertype *tpcmn)
@@ -95,13 +95,15 @@ static ddsi_typemap_t * sertype_default_typemap (const struct ddsi_sertype *tpcm
   return tmap;
 }
 
-static const ddsi_sertype_cdr_data_t * sertype_default_typeinfo_ser (const struct ddsi_sertype *tpcmn)
+static ddsi_typeinfo_t *sertype_default_typeinfo (const struct ddsi_sertype *tpcmn)
 {
   assert (tpcmn);
   const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
   if (tp->type.typeinfo_ser.sz == 0 || tp->type.typeinfo_ser.data == NULL)
-    return NULL;
-  return &tp->type.typeinfo_ser;
+    return false;
+  ddsi_typeinfo_t *type_info = NULL;
+  ddsi_typeinfo_deser (tp->type.typeinfo_ser.data, tp->type.typeinfo_ser.sz, &type_info);
+  return type_info;
 }
 
 static uint32_t sertype_default_hash (const struct ddsi_sertype *tpcmn)
@@ -219,8 +221,8 @@ static bool sertype_default_assignable_from (const struct ddsi_sertype *type_a, 
   if (a->type.flagset & DDS_TOPIC_DISABLE_TYPECHECK)
     return true;
 
-  if (!(tlm_a = ddsi_tl_meta_lookup (gv, sertype_default_typeid (type_a, TYPE_ID_KIND_MINIMAL), type_a->type_name)))
-    tlm_a = ddsi_tl_meta_lookup (gv, sertype_default_typeid (type_a, TYPE_ID_KIND_COMPLETE), type_a->type_name);
+  if (!(tlm_a = ddsi_tl_meta_lookup_locked (gv, sertype_default_typeid (type_a, TYPE_ID_KIND_MINIMAL), type_a->type_name)))
+    tlm_a = ddsi_tl_meta_lookup_locked (gv, sertype_default_typeid (type_a, TYPE_ID_KIND_COMPLETE), type_a->type_name);
 
   assert (tlm_a);
   return ddsi_xt_is_assignable_from (gv, tlm_a->xt, xt_b);
@@ -238,7 +240,7 @@ const struct ddsi_sertype_ops ddsi_sertype_ops_default = {
   .hash = sertype_default_hash,
   .typeid = sertype_default_typeid,
   .typemap = sertype_default_typemap,
-  .typeinfo_ser = sertype_default_typeinfo_ser,
+  .typeinfo = sertype_default_typeinfo,
   .free = sertype_default_free,
   .zero_samples = sertype_default_zero_samples,
   .realloc_samples = sertype_default_realloc_samples,

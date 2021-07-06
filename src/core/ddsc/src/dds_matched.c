@@ -152,9 +152,8 @@ static dds_builtintopic_endpoint_t *make_builtintopic_endpoint (
 #ifdef DDS_HAS_TYPE_DISCOVERY
   if (tlm != NULL && (!ddsi_typeid_is_none (&tlm->xt->type_id) || !ddsi_typeid_is_none (&tlm->xt->type_id_minimal)))
   {
-    ep->qos->present |= QP_TYPE_INFORMATION;
-    const ddsi_sertype_cdr_data_t *ti_ser = ddsi_sertype_typeinfo_ser (tlm->sertype);
-    ddsi_typeinfo_deser (ti_ser->data, ti_ser->sz, &ep->qos->type_information);
+    if ((ep->qos->type_information = ddsi_sertype_typeinfo (tlm->sertype)))
+      ep->qos->present |= QP_TYPE_INFORMATION;
   }
 #endif
 

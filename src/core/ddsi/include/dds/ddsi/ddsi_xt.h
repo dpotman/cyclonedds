@@ -59,6 +59,7 @@ void ddsi_typeinfo_ser (const ddsi_typeinfo_t *typeinfo, unsigned char **buf, ui
 void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typeinfo);
 
 const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const ddsi_typeid_t *tid);
+const ddsi_typeid_t * ddsi_typemap_matching_id (const ddsi_typemap_t *tmap, const ddsi_typeid_t *type_id);
 void ddsi_typemap_ser (const ddsi_typemap_t *typemap, unsigned char **buf, uint32_t *sz);
 void ddsi_typemap_deser (unsigned char *buf, uint32_t sz, ddsi_typemap_t **typemap);
 

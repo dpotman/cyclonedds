@@ -349,19 +349,35 @@ void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typ
   dds_stream_read (&is, (void *) *typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
 }
 
-const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const ddsi_typeid_t *tid)
+const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const ddsi_typeid_t *type_id)
 {
-  assert (tid);
+  assert (type_id);
   assert (tmap);
-  if (!ddsi_typeid_is_hash (tid))
+  if (!ddsi_typeid_is_hash (type_id))
     return NULL;
-  const dds_sequence_DDS_XTypes_TypeIdentifierTypeObjectPair *list = ddsi_typeid_is_minimal (tid) ?
+  const dds_sequence_DDS_XTypes_TypeIdentifierTypeObjectPair *list = ddsi_typeid_is_minimal (type_id) ?
     &tmap->identifier_object_pair_minimal : &tmap->identifier_object_pair_complete;
   for (uint32_t i = 0; i < list->_length; i++)
   {
     DDS_XTypes_TypeIdentifierTypeObjectPair *pair = &list->_buffer[i];
-    if (!ddsi_typeid_compare (tid, &pair->type_identifier))
+    if (!ddsi_typeid_compare (type_id, &pair->type_identifier))
       return &pair->type_object;
+  }
+  return NULL;
+}
+
+const ddsi_typeid_t * ddsi_typemap_matching_id (const ddsi_typemap_t *tmap, const ddsi_typeid_t *type_id)
+{
+  assert (tmap);
+  assert (type_id);
+  if (!ddsi_typeid_is_hash (type_id))
+    return NULL;
+  ddsi_typeid_kind_t return_kind = ddsi_typeid_is_complete (type_id) ? TYPE_ID_KIND_MINIMAL : TYPE_ID_KIND_COMPLETE;
+  for (uint32_t i = 0; i < tmap->identifier_complete_minimal._length; i++)
+  {
+    DDS_XTypes_TypeIdentifierPair *pair = &tmap->identifier_complete_minimal._buffer[i];
+    if (!ddsi_typeid_compare (type_id, return_kind == TYPE_ID_KIND_MINIMAL ? &pair->type_identifier1 : &pair->type_identifier2))
+      return return_kind == TYPE_ID_KIND_MINIMAL ? &pair->type_identifier2 : &pair->type_identifier1;
   }
   return NULL;
 }
