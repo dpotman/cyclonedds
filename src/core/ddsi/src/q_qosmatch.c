@@ -177,12 +177,15 @@ bool qos_match_mask_p (
       return false;
     if (!check_endpoint_typeid (gv, wr_qos->type_name, wr_tlm, wr_typeid_req_lookup))
       return false;
+    ddsrt_mutex_lock (&gv->tl_admin_lock);
     if ((rd_tlm->sertype != NULL && !ddsi_sertype_assignable_from (rd_tlm->sertype, wr_tlm->xt))
       || (wr_tlm->sertype != NULL && !ddsi_sertype_assignable_from (wr_tlm->sertype, rd_tlm->xt)))
     {
+      ddsrt_mutex_unlock (&gv->tl_admin_lock);
       *reason = DDS_TYPE_CONSISTENCY_ENFORCEMENT_QOS_POLICY_ID;
       return false;
     }
+    ddsrt_mutex_unlock (&gv->tl_admin_lock);
   }
 #else
   if ((mask & QP_TYPE_NAME) && strcmp (rd_qos->type_name, wr_qos->type_name) != 0)

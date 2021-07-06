@@ -4605,12 +4605,8 @@ dds_return_t ddsi_new_topic
   ddsi_typeid_t * tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE);
   assert (!ddsi_typeid_is_none (tid));
 
-  const ddsi_sertype_cdr_data_t *type_info_ser = ddsi_sertype_typeinfo_ser (type);
-  if (type_info_ser)
-  {
+  if ((tp_qos->type_information = ddsi_sertype_typeinfo (type)))
     tp_qos->present |= QP_TYPE_INFORMATION;
-    ddsi_typeinfo_deser (type_info_ser->data, type_info_ser->sz, &tp_qos->type_information);
-  }
 
   set_topic_type_name (tp_qos, topic_name, type->type_name);
 
@@ -5681,23 +5677,11 @@ static struct ddsi_topic_definition * new_topic_definition (struct ddsi_domaingv
   tpd->refc = 0;
   tpd->gv = gv;
   if (type != NULL)
-  {
-    ddsi_typeid_t *tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE), *tid_min = ddsi_sertype_typeid (type, TYPE_ID_KIND_MINIMAL);
-    tpd->tlm = ddsi_tl_meta_proxy_ref (gv, tid_min, tid, qos->type_name, NULL);
-    ddsrt_free (tid);
-    ddsrt_free (tid_min);
-#ifndef NDEBUG
-    if (qos->present & QP_TYPE_INFORMATION)
-    {
-      // FIXME: assert that qos->type_information does not conflict with type id from sertype
-    }
-#endif
-  }
+    tpd->tlm = ddsi_tl_meta_local_ref (gv, type);
   else
   {
     assert (qos->present & QP_TYPE_INFORMATION);
-    tpd->tlm = ddsi_tl_meta_proxy_ref (gv, &qos->type_information->minimal.typeid_with_size.type_id,
-      &qos->type_information->complete.typeid_with_size.type_id, qos->type_name, NULL);
+    tpd->tlm = ddsi_tl_meta_proxy_ref (gv, qos->type_information, qos->type_name, NULL);
   }
 
   set_topic_definition_hash (tpd);
@@ -5969,8 +5953,7 @@ static int proxy_endpoint_common_init (struct entity_common *e, struct proxy_end
   c->seq = seq;
 #ifdef DDS_HAS_TYPE_DISCOVERY
   if (plist->qos.present & QP_TYPE_INFORMATION)
-    c->tlm = ddsi_tl_meta_proxy_ref (proxypp->e.gv, &plist->qos.type_information->minimal.typeid_with_size.type_id,
-      &plist->qos.type_information->complete.typeid_with_size.type_id, plist->qos.type_name, guid);
+    c->tlm = ddsi_tl_meta_proxy_ref (proxypp->e.gv, plist->qos.type_information, plist->qos.type_name, guid);
   else
     c->tlm = NULL;
   c->type = NULL;

@@ -1448,6 +1448,7 @@ static bool xt_is_assignable_from_struct (struct ddsi_domaingv *gv, const struct
             }
           }
         }
+        break;
       }
     }
     /* Rule (for T1 members): "Members for which both optional is false and must_understand is true in either T1 or T2 appear (i.e., have a

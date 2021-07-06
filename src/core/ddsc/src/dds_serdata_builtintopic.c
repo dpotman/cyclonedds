@@ -122,8 +122,7 @@ static void from_entity_rd (struct ddsi_serdata_builtintopic_endpoint *d, const 
 {
   d->pphandle = rd->c.pp->e.iid;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  if (rd->c.tlm)
-    d->type_id = rd->c.tlm->xt->type_id;
+  //d->type_info = ddsi_sertype_typeinfo (rd->type);
 #endif
   from_qos (&d->common, rd->xqos);
 }
@@ -132,8 +131,7 @@ static void from_entity_wr (struct ddsi_serdata_builtintopic_endpoint *d, const 
 {
   d->pphandle = wr->c.pp->e.iid;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  if (wr->c.tlm)
-    d->type_id = wr->c.tlm->xt->type_id;
+  //d->type_info = ddsi_sertype_typeinfo (wr->type);
 #endif
   from_qos (&d->common, wr->xqos);
 }
@@ -142,8 +140,14 @@ static void from_proxy_endpoint_common (struct ddsi_serdata_builtintopic_endpoin
 {
   d->pphandle = pec->proxypp->e.iid;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  if (pec->tlm)
-    d->type_id = pec->tlm->xt->type_id;
+  // if (pec->tlm)
+  // {
+  //   d->type_info = ddsrt_calloc (1, sizeof (*d->type_info));
+  //   ddsrt_mutex_lock (&pec->type->gv->tl_admin_lock);
+  //   ddsi_typeid_copy (&d->type_info->minimal.typeid_with_size.type_id, &pec->tlm->xt->type_id_minimal);
+  //   ddsi_typeid_copy (&d->type_info->complete.typeid_with_size.type_id, &pec->tlm->xt->type_id);
+  //   ddsrt_mutex_unlock (&pec->type->gv->tl_admin_lock);
+  // }
 #endif
   from_qos (&d->common, pec->xqos);
 }
@@ -310,13 +314,15 @@ static bool to_sample_endpoint (const struct ddsi_serdata_builtintopic_endpoint 
     sample->type_name = dds_string_dup_reuse (sample->type_name, dep->common.xqos.type_name);
     sample->qos = dds_qos_from_xqos_reuse (sample->qos, &dep->common.xqos);
 #ifdef DDS_HAS_TYPE_DISCOVERY
-    if (!(sample->qos->present & QP_TYPE_INFORMATION))
+    if (dep->common.xqos.present & QP_TYPE_INFORMATION)
     {
-      sample->qos->type_information = NULL;
-      sample->qos->present |= QP_TYPE_INFORMATION;
+      if (!(sample->qos->present & QP_TYPE_INFORMATION))
+      {
+        sample->qos->present |= QP_TYPE_INFORMATION;
+        sample->qos->type_information = NULL;
+      }
+      sample->qos->type_information = dds_mem_dup_reuse (sample->qos->type_information, dep->common.xqos.type_information, sizeof (*sample->qos->type_information));
     }
-    // FIXME: always overwrite value from dep->common.xqos?
-    sample->qos->type_information = dds_mem_dup_reuse (sample->qos->type_information, &dep->type_id, sizeof (*sample->qos->type_information));
 #endif
   }
   return true;
@@ -333,13 +339,16 @@ static bool to_sample_topic (const struct ddsi_serdata_builtintopic_topic *dtp, 
     sample->topic_name = dds_string_dup_reuse (sample->topic_name, dtp->common.xqos.topic_name);
     sample->type_name = dds_string_dup_reuse (sample->type_name, dtp->common.xqos.type_name);
     sample->qos = dds_qos_from_xqos_reuse (sample->qos, &dtp->common.xqos);
-    if (!(sample->qos->present & QP_TYPE_INFORMATION))
+    if (dtp->common.xqos.present & QP_TYPE_INFORMATION)
     {
-      sample->qos->type_information = NULL;
-      sample->qos->present |= QP_TYPE_INFORMATION;
+      if (!(sample->qos->present & QP_TYPE_INFORMATION))
+      {
+        sample->qos->present |= QP_TYPE_INFORMATION;
+        sample->qos->type_information = NULL;
+      }
+      // FIXME: always overwrite value from dtp->common.xqos?
+      sample->qos->type_information = dds_mem_dup_reuse (sample->qos->type_information, dtp->common.xqos.type_information, sizeof (*sample->qos->type_information));
     }
-    // FIXME: always overwrite value from dtp->common.xqos?
-    sample->qos->type_information = dds_mem_dup_reuse (sample->qos->type_information, &dtp->type_id, sizeof (*sample->qos->type_information));
   }
   return true;
 }
@@ -430,7 +439,7 @@ struct ddsi_serdata *dds_serdata_builtin_from_topic_definition (const struct dds
   memcpy (&d->common.key.raw, key, sizeof (d->common.key.raw));
   if (tpd != NULL && kind == SDK_DATA)
   {
-    d->type_id = tpd->tlm->xt->type_id;
+    // d->type_info = ddsi_sertype_typeinfo (tpd->tlm->sertype);
     from_qos (&d->common, tpd->xqos);
   }
   return fix_serdata_builtin (&d->common, DSBT_TOPIC, tp->c.serdata_basehash);

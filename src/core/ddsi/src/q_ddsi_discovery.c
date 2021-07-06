@@ -1226,12 +1226,8 @@ static int sedp_write_endpoint_impl
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
     assert (type);
-    const ddsi_sertype_cdr_data_t *type_info_ser = ddsi_sertype_typeinfo_ser (type);
-    if (type_info_ser)
-    {
+    if ((ps.qos.type_information = ddsi_sertype_typeinfo (type)))
       ps.qos.present |= QP_TYPE_INFORMATION;
-      ddsi_typeinfo_deser (type_info_ser->data, type_info_ser->sz, &ps.qos.type_information);
-    }
 #endif
   }
 
@@ -1263,12 +1259,8 @@ static int sedp_write_topic_impl (struct writer *wr, int alive, const ddsi_guid_
     qosdiff |= ~QP_UNRECOGNIZED_INCOMPATIBLE_MASK;
 
   assert (type);
-  const ddsi_sertype_cdr_data_t *type_info_ser = ddsi_sertype_typeinfo_ser (type);
-  if (type_info_ser)
-  {
+  if ((ps.qos.type_information = ddsi_sertype_typeinfo (type)))
     ps.qos.present |= QP_TYPE_INFORMATION;
-    ddsi_typeinfo_deser (type_info_ser->data, type_info_ser->sz, &ps.qos.type_information);
-  }
 
   if (xqos)
     ddsi_xqos_mergein_missing (&ps.qos, xqos, qosdiff);
@@ -1592,15 +1584,6 @@ static void handle_sedp_alive_endpoint (const struct receiver_state *rst, seqno_
               ? "(default)" : xqos->partition.strs[0]),
              ((xqos->present & QP_PARTITION) && xqos->partition.n > 1) ? "+" : "",
              xqos->topic_name, xqos->type_name);
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  ddsi_typeid_t type_id;
-  if (xqos->present & QP_TYPE_INFORMATION)
-  {
-    ddsi_typeid_copy (&type_id, &xqos->type_information->minimal.typeid_with_size.type_id);
-    // FIXME
-    // GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID (type_id));
-  }
-#endif
 
   if (sedp_kind == SEDP_KIND_READER && (datap->present & PP_EXPECTS_INLINE_QOS) && datap->expects_inline_qos)
     E ("******* AARGH - it expects inline QoS ********\n", err);

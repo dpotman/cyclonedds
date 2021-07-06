@@ -42,6 +42,7 @@ struct participant;
 struct receiver_state;
 struct ddsi_serdata;
 struct ddsi_sertype;
+struct tl_meta;
 
 #define NOARG
 DDSI_LIST_TYPES_TMPL(tlm_proxy_guid_list, ddsi_guid_t, NOARG, 32)
@@ -49,6 +50,11 @@ DDSI_LIST_TYPES_TMPL(tlm_proxy_guid_list, ddsi_guid_t, NOARG, 32)
 
 extern const ddsrt_avl_treedef_t ddsi_tl_meta_minimal_treedef;
 extern const ddsrt_avl_treedef_t ddsi_tl_meta_treedef;
+
+struct tl_meta_dep {
+  struct tl_meta *tlm;
+  struct tl_meta_dep *prev;
+};
 
 struct tl_meta {
   ddsrt_avl_node_t avl_node_minimal;
@@ -59,6 +65,7 @@ struct tl_meta {
   seqno_t request_seqno;                  /* sequence number of the last type lookup request message */
   struct tlm_proxy_guid_list proxy_guids; /* administration for proxy endpoints (not proxy topics) that are using this type */
   uint32_t refc;                          /* refcount for this record */
+  struct tl_meta_dep *deps;               /* dependent tlm records */
 };
 
 /**
@@ -82,7 +89,7 @@ struct tl_meta * ddsi_tl_meta_local_ref (struct ddsi_domaingv *gv, const struct 
  * Reference the type lookup meta object identified by the provided type identifier
  * and register the proxy endpoint with this entry.
  */
-struct tl_meta * ddsi_tl_meta_proxy_ref (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id_minimal, const ddsi_typeid_t *type_id, const char *type_name, const ddsi_guid_t *proxy_guid);
+struct tl_meta * ddsi_tl_meta_proxy_ref (struct ddsi_domaingv *gv, const ddsi_typeinfo_t *type_info, const char *type_name, const ddsi_guid_t *proxy_guid);
 
 /**
  * Dereference the type lookup meta object identified by the provided type identifier.
