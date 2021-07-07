@@ -440,7 +440,7 @@ get_complete_member_detail(
 
 
 static idl_retcode_t
-add_struct_member (struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minimal, DDS_XTypes_TypeObject *to_complete, const void *node)
+add_struct_member (struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minimal, DDS_XTypes_TypeObject *to_complete, const void *node, const idl_type_spec_t *type_spec)
 {
   assert (to_minimal->_u.minimal._d == DDS_XTypes_TK_STRUCTURE);
   assert (to_complete->_u.complete._d == DDS_XTypes_TK_STRUCTURE);
@@ -452,7 +452,7 @@ add_struct_member (struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_m
   memset (&c, 0, sizeof (c));
 
   const idl_member_t *member = (const idl_member_t *) idl_parent (node);
-  if (get_type_spec_typeid (dtm, idl_type_spec (node), &m.common.member_type_id, &c.common.member_type_id) < 0)
+  if (get_type_spec_typeid (dtm, type_spec, &m.common.member_type_id, &c.common.member_type_id) < 0)
     return -1;
   m.common.member_id = c.common.member_id = member->id.value;
   m.common.member_flags = c.common.member_flags = get_struct_member_flags (member);
@@ -467,7 +467,7 @@ add_struct_member (struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_m
 }
 
 static idl_retcode_t
-add_union_case(struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minimal, DDS_XTypes_TypeObject *to_complete, const void *node)
+add_union_case(struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minimal, DDS_XTypes_TypeObject *to_complete, const void *node, const idl_type_spec_t *type_spec)
 {
   assert (to_minimal->_u.complete._d == DDS_XTypes_TK_UNION);
   assert (to_complete->_u.complete._d == DDS_XTypes_TK_UNION);
@@ -479,7 +479,7 @@ add_union_case(struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minim
   memset (&c, 0, sizeof (c));
 
   const idl_case_t *_case = (const idl_case_t *) idl_parent (node);
-  if (get_type_spec_typeid (dtm, idl_type_spec (node), &m.common.type_id, &c.common.type_id) < 0)
+  if (get_type_spec_typeid (dtm, type_spec, &m.common.type_id, &c.common.type_id) < 0)
     return -1;
   m.common.member_id = c.common.member_id = _case->id.value;
   m.common.member_flags = c.common.member_flags = get_union_case_flags (_case);
@@ -599,11 +599,6 @@ add_array (
       add_to_seq ((dds_sequence_t *) &dtm->stack->to_complete->_u.complete._u.array_type.header.common.bound_seq,
         &literal->value.uint32, sizeof (literal->value.uint32));
     }
-
-    if (is_fully_descriptive (type_spec))
-      return IDL_VISIT_REVISIT;
-    else
-      return IDL_VISIT_TYPE_SPEC | IDL_VISIT_REVISIT;
   }
   return IDL_RETCODE_OK;
 }
@@ -720,37 +715,36 @@ emit_declarator (
   const void *node,
   void *user_data)
 {
+  idl_retcode_t ret;
   struct descriptor_type_meta *dtm = (struct descriptor_type_meta *) user_data;
-  struct type_meta *tm = dtm->stack;
-  assert(tm);
 
   (void) pstate;
   (void) path;
   if (idl_is_typedef (idl_parent (node)))
     return add_typedef (revisit, node, user_data);
   if (idl_is_array (node)) {
-    if (is_fully_descriptive (node)) {
-      if (!revisit)
-        return IDL_VISIT_REVISIT;
-    } else {
-      return add_array (revisit, node, user_data);
+    if (!is_fully_descriptive (node)) {
+      if ((ret = add_array (revisit, node, user_data)) < 0)
+        return ret;
     }
   }
 
   if (revisit) {
+    struct type_meta *tm = dtm->stack;
+    assert(tm);
     if (tm->to_minimal->_u.minimal._d == DDS_XTypes_TK_STRUCTURE) {
       assert (tm->to_complete->_u.complete._d == DDS_XTypes_TK_STRUCTURE);
-      if (add_struct_member (dtm, tm->to_minimal, tm->to_complete, node) < 0)
+      if (add_struct_member (dtm, tm->to_minimal, tm->to_complete, node, idl_is_array (node) ? node : idl_type_spec (node)) < 0)
         return -1;
     } else if (tm->to_minimal->_u.minimal._d == DDS_XTypes_TK_UNION) {
       assert (tm->to_complete->_u.complete._d == DDS_XTypes_TK_UNION);
-      if (add_union_case (dtm, tm->to_minimal, tm->to_complete, node) < 0)
+      if (add_union_case (dtm, tm->to_minimal, tm->to_complete, node, idl_is_array (node) ? node : idl_type_spec (node)) < 0)
         return -1;
     } else {
       abort ();
     }
   } else {
-    const idl_type_spec_t *type_spec = idl_type_spec (node);
+    const idl_type_spec_t *type_spec = idl_is_array (node) ? node : idl_type_spec (node);
     if (is_fully_descriptive (type_spec))
       return IDL_VISIT_REVISIT;
     else
