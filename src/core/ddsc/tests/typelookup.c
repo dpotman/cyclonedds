@@ -136,8 +136,7 @@ static endpoint_info_t * find_typeid_match (dds_entity_t participant, dds_entity
         if (t != NULL)
         {
           print_ep (&data->key);
-          // FIXME
-          // printf (" type: "PTYPEIDFMT, PTYPEID (t));
+          printf (" type: "PTYPEIDFMT, PTYPEID (*t));
           if (!ddsi_typeid_compare (t, type_id) && !strcmp (data->topic_name, match_topic))
           {
             printf(" match");

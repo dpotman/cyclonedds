@@ -26,8 +26,9 @@
 extern "C" {
 #endif
 
-#define PTYPEIDFMT "%u"
-#define PTYPEID(x) ((x)._d)
+#define PTYPEIDFMT "[%s %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]"
+#define PHASH(x, n) ((x)._d == DDS_XTypes_EK_MINIMAL || (x)._d == DDS_XTypes_EK_COMPLETE ? (x)._u.equivalence_hash[(n)] : 0)
+#define PTYPEID(x) (ddsi_typeid_disc_descr((x)._d)), PHASH(x, 0), PHASH(x, 1), PHASH(x, 2), PHASH(x, 3), PHASH(x, 4), PHASH(x, 5), PHASH(x, 6), PHASH(x, 7), PHASH(x, 8), PHASH(x, 9), PHASH(x, 10), PHASH(x, 11), PHASH(x, 12), PHASH(x, 13)
 
 typedef enum ddsi_typeid_kind {
   TYPE_ID_KIND_MINIMAL,
@@ -48,6 +49,7 @@ DDS_EXPORT bool ddsi_typeid_is_none (const ddsi_typeid_t *typeid);
 DDS_EXPORT bool ddsi_typeid_is_hash (const ddsi_typeid_t *typeid);
 DDS_EXPORT bool ddsi_typeid_is_minimal (const ddsi_typeid_t *typeid);
 DDS_EXPORT bool ddsi_typeid_is_complete (const ddsi_typeid_t *typeid);
+const char * ddsi_typeid_disc_descr (unsigned char disc);
 
 void ddsi_typeobj_ser (const ddsi_typeobj_t *typeobj, unsigned char **buf, uint32_t *sz);
 void ddsi_typeobj_deser (unsigned char *buf, uint32_t sz, ddsi_typeobj_t **typeobj);

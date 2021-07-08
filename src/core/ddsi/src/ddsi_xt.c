@@ -100,6 +100,42 @@ ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src)
   return tid;
 }
 
+const char * ddsi_typeid_disc_descr (unsigned char disc)
+{
+  switch (disc)
+  {
+    case DDS_XTypes_EK_MINIMAL: return "EK_MINIMAL";
+    case DDS_XTypes_EK_COMPLETE: return "EK_COMPLETE";
+    case DDS_XTypes_TK_NONE: return "NONE";
+    case DDS_XTypes_TK_BOOLEAN: return "BOOLEAN";
+    case DDS_XTypes_TK_BYTE: return "BYTE";
+    case DDS_XTypes_TK_INT16: return "INT16";
+    case DDS_XTypes_TK_INT32: return "INT32";
+    case DDS_XTypes_TK_INT64: return "INT64";
+    case DDS_XTypes_TK_UINT16: return "UINT16";
+    case DDS_XTypes_TK_UINT32: return "UINT32";
+    case DDS_XTypes_TK_UINT64: return "UINT64";
+    case DDS_XTypes_TK_FLOAT32: return "FLOAT32";
+    case DDS_XTypes_TK_FLOAT64: return "FLOAT64";
+    case DDS_XTypes_TK_FLOAT128: return "FLOAT128";
+    case DDS_XTypes_TK_CHAR8: return "TK_CHAR";
+    case DDS_XTypes_TK_CHAR16: return "TK_CHAR16";
+    case DDS_XTypes_TK_STRING8: return "TK_STRING8";
+    case DDS_XTypes_TK_STRING16: return "TK_STRING16";
+    case DDS_XTypes_TK_ALIAS: return "TK_ALIAS";
+    case DDS_XTypes_TK_ENUM: return "TK_ENUM";
+    case DDS_XTypes_TK_BITMASK: return "TK_BITMASK";
+    case DDS_XTypes_TK_ANNOTATION: return "TK_ANNOTATION";
+    case DDS_XTypes_TK_STRUCTURE: return "TK_STRUCTURE";
+    case DDS_XTypes_TK_UNION: return "TK_UNION";
+    case DDS_XTypes_TK_BITSET: return "TK_BITSET";
+    case DDS_XTypes_TK_SEQUENCE: return "TK_SEQUENCE";
+    case DDS_XTypes_TK_ARRAY: return "TK_ARRAY";
+    case DDS_XTypes_TK_MAP: return "TK_MAP";
+    default: return "INVALID";
+  }
+}
+
 static int plain_collection_header_compare (struct DDS_XTypes_PlainCollectionHeader a, struct DDS_XTypes_PlainCollectionHeader b)
 {
   if (a.equiv_kind != b.equiv_kind)
@@ -109,7 +145,7 @@ static int plain_collection_header_compare (struct DDS_XTypes_PlainCollectionHea
 
 static int equivalence_hash_compare (const DDS_XTypes_EquivalenceHash a, const DDS_XTypes_EquivalenceHash b)
 {
-  return memcmp (a, b, sizeof (*a));
+  return memcmp (a, b, sizeof (DDS_XTypes_EquivalenceHash));
 }
 
 static int type_object_hashid_compare (struct DDS_XTypes_TypeObjectHashId a, struct DDS_XTypes_TypeObjectHashId b)

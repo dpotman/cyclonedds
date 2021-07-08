@@ -58,16 +58,9 @@ static int tlm_proxy_guids_eq (const struct ddsi_guid a, const struct ddsi_guid 
 
 int ddsi_tl_meta_compare_minimal (const struct tl_meta *a, const struct tl_meta *b)
 {
-  int r;
-  if ((r = ddsi_typeid_compare (&a->xt->type_id_minimal, &b->xt->type_id_minimal)) != 0)
-    return r;
-  /* consider types equal if the type name is not filled,
-     which can only occur when searching for a type
-     because all entries in the administration are required
-     to have to type name */
-  if (a->type_name == NULL || b->type_name == NULL)
-    return 0;
-  return strcmp (a->type_name, b->type_name);
+  /* type name equality is checked in tl_meta_lookup function, to allow iterating
+     all entries with a specific minimal type_id without taking type name into account */
+  return ddsi_typeid_compare (&a->xt->type_id_minimal, &b->xt->type_id_minimal);
 }
 
 int ddsi_tl_meta_compare (const struct tl_meta *a, const struct tl_meta *b)
@@ -107,14 +100,22 @@ static void tlm_fini (struct ddsi_domaingv *gv, struct tl_meta *tlm)
 struct tl_meta * ddsi_tl_meta_lookup_locked (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id, const char *type_name)
 {
   assert (type_id);
-  struct tl_meta templ, *tlm = NULL;
+  struct tl_meta templ, *tlm = NULL, *tmp;
   memset (&templ, 0, sizeof (templ));
   templ.xt = ddsrt_malloc (sizeof (*templ.xt));
   if (ddsi_typeid_is_minimal (type_id))
   {
     ddsi_typeid_copy (&templ.xt->type_id_minimal, type_id);
-    templ.type_name = type_name;
-    tlm = ddsrt_avl_lookup (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, &templ);
+    ddsrt_avl_iter_t it;
+    for (tmp = ddsrt_avl_iter_succ_eq (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, &it, &templ);
+      tmp != NULL && !ddsi_tl_meta_compare_minimal (tmp, &templ); tmp = ddsrt_avl_iter_next (&it))
+    {
+      if ((!type_name && !tmp->type_name) || (type_name && tmp->type_name && !strcmp (tmp->type_name, type_name)))
+      {
+        tlm = tmp;
+        break;
+      }
+    }
   }
   else // type_id is complete or fully-descriptive (non-hash)
   {
@@ -125,15 +126,6 @@ struct tl_meta * ddsi_tl_meta_lookup_locked (struct ddsi_domaingv *gv, const dds
     tlm = ddsrt_avl_lookup (&ddsi_tl_meta_treedef, &gv->tl_admin, &templ);
   }
   ddsrt_free (templ.xt);
-  return tlm;
-}
-
-struct tl_meta * ddsi_tl_meta_lookup (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id, const char *type_name)
-{
-  struct tl_meta *tlm;
-  ddsrt_mutex_lock (&gv->tl_admin_lock);
-  tlm = ddsi_tl_meta_lookup_locked (gv, type_id, type_name);
-  ddsrt_mutex_unlock (&gv->tl_admin_lock);
   return tlm;
 }
 
@@ -186,16 +178,19 @@ static void tlm_add_dependent_type (struct ddsi_domaingv *gv, struct tl_meta *tl
 {
   assert (dep_type_id);
   struct tl_meta *dep_tlm;
-  struct tl_meta_dep *tmp = tlm->deps;
-  tlm->deps = ddsrt_malloc (sizeof (*tlm->deps));
-  tlm->deps->prev = tmp;
   if (tmap)
   {
     const ddsi_typeid_t *dep_type_id_minimal = ddsi_typemap_matching_id (tmap, dep_type_id);
+    GVTRACE (" dep " PTYPEIDFMT "/" PTYPEIDFMT " (", PTYPEID(*dep_type_id), PTYPEID(*dep_type_id_minimal));
     if (!(dep_tlm = ddsi_tl_meta_lookup_locked (gv, dep_type_id_minimal, NULL)))
       dep_tlm = ddsi_tl_meta_lookup_locked (gv, dep_type_id, NULL);
     if (dep_tlm)
-      ddsi_tl_meta_ref_locked (gv, dep_tlm);
+    {
+      if (dep_tlm != tlm)
+        (void) ddsi_tl_meta_ref_locked (gv, dep_tlm);
+      else
+        return;
+    }
     else
     {
       ddsi_typeinfo_t type_info;
@@ -207,9 +202,15 @@ static void tlm_add_dependent_type (struct ddsi_domaingv *gv, struct tl_meta *tl
     }
   }
   else
+  {
     dep_tlm = ddsi_tl_meta_typeid_ref_locked (gv, dep_type_id);
+  }
   assert (dep_tlm);
+  struct tl_meta_dep *tmp = tlm->deps;
+  tlm->deps = ddsrt_malloc (sizeof (*tlm->deps));
+  tlm->deps->prev = tmp;
   tlm->deps->tlm = dep_tlm;
+  GVTRACE (") ");
 }
 
 static struct tl_meta * get_tlm (struct ddsi_domaingv *gv, const char *type_name, const ddsi_typeinfo_t *type_info, const ddsi_typemap_t *tmap)
@@ -217,6 +218,7 @@ static struct tl_meta * get_tlm (struct ddsi_domaingv *gv, const char *type_name
   struct tl_meta *tlm = NULL;
   const ddsi_typeid_t *type_id_minimal = &type_info->minimal.typeid_with_size.type_id,
       *type_id = &type_info->complete.typeid_with_size.type_id;
+  GVTRACE (" tid_min " PTYPEIDFMT " tid " PTYPEIDFMT, PTYPEID(*type_id_minimal), PTYPEID(*type_id));
   if ((ddsi_typeid_is_none (type_id_minimal) || !(tlm = ddsi_tl_meta_lookup_locked (gv, type_id_minimal, type_name)))
     && (ddsi_typeid_is_none (type_id) || !(tlm = ddsi_tl_meta_lookup_locked (gv, type_id, NULL))))
   {
@@ -248,14 +250,14 @@ struct tl_meta * ddsi_tl_meta_ref_locked (struct ddsi_domaingv *gv, struct tl_me
   assert ((!ddsi_typeid_is_none (&tlm->xt->type_id_minimal) && ddsi_tl_meta_lookup_locked (gv, &tlm->xt->type_id_minimal, tlm->type_name))
     || (!ddsi_typeid_is_none (&tlm->xt->type_id) && ddsi_tl_meta_lookup_locked (gv, &tlm->xt->type_id, NULL)));
   tlm->refc++;
-  GVTRACE (" ref tl_meta refc %u\n", tlm->refc);
+  GVTRACE (" ref tl_meta %p refc %u\n", tlm, tlm->refc);
   return tlm;
 }
 
 struct tl_meta * ddsi_tl_meta_typeid_ref_locked (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id)
 {
   assert (type_id);
-  GVTRACE (" ref tl_meta type-id ");
+  GVTRACE (" ref tl_meta type-id " PTYPEIDFMT, PTYPEID(*type_id));
   bool complete = !ddsi_typeid_is_hash (type_id) || ddsi_typeid_is_complete (type_id);
   ddsi_typeinfo_t type_info;
   memset (&type_info, 0, sizeof (type_info));
@@ -329,7 +331,7 @@ static void tlm_unref_impl_locked (struct ddsi_domaingv *gv, struct tl_meta *tlm
   }
   if (--tlm->refc == 0)
   {
-    GVTRACE (" remove tl_meta\n");
+    GVTRACE (" remove tlm\n");
     ddsrt_avl_delete (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, tlm);
     ddsrt_avl_delete (&ddsi_tl_meta_treedef, &gv->tl_admin, tlm);
     tlm_fini (gv, tlm);
@@ -344,18 +346,22 @@ static void tlm_unref_impl (struct ddsi_domaingv *gv, struct tl_meta *tlm, const
   if (!tlm)
   {
     ddsi_typeid_t *tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_COMPLETE);
-    if (ddsi_typeid_is_none (tid))
+    if (!ddsi_typeid_is_none (tid))
+      tlm = ddsi_tl_meta_lookup_locked (gv, tid, NULL);
+    if (!tlm)
+    {
       tid = ddsi_sertype_typeid (type, TYPE_ID_KIND_MINIMAL);
-    if (ddsi_typeid_is_none (tid))
+      if (!ddsi_typeid_is_none (tid))
+        tlm = ddsi_tl_meta_lookup_locked (gv, tid, type->type_name);
+    }
+    if (!tlm)
     {
       GVTRACE (" no typeid\n");
       ddsrt_mutex_unlock (&gv->tl_admin_lock);
       return;
     }
-    const char *tname = tlm ? tlm->type_name : type->type_name;
-    tlm = ddsi_tl_meta_lookup_locked (gv, tid, tname);
+    GVTRACE (" tid " PTYPEIDFMT " tlm %p", PTYPEID (*tid), tlm);
   }
-  assert (tlm);
   tlm_unref_impl_locked (gv, tlm, proxy_guid);
   ddsrt_mutex_unlock (&gv->tl_admin_lock);
   GVTRACE ("\n");
@@ -405,7 +411,7 @@ bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t 
   {
     // type lookup is pending or the type is already resolved, so we'll return true
     // to indicate that the type request is done (or not required)
-    // FIXME: GVTRACE ("state not-new for "PTYPEIDFMT"\n", PTYPEID (*type_id));
+    GVTRACE ("state not-new for "PTYPEIDFMT"\n", PTYPEID (*type_id));
     ddsrt_mutex_unlock (&gv->tl_admin_lock);
     return true;
   }
@@ -444,7 +450,7 @@ bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t 
   ddsrt_mutex_unlock (&gv->tl_admin_lock);
 
   thread_state_awake (lookup_thread_state (), gv);
-  // FIXME: GVTRACE ("wr "PGUIDFMT" typeid "PTYPEIDFMT"\n", PGUID (wr->e.guid), PTYPEID(*type_id));
+  GVTRACE ("wr "PGUIDFMT" typeid "PTYPEIDFMT"\n", PGUID (wr->e.guid ), PTYPEID(*type_id));
   struct ddsi_tkmap_instance *tk = ddsi_tkmap_lookup_instance_ref (gv->m_tkmap, serdata);
   write_sample_gc (lookup_thread_state (), NULL, wr, serdata, tk);
   ddsi_tkmap_instance_unref (gv->m_tkmap, tk);
@@ -495,10 +501,10 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
 {
   assert (!(d->statusinfo & (NN_STATUSINFO_DISPOSE | NN_STATUSINFO_UNREGISTER)));
 
+  struct tl_meta *tlm = NULL, *tmp;
   DDS_Builtin_TypeLookup_Request req;
   memset (&req, 0, sizeof (req));
   ddsi_serdata_to_sample (d, &req, NULL, NULL);
-
   GVTRACE (" handle-tl-req wr "PGUIDFMT " seqnr %"PRIi64" ntypeids %"PRIu32, PGUID (from_guid (&req.header.requestId.writer_guid)), from_seqno (&req.header.requestId.sequence_number), req.data._u.getTypes.type_ids._length);
 
   ddsrt_mutex_lock (&gv->tl_admin_lock);
@@ -506,15 +512,38 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
   for (uint32_t n = 0; n < req.data._u.getTypes.type_ids._length; n++)
   {
     ddsi_typeid_t *tid = &req.data._u.getTypes.type_ids._buffer[n];
+    ddsi_typeid_kind_t kind = ddsi_typeid_is_minimal (tid) ? TYPE_ID_KIND_MINIMAL : TYPE_ID_KIND_COMPLETE;
     GVTRACE (" type "PTYPEIDFMT, PTYPEID (*tid));
-    struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, tid, NULL); /* any type name */
-    if (tlm && (
-      (ddsi_typeid_is_minimal (tid) && tlm->xt->has_minimal_obj)
-      || (ddsi_typeid_is_complete (tid) && tlm->xt->has_complete_obj)))
+    if (kind == TYPE_ID_KIND_MINIMAL)
+    {
+      ddsrt_avl_iter_t it;
+      struct tl_meta templ;
+      memset (&templ, 0, sizeof (templ));
+      templ.xt = ddsrt_malloc (sizeof (*templ.xt));
+      ddsi_typeid_copy (&templ.xt->type_id_minimal, tid);
+      for (tmp = ddsrt_avl_iter_succ_eq (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, &it, &templ);
+        tmp != NULL && !ddsi_tl_meta_compare_minimal (tmp, &templ); tlm = ddsrt_avl_iter_next (&it))
+      {
+        if (tmp->xt->has_minimal_obj)
+        {
+          tlm = tmp;
+          break;
+        }
+      }
+      ddsrt_free (templ.xt);
+    }
+    else
+    {
+      assert (ddsi_typeid_is_complete (tid));
+      tmp = ddsi_tl_meta_lookup_locked (gv, tid, NULL);
+      if (tmp->xt->has_complete_obj)
+        tlm = tmp;
+    }
+    if (tlm)
     {
       types._buffer = ddsrt_realloc (types._buffer, (types._length + 1) * sizeof (*types._buffer));
       ddsi_typeid_copy (&types._buffer[types._length].type_identifier, tid);
-      ddsi_xt_get_typeobject (tlm->xt, ddsi_typeid_is_minimal (tid) ? TYPE_ID_KIND_MINIMAL : TYPE_ID_KIND_COMPLETE, &types._buffer[types._length].type_object);
+      ddsi_xt_get_typeobject (tlm->xt, kind, &types._buffer[types._length].type_object);
       types._length++;
     }
   }
@@ -606,31 +635,27 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
   DDS_Builtin_TypeLookup_Reply reply;
   memset (&reply, 0, sizeof (reply));
   ddsi_serdata_to_sample (d, &reply, NULL, NULL);
-
-  // struct ddsi_sertype_default *st = NULL;
   bool resolved = false;
-
   ddsrt_mutex_lock (&gv->tl_admin_lock);
   GVTRACE ("handle-tl-reply wr "PGUIDFMT " seqnr %"PRIi64" ntypeids %"PRIu32" ", PGUID (from_guid (&reply.header.requestId.writer_guid)), from_seqno (&reply.header.requestId.sequence_number), reply.return_data._u.getType._u.result.types._length);
   while (n < reply.return_data._u.getType._u.result.types._length)
   {
     DDS_XTypes_TypeIdentifierTypeObjectPair r = reply.return_data._u.getType._u.result.types._buffer[n];
-    // FIXME: in case of minimal type id resolved, update all records with this id if more exist?
-    // FIXME: in case tlm record exists with minimal type info, update if complete type info received
-
+    GVTRACE (" type "PTYPEIDFMT, PTYPEID (r.type_identifier));
     if (ddsi_typeid_is_minimal (&r.type_identifier))
     {
+      /* Add type object to all tl_meta records with this type identifier, regardless of the type name */
       ddsrt_avl_iter_t it;
       struct tl_meta templ;
       memset (&templ, 0, sizeof (templ));
       templ.xt = ddsrt_malloc (sizeof (*templ.xt));
       ddsi_typeid_copy (&templ.xt->type_id_minimal, &r.type_identifier);
-      for (struct tl_meta *tlm = ddsrt_avl_iter_succ_eq (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, &it, &templ); tlm != NULL; tlm = ddsrt_avl_iter_next (&it))
+      for (struct tl_meta *tlm = ddsrt_avl_iter_succ_eq (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, &it, &templ);
+        tlm != NULL && !ddsi_tl_meta_compare_minimal (tlm, &templ); tlm = ddsrt_avl_iter_next (&it))
       {
         if (!tlm->xt->has_minimal_obj)
         {
-          // FIXME
-          // GVTRACE (" type "PTYPEIDFMT, PTYPEID (*r.type_identifier));
+          GVTRACE (" resolve-minimal tlm %p", tlm);
           ddsi_xt_type_add (gv, tlm->xt, &r.type_identifier, &r.type_object);
           tlm->xt->minimal_obj_req = 0;
 
@@ -646,8 +671,7 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
       struct tl_meta *tlm = ddsi_tl_meta_lookup_locked (gv, &r.type_identifier, NULL);
       if (tlm && !tlm->xt->has_complete_obj)
       {
-        // FIXME
-        // GVTRACE (" type "PTYPEIDFMT, PTYPEID (*r.type_identifier));
+        GVTRACE (" resolve-complete tlm %p", tlm);
         ddsi_xt_type_add (gv, tlm->xt, &r.type_identifier, &r.type_object);
         tlm->xt->complete_obj_req = 0;
 

@@ -76,9 +76,7 @@ static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, co
   ddsrt_mutex_lock (&gv->tl_admin_lock);
   if (!tlm->xt->has_minimal_obj && !tlm->xt->has_complete_obj)
   {
-    GVTRACE ("unresolved type object for %s / ", type_name);
-    // FIXME: GVTRACE (type_id)
-    GVTRACE ("\n");
+    GVTRACE ("unresolved type object for %s / " PTYPEIDFMT, type_name, PTYPEID(tlm->xt->type_id_minimal));
     /* defer requesting unresolved type until after the endpoint qos lock
        has been released, so just set a bool value indicating that a type
        lookup is required */
@@ -178,13 +176,16 @@ bool qos_match_mask_p (
     if (!check_endpoint_typeid (gv, wr_qos->type_name, wr_tlm, wr_typeid_req_lookup))
       return false;
     ddsrt_mutex_lock (&gv->tl_admin_lock);
+    printf("%" PRIdTID " try match %p %p\n", ddsrt_gettid(), rd_tlm, wr_tlm);
     if ((rd_tlm->sertype != NULL && !ddsi_sertype_assignable_from (rd_tlm->sertype, wr_tlm->xt))
       || (wr_tlm->sertype != NULL && !ddsi_sertype_assignable_from (wr_tlm->sertype, rd_tlm->xt)))
     {
+      printf("%" PRIdTID " no match %p %p\n", ddsrt_gettid(), rd_tlm, wr_tlm);
       ddsrt_mutex_unlock (&gv->tl_admin_lock);
       *reason = DDS_TYPE_CONSISTENCY_ENFORCEMENT_QOS_POLICY_ID;
       return false;
     }
+    printf("%" PRIdTID " match %p %p\n", ddsrt_gettid(), rd_tlm, wr_tlm);
     ddsrt_mutex_unlock (&gv->tl_admin_lock);
   }
 #else
