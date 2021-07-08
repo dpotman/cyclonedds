@@ -1764,8 +1764,7 @@ static void handle_sedp_alive_topic (const struct receiver_state *rst, seqno_t s
   {
     ddsi_typeid_copy (&type_id_minimal, &xqos->type_information->minimal.typeid_with_size.type_id);
     ddsi_typeid_copy (&type_id, &xqos->type_information->complete.typeid_with_size.type_id);
-    // FIXME
-    // GVLOGDISC (" type-hash "PTYPEIDFMT, PTYPEID(type_id));
+    GVLOGDISC (" tid "PTYPEIDFMT, PTYPEID(type_id));
   }
   GVLOGDISC (" QOS={");
   ddsi_xqos_log (DDS_LC_DISCOVERY, &gv->logconfig, xqos);

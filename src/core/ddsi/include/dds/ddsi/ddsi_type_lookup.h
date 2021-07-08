@@ -119,15 +119,6 @@ void ddsi_tl_meta_unref_locked (struct ddsi_domaingv *gv, struct tl_meta *tlm);
 struct tl_meta * ddsi_tl_meta_lookup_locked (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id, const char *type_name);
 
 /**
- * Returns the type lookup meta object for the provided type identifier
- *
- * @remark The returned object from this function is not refcounted,
- *   its lifetime is at lease the lifetime of the (proxy) endpoints
- *   that are referring to it.
- */
-struct tl_meta * ddsi_tl_meta_lookup (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id, const char *type_name);
-
-/**
  * For all proxy endpoints registered with the type lookup meta object that is
  * associated with the provided type, this function references the sertype
  * for these endpoints.
