@@ -12,7 +12,7 @@
 #ifndef Q_QOSMATCH_H
 #define Q_QOSMATCH_H
 
-#include "dds/ddsi/ddsi_xt.h"
+#include "dds/ddsi/ddsi_typelib.h"
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -37,8 +37,8 @@ bool qos_match_mask_p (
     uint64_t mask,
     dds_qos_policy_id_t *reason
 #ifdef DDS_HAS_TYPE_DISCOVERY
-    , const struct tl_meta *rd_tlm
-    , const struct tl_meta *wr_tlm
+    , const struct ddsi_type_pair *rd_type_pair
+    , const struct ddsi_type_pair *wr_type_pair
     , bool *rd_typeid_req_lookup
     , bool *wr_typeid_req_lookup
 #endif
@@ -50,8 +50,8 @@ bool qos_match_p (
     const dds_qos_t *wr_qos,
     dds_qos_policy_id_t *reason
 #ifdef DDS_HAS_TYPE_DISCOVERY
-    , const struct tl_meta *rd_tlm
-    , const struct tl_meta *wr_tlm
+    , const struct ddsi_type_pair *rd_type_pair
+    , const struct ddsi_type_pair *wr_type_pair
     , bool *rd_typeid_req_lookup
     , bool *wr_typeid_req_lookup
 #endif

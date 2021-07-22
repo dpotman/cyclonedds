@@ -25,10 +25,9 @@
 #include "dds/ddsi/ddsi_cdrstream.h"
 #include "dds/ddsi/ddsi_sertype.h"
 #include "dds/ddsi/ddsi_serdata_default.h"
-#include "dds/ddsi/ddsi_type_lookup.h"
-#include "dds/ddsi/ddsi_xt.h"
-#include "dds/ddsi/ddsi_xt_wrap.h"
 #include "dds/ddsi/ddsi_xt_typeinfo.h"
+#include "dds/ddsi/ddsi_typelookup.h"
+#include "dds/ddsi/ddsi_typelib.h"
 
 
 static bool sertype_default_equal (const struct ddsi_sertype *acmn, const struct ddsi_sertype *bcmn)
@@ -209,26 +208,27 @@ static bool sertype_default_deserialize (struct ddsi_domaingv *gv, struct ddsi_s
   return true;
 }
 
-static bool sertype_default_assignable_from (const struct ddsi_sertype *type_a, const struct xt_type *xt_b)
+static bool sertype_default_assignable_from (const struct ddsi_sertype *sertype_a, const struct ddsi_type_pair *type_pair_b)
 {
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  assert (xt_b);
-  struct tl_meta *tlm_a;
-  struct ddsi_domaingv *gv = ddsrt_atomic_ldvoidp (&type_a->gv);
+  assert (type_pair_b);
+  struct ddsi_type *type_a;
+  struct ddsi_domaingv *gv = ddsrt_atomic_ldvoidp (&sertype_a->gv);
 
   // If receiving type disables type checking, type b is assignable
-  struct ddsi_sertype_default *a = (struct ddsi_sertype_default *) type_a;
+  struct ddsi_sertype_default *a = (struct ddsi_sertype_default *) sertype_a;
   if (a->type.flagset & DDS_TOPIC_DISABLE_TYPECHECK)
     return true;
 
-  if (!(tlm_a = ddsi_tl_meta_lookup_locked (gv, sertype_default_typeid (type_a, TYPE_ID_KIND_MINIMAL), type_a->type_name)))
-    tlm_a = ddsi_tl_meta_lookup_locked (gv, sertype_default_typeid (type_a, TYPE_ID_KIND_COMPLETE), type_a->type_name);
+  if (!(type_a = ddsi_type_lookup_locked (gv, sertype_default_typeid (sertype_a, TYPE_ID_KIND_MINIMAL))))
+    type_a = ddsi_type_lookup_locked (gv, sertype_default_typeid (sertype_a, TYPE_ID_KIND_COMPLETE));
 
-  assert (tlm_a);
-  return ddsi_xt_is_assignable_from (gv, tlm_a->xt, xt_b);
+  assert (type_a);
+  return (type_pair_b->minimal && ddsi_xt_is_assignable_from (gv, &type_a->xt, &type_pair_b->minimal->xt))
+    || (type_pair_b->complete && ddsi_xt_is_assignable_from (gv, &type_a->xt, &type_pair_b->complete->xt));
 #else
-  DDSRT_UNUSED_ARG (type_a);
-  DDSRT_UNUSED_ARG (tlm_b);
+  DDSRT_UNUSED_ARG (sertype_a);
+  DDSRT_UNUSED_ARG (type_pair_b);
 #endif
   return false;
 }

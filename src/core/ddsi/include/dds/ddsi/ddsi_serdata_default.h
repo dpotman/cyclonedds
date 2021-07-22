@@ -18,9 +18,8 @@
 #include "dds/ddsrt/avl.h"
 #include "dds/ddsi/ddsi_serdata.h"
 #include "dds/ddsi/ddsi_plist_generic.h"
-#include "dds/ddsi/ddsi_xt.h"
-#include "dds/ddsi/ddsi_xt_wrap.h"
-#include "dds/ddsi/ddsi_type_lookup.h"
+#include "dds/ddsi/ddsi_typelib.h"
+#include "dds/ddsi/ddsi_typelookup.h"
 
 #include "dds/dds.h"
 

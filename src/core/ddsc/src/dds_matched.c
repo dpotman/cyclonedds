@@ -132,7 +132,7 @@ static dds_builtintopic_endpoint_t *make_builtintopic_endpoint (
     dds_instance_handle_t ppiid,
     const dds_qos_t *qos
 #ifdef DDS_HAS_TYPE_DISCOVERY
-    , const struct tl_meta *tlm
+    , const struct ddsi_type_pair *type_pair
 #endif
 )
 {
@@ -150,10 +150,11 @@ static dds_builtintopic_endpoint_t *make_builtintopic_endpoint (
   ep->type_name = dds_string_dup (qos->type_name);
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  if (tlm != NULL && (!ddsi_typeid_is_none (&tlm->xt->type_id) || !ddsi_typeid_is_none (&tlm->xt->type_id_minimal)))
+  if (type_pair != NULL && (type_pair->minimal || type_pair->complete))
   {
-    if ((ep->qos->type_information = ddsi_sertype_typeinfo (tlm->sertype)))
-      ep->qos->present |= QP_TYPE_INFORMATION;
+    // FIXME: get type information
+    // if ((ep->qos->type_information = ddsi_sertype_typeinfo (type->sertype)))
+      // ep->qos->present |= QP_TYPE_INFORMATION;
   }
 #endif
 
@@ -183,7 +184,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_subscription_data (dds_entity_t wri
         if (prd->e.iid == ih)
         {
 #ifdef DDS_HAS_TYPE_DISCOVERY
-          ret = make_builtintopic_endpoint (&prd->e.guid, &prd->c.proxypp->e.guid, prd->c.proxypp->e.iid, prd->c.xqos, prd->c.tlm);
+          ret = make_builtintopic_endpoint (&prd->e.guid, &prd->c.proxypp->e.guid, prd->c.proxypp->e.iid, prd->c.xqos, prd->c.type_pair);
 #else
           ret = make_builtintopic_endpoint (&prd->e.guid, &prd->c.proxypp->e.guid, prd->c.proxypp->e.iid, prd->c.xqos);
 #endif
@@ -200,7 +201,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_subscription_data (dds_entity_t wri
         if (rd->e.iid == ih)
         {
 #ifdef DDS_HAS_TYPE_DISCOVERY
-          ret = make_builtintopic_endpoint (&rd->e.guid, &rd->c.pp->e.guid, rd->c.pp->e.iid, rd->xqos, rd->c.tlm);
+          ret = make_builtintopic_endpoint (&rd->e.guid, &rd->c.pp->e.guid, rd->c.pp->e.iid, rd->xqos, rd->c.type_pair);
 #else
           ret = make_builtintopic_endpoint (&rd->e.guid, &rd->c.pp->e.guid, rd->c.pp->e.iid, rd->xqos);
 #endif
@@ -238,7 +239,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_publication_data (dds_entity_t read
         if (pwr->e.iid == ih)
         {
 #ifdef DDS_HAS_TYPE_DISCOVERY
-          ret = make_builtintopic_endpoint (&pwr->e.guid, &pwr->c.proxypp->e.guid, pwr->c.proxypp->e.iid, pwr->c.xqos, pwr->c.tlm);
+          ret = make_builtintopic_endpoint (&pwr->e.guid, &pwr->c.proxypp->e.guid, pwr->c.proxypp->e.iid, pwr->c.xqos, pwr->c.type_pair);
 #else
           ret = make_builtintopic_endpoint (&pwr->e.guid, &pwr->c.proxypp->e.guid, pwr->c.proxypp->e.iid, pwr->c.xqos);
 #endif
@@ -255,7 +256,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_publication_data (dds_entity_t read
         if (wr->e.iid == ih)
         {
 #ifdef DDS_HAS_TYPE_DISCOVERY
-          ret = make_builtintopic_endpoint (&wr->e.guid, &wr->c.pp->e.guid, wr->c.pp->e.iid, wr->xqos, wr->c.tlm);
+          ret = make_builtintopic_endpoint (&wr->e.guid, &wr->c.pp->e.guid, wr->c.pp->e.iid, wr->xqos, wr->c.type_pair);
 #else
           ret = make_builtintopic_endpoint (&wr->e.guid, &wr->c.pp->e.guid, wr->c.pp->e.iid, wr->xqos);
 #endif

@@ -206,7 +206,7 @@ static void dds_topic_close (dds_entity *e)
   assert (dds_entity_kind (e->m_parent) == DDS_KIND_PARTICIPANT);
   dds_participant * const pp = (dds_participant *) e->m_parent;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  ddsi_tl_meta_local_unref (&e->m_domain->gv, NULL, tp->m_stype);
+  ddsi_type_unref_local (&e->m_domain->gv, NULL, tp->m_stype);
 #endif
   ddsrt_free (tp->m_name);
 
@@ -527,14 +527,15 @@ dds_entity_t dds_create_topic_impl (
   *sertype = sertype_registered;
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  (void) ddsi_tl_meta_local_ref (gv, sertype_registered);
+  (void) ddsi_type_ref_local (gv, sertype_registered, TYPE_ID_KIND_MINIMAL);
+  (void) ddsi_type_ref_local (gv, sertype_registered, TYPE_ID_KIND_COMPLETE);
 #endif
 
   const bool new_topic_def = register_topic_type_for_discovery (gv, pp, ktp, is_builtin, sertype_registered);
   ddsrt_mutex_unlock (&pp->m_entity.m_mutex);
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  ddsi_tl_meta_register_with_proxy_endpoints (gv, sertype_registered);
+  ddsi_type_register_with_proxy_endpoints (gv, sertype_registered);
 #endif
 
   if (new_topic_def)
@@ -851,7 +852,7 @@ static dds_entity_t find_remote_topic_impl (dds_participant *pp_topic, const cha
     return ret;
   if (tpd == NULL)
     return DDS_RETCODE_OK;
-  if ((ret = dds_domain_resolve_type (pp_topic->m_entity.m_hdllink.hdl, &tpd->tlm->xt->type_id, tpd->tlm->type_name, timeout, &sertype)) != DDS_RETCODE_OK)
+  if ((ret = dds_domain_resolve_type (pp_topic->m_entity.m_hdllink.hdl, &tpd->type_pair->complete->xt.id, timeout, &sertype)) != DDS_RETCODE_OK)
   {
     /* if topic definition is found, but the type for this topic is not resolved
         and timeout 0 means we don't want to request and wait for the type to be retrieved */

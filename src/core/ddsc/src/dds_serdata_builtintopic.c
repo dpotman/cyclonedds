@@ -139,17 +139,18 @@ static void from_entity_wr (struct ddsi_serdata_builtintopic_endpoint *d, const 
 static void from_proxy_endpoint_common (struct ddsi_serdata_builtintopic_endpoint *d, const struct proxy_endpoint_common *pec)
 {
   d->pphandle = pec->proxypp->e.iid;
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  // if (pec->tlm)
-  // {
-  //   d->type_info = ddsrt_calloc (1, sizeof (*d->type_info));
-  //   ddsrt_mutex_lock (&pec->type->gv->tl_admin_lock);
-  //   ddsi_typeid_copy (&d->type_info->minimal.typeid_with_size.type_id, &pec->tlm->xt->type_id_minimal);
-  //   ddsi_typeid_copy (&d->type_info->complete.typeid_with_size.type_id, &pec->tlm->xt->type_id);
-  //   ddsrt_mutex_unlock (&pec->type->gv->tl_admin_lock);
-  // }
-#endif
   from_qos (&d->common, pec->xqos);
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  if (pec->type_pair)
+  {
+    d->common.xqos.type_information = ddsrt_calloc (1, sizeof (*d->common.xqos.type_information));
+    ddsrt_mutex_lock (&pec->proxypp->e.gv->typelib_lock);
+    ddsi_typeid_copy (&d->common.xqos.type_information->minimal.typeid_with_size.type_id, &pec->type_pair->minimal->xt.id);
+    ddsi_typeid_copy (&d->common.xqos.type_information->complete.typeid_with_size.type_id, &pec->type_pair->complete->xt.id);
+    // FIXME: type obj ser size, dependent type ids
+    ddsrt_mutex_unlock (&pec->proxypp->e.gv->typelib_lock);
+  }
+#endif
 }
 
 static void from_entity_proxy_rd (struct ddsi_serdata_builtintopic_endpoint *d, const struct proxy_reader *proxyrd)
@@ -439,7 +440,8 @@ struct ddsi_serdata *dds_serdata_builtin_from_topic_definition (const struct dds
   memcpy (&d->common.key.raw, key, sizeof (d->common.key.raw));
   if (tpd != NULL && kind == SDK_DATA)
   {
-    // d->type_info = ddsi_sertype_typeinfo (tpd->tlm->sertype);
+    // FIXME
+    // d->type_info = ddsi_sertype_typeinfo (tpd->type_pair->complete->sertype);
     from_qos (&d->common, tpd->xqos);
   }
   return fix_serdata_builtin (&d->common, DSBT_TOPIC, tp->c.serdata_basehash);

@@ -18,7 +18,7 @@
 #include "dds/ddsi/q_protocol.h"
 #include "dds/ddsi/q_rtps.h"
 #include "dds/ddsi/q_log.h"
-#include "dds/ddsi/ddsi_xt.h"
+#include "dds/ddsi/ddsi_typelib.h"
 
 #if defined (__cplusplus)
 extern "C" {

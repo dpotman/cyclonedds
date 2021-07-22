@@ -28,8 +28,8 @@
 #include "dds/ddsi/q_inverse_uint32_set.h"
 #include "dds/ddsi/ddsi_serdata_default.h"
 #include "dds/ddsi/ddsi_handshake.h"
-#include "dds/ddsi/ddsi_xt.h"
-#include "dds/ddsi/ddsi_type_lookup.h"
+#include "dds/ddsi/ddsi_typelib.h"
+#include "dds/ddsi/ddsi_typelookup.h"
 #include "dds/ddsi/ddsi_tran.h"
 #include "dds/ddsi/ddsi_list_genptr.h"
 
@@ -261,7 +261,7 @@ struct participant
 #ifdef DDS_HAS_TOPIC_DISCOVERY
 struct ddsi_topic_definition {
   unsigned char key[16]; /* key for this topic definition (MD5 hash of the type_id and qos) */
-  struct tl_meta *tlm;
+  struct ddsi_type_pair *type_pair;
   struct dds_qos *xqos; /* contains also the topic name and type name */
   uint32_t refc;
   struct ddsi_domaingv *gv;
@@ -278,7 +278,7 @@ struct endpoint_common {
   struct participant *pp;
   ddsi_guid_t group_guid;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  struct tl_meta *tlm;
+  struct ddsi_type_pair *type_pair;
 #endif
 };
 
@@ -489,7 +489,7 @@ struct proxy_endpoint_common
   nn_vendorid_t vendor; /* cached from proxypp->vendor */
   seqno_t seq; /* sequence number of most recent SEDP message */
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  struct tl_meta *tlm;
+  struct ddsi_type_pair *type_pair;
   const struct ddsi_sertype * type; /* sertype for data this endpoint reads/writes */
 #endif
 #ifdef DDS_HAS_SECURITY
