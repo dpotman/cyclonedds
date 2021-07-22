@@ -123,6 +123,11 @@ static int data_representation_match_p (const dds_qos_t *a, const dds_qos_t *b)
   }
 }
 
+static bool type_pair_has_id (const struct ddsi_type_pair *pair)
+{
+  return pair && (pair->minimal || pair->complete);
+}
+
 bool qos_match_mask_p (
     struct ddsi_domaingv *gv,
     const dds_qos_t *rd_qos,
@@ -155,7 +160,7 @@ bool qos_match_mask_p (
   if (wr_typeid_req_lookup != NULL)
     *wr_typeid_req_lookup = false;
 
-  if (rd_type_pair == NULL || rd_type_pair == NULL)
+  if (!type_pair_has_id (rd_type_pair) || !type_pair_has_id (rd_type_pair))
   {
     // Type info missing on either or both: automatic failure if "force type validation"
     // is set.  If it is missing for one, there is no point in requesting it for the

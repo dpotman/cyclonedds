@@ -206,7 +206,7 @@ static void dds_topic_close (dds_entity *e)
   assert (dds_entity_kind (e->m_parent) == DDS_KIND_PARTICIPANT);
   dds_participant * const pp = (dds_participant *) e->m_parent;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  ddsi_type_unref_local (&e->m_domain->gv, NULL, tp->m_stype);
+  ddsi_type_unref_sertype (&e->m_domain->gv, tp->m_stype);
 #endif
   ddsrt_free (tp->m_name);
 

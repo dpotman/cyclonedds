@@ -347,19 +347,18 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
 struct ddsi_type * ddsi_type_ref_proxy (struct ddsi_domaingv *gv, const ddsi_typeinfo_t *type_info, ddsi_typeid_kind_t kind, const ddsi_guid_t *proxy_guid);
 
 /**
- * Dereference the type lookup meta object identified by the provided type identifier.
- * The proxy endpoint will be deregistered for this entry.
+ * Dereference the type identified by the provided type identifier.
+ * If provided, the proxy endpoint will be deregistered for this entry.
  */
-void ddsi_type_unref_proxy (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_guid_t *proxy_ep_guid);
+void ddsi_type_unref (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_guid_t *proxy_guid);
 
 /**
- * Dereference the type lookup meta object identifier by the provided type identifier
- * or the provided type object.
+ * Dereference the types (min/compl) for the provided type sertype
  */
-void ddsi_type_unref_local (struct ddsi_domaingv *gv, struct ddsi_type *type, const struct ddsi_sertype *sertype);
+void ddsi_type_unref_sertype (struct ddsi_domaingv *gv, const struct ddsi_sertype *sertype);
 
 /**
- * Dereference the type lookup meta object
+ * Dereference the type (caller must have the typelib lock)
  */
 void ddsi_type_unref_locked (struct ddsi_domaingv *gv, struct ddsi_type *type);
 

@@ -2768,20 +2768,20 @@ static bool topickind_qos_match_p_lock (
     ddsrt_mutex_unlock (locks[i + shift]);
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  if (!ret && (rd_type_lookup || wr_type_lookup))
+  if (!ret)
   {
     /* In case qos_match_p returns false, one of rd_type_look and wr_type_lookup could
        be set to indicate that type information is missing. At this point, we know this
        is the case so pass either rd_type_pair->minimal->id or wr_type_pair->minimal->id to the tl_request_type function. */
     const ddsi_typeid_t ** dep_ids = NULL;
     uint32_t dep_id_cnt = 0;
-    if (rd_type_lookup)
+    if (rd_type_lookup && rd_type_pair->minimal)
     {
       if (rdqos->present & QP_TYPE_INFORMATION)
         dep_id_cnt = get_dependent_typeids (rdqos->type_information, &dep_ids, TYPE_ID_KIND_MINIMAL);
       (void) ddsi_tl_request_type (gv, &rd_type_pair->minimal->xt.id, dep_ids, dep_id_cnt);
     }
-    else
+    else if (wr_type_lookup && wr_type_pair->minimal)
     {
       if (wrqos->present & QP_TYPE_INFORMATION)
         dep_id_cnt = get_dependent_typeids (wrqos->type_information, &dep_ids, TYPE_ID_KIND_MINIMAL);
@@ -3405,8 +3405,8 @@ static void endpoint_common_fini (struct entity_common *e, struct endpoint_commo
 #ifdef DDS_HAS_TYPE_DISCOVERY
     if (c->type_pair)
     {
-      ddsi_type_unref_local (e->gv, c->type_pair->minimal, NULL);
-      ddsi_type_unref_local (e->gv, c->type_pair->complete, NULL);
+      ddsi_type_unref (e->gv, c->type_pair->minimal, NULL);
+      ddsi_type_unref (e->gv, c->type_pair->complete, NULL);
       ddsrt_free (c->type_pair);
     }
 #endif
@@ -5748,6 +5748,7 @@ static struct ddsi_topic_definition *lookup_topic_definition_locked (struct ddsi
   templ.gv = gv;
   set_topic_definition_hash (&templ);
   struct ddsi_topic_definition *tpd = ddsrt_hh_lookup (gv->topic_defs, &templ);
+  ddsrt_free (templ.type_pair->complete);
   ddsrt_free (templ.type_pair);
   if (tpd == NULL)
   {
@@ -5802,8 +5803,8 @@ static void gc_delete_topic_definition (struct gcreq *gcreq)
   builtintopic_write_topic (gv->builtin_topic_interface, tpd, gcdata->timestamp, false);
   if (tpd->type_pair)
   {
-    ddsi_type_unref_proxy (gv, tpd->type_pair->minimal, NULL);
-    ddsi_type_unref_proxy (gv, tpd->type_pair->complete, NULL);
+    ddsi_type_unref (gv, tpd->type_pair->minimal, NULL);
+    ddsi_type_unref (gv, tpd->type_pair->complete, NULL);
   }
   ddsi_xqos_fini (tpd->xqos);
   ddsrt_free (tpd->xqos);
@@ -6016,8 +6017,8 @@ static int proxy_endpoint_common_init (struct entity_common *e, struct proxy_end
 #ifdef DDS_HAS_TYPE_DISCOVERY
     if (c->type_pair != NULL)
     {
-      ddsi_type_unref_proxy (proxypp->e.gv, c->type_pair->minimal, guid);
-      ddsi_type_unref_proxy (proxypp->e.gv, c->type_pair->complete, guid);
+      ddsi_type_unref (proxypp->e.gv, c->type_pair->minimal, guid);
+      ddsi_type_unref (proxypp->e.gv, c->type_pair->complete, guid);
       ddsrt_free (c->type_pair);
     }
 #endif
@@ -6369,8 +6370,8 @@ int delete_proxy_writer (struct ddsi_domaingv *gv, const struct ddsi_guid *guid,
      the endpoint list. */
   if (pwr->c.type_pair != NULL)
   {
-    ddsi_type_unref_proxy (gv, pwr->c.type_pair->minimal, &pwr->e.guid);
-    ddsi_type_unref_proxy (gv, pwr->c.type_pair->complete, &pwr->e.guid);
+    ddsi_type_unref (gv, pwr->c.type_pair->minimal, &pwr->e.guid);
+    ddsi_type_unref (gv, pwr->c.type_pair->complete, &pwr->e.guid);
     ddsrt_free (pwr->c.type_pair);
   }
 #endif
@@ -6613,8 +6614,8 @@ int delete_proxy_reader (struct ddsi_domaingv *gv, const struct ddsi_guid *guid,
      the endpoint list. */
   if (prd->c.type_pair != NULL)
   {
-    ddsi_type_unref_proxy (gv, prd->c.type_pair->minimal, &prd->e.guid);
-    ddsi_type_unref_proxy (gv, prd->c.type_pair->complete, &prd->e.guid);
+    ddsi_type_unref (gv, prd->c.type_pair->minimal, &prd->e.guid);
+    ddsi_type_unref (gv, prd->c.type_pair->complete, &prd->e.guid);
     ddsrt_free (prd->c.type_pair);
   }
 #endif

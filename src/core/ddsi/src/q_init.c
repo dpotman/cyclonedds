@@ -2279,14 +2279,6 @@ void rtps_fini (struct ddsi_domaingv *gv)
   ddsrt_hh_free (gv->topic_defs);
   ddsrt_mutex_destroy (&gv->topic_defs_lock);
 #endif /* DDS_HAS_TOPIC_DISCOVERY */
-#ifndef NDEBUG
-  {
-    struct ddsrt_hh_iter it;
-    assert (ddsrt_hh_iter_first (gv->sertypes, &it) == NULL);
-  }
-#endif
-  ddsrt_hh_free (gv->sertypes);
-  ddsrt_mutex_destroy (&gv->sertypes_lock);
 #ifdef DDS_HAS_TYPE_DISCOVERY
 #ifndef NDEBUG
   {
@@ -2296,6 +2288,14 @@ void rtps_fini (struct ddsi_domaingv *gv)
   ddsrt_avl_free (&ddsi_typelib_treedef, &gv->typelib, 0);
   ddsrt_mutex_destroy (&gv->typelib_lock);
 #endif /* DDS_HAS_TYPE_DISCOVERY */
+#ifndef NDEBUG
+  {
+    struct ddsrt_hh_iter it;
+    assert (ddsrt_hh_iter_first (gv->sertypes, &it) == NULL);
+  }
+#endif
+  ddsrt_hh_free (gv->sertypes);
+  ddsrt_mutex_destroy (&gv->sertypes_lock);
 #ifdef DDS_HAS_SECURITY
   q_omg_security_free (gv);
   ddsi_xqos_fini (&gv->builtin_stateless_xqos_wr);
