@@ -3956,7 +3956,6 @@ dds_domain_set_deafmute (
  * @param[in]   entity              A domain entity or an entity bound to a domain, such
  *                                  as a participant, reader or writer.
  * @param[in]   type_id             Type identifier
- * @param[in]   type_name           Type name
  * @param[in]   timeout             Timeout for waiting for requested type information to be available
  * @param[out]  sertype             The type information, or NULL if the type could not be resolved
  *
@@ -3982,7 +3981,6 @@ DDS_EXPORT dds_return_t
 dds_domain_resolve_type (
   dds_entity_t entity,
   const struct DDS_XTypes_TypeIdentifier *type_id,
-  const char *type_name,
   dds_duration_t timeout,
   struct ddsi_sertype **sertype);
 

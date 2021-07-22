@@ -41,7 +41,7 @@
 
 #include "dds/ddsi/ddsi_plist_generic.h"
 #include "dds/ddsi/ddsi_security_omg.h"
-#include "dds/ddsi/ddsi_xt.h"
+#include "dds/ddsi/ddsi_typelib.h"
 #include "dds/ddsi/ddsi_cdrstream.h"
 
 /* I am tempted to change LENGTH_UNLIMITED to 0 in the API (with -1

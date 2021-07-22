@@ -50,9 +50,9 @@
 #include "dds/ddsi/q_init.h"
 #include "dds/ddsi/ddsi_threadmon.h"
 #include "dds/ddsi/ddsi_pmd.h"
-#include "dds/ddsi/ddsi_type_lookup.h"
-#include "dds/ddsi/ddsi_cdrstream.h"
 #include "dds/ddsi/ddsi_xt_typelookup.h"
+#include "dds/ddsi/ddsi_typelookup.h"
+#include "dds/ddsi/ddsi_cdrstream.h"
 
 #include "dds/ddsi/ddsi_tran.h"
 #include "dds/ddsi/ddsi_udp.h"
@@ -1519,10 +1519,9 @@ int rtps_init (struct ddsi_domaingv *gv)
   gv->sertypes = ddsrt_hh_new (1, ddsi_sertype_hash_wrap, ddsi_sertype_equal_wrap);
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  ddsrt_mutex_init (&gv->tl_admin_lock);
-  ddsrt_cond_init (&gv->tl_resolved_cond);
-  ddsrt_avl_init (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal);
-  ddsrt_avl_init (&ddsi_tl_meta_treedef, &gv->tl_admin);
+  ddsrt_mutex_init (&gv->typelib_lock);
+  ddsrt_cond_init (&gv->typelib_resolved_cond);
+  ddsrt_avl_init (&ddsi_typelib_treedef, &gv->typelib);
 #endif
   ddsrt_mutex_init (&gv->new_topic_lock);
   ddsrt_cond_init (&gv->new_topic_cond);
@@ -1921,10 +1920,9 @@ err_unicast_sockets:
   ddsrt_mutex_destroy (&gv->new_topic_lock);
   ddsrt_cond_destroy (&gv->new_topic_cond);
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  ddsrt_avl_free (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, 0);
-  ddsrt_avl_free (&ddsi_tl_meta_treedef, &gv->tl_admin, 0);
-  ddsrt_mutex_destroy (&gv->tl_admin_lock);
-  ddsrt_cond_destroy (&gv->tl_resolved_cond);
+  ddsrt_avl_free (&ddsi_typelib_treedef, &gv->typelib, 0);
+  ddsrt_mutex_destroy (&gv->typelib_lock);
+  ddsrt_cond_destroy (&gv->typelib_resolved_cond);
 #endif
 #ifdef DDS_HAS_SECURITY
   ddsi_xqos_fini (&gv->builtin_stateless_xqos_wr);
@@ -2303,13 +2301,11 @@ void rtps_fini (struct ddsi_domaingv *gv)
 #ifdef DDS_HAS_TYPE_DISCOVERY
 #ifndef NDEBUG
   {
-    assert(ddsrt_avl_is_empty(&gv->tl_admin_minimal));
-    assert(ddsrt_avl_is_empty(&gv->tl_admin));
+    assert(ddsrt_avl_is_empty(&gv->typelib));
   }
 #endif
-  ddsrt_avl_free (&ddsi_tl_meta_minimal_treedef, &gv->tl_admin_minimal, 0);
-  ddsrt_avl_free (&ddsi_tl_meta_treedef, &gv->tl_admin, 0);
-  ddsrt_mutex_destroy (&gv->tl_admin_lock);
+  ddsrt_avl_free (&ddsi_typelib_treedef, &gv->typelib, 0);
+  ddsrt_mutex_destroy (&gv->typelib_lock);
 #endif /* DDS_HAS_TYPE_DISCOVERY */
 #ifdef DDS_HAS_SECURITY
   q_omg_security_free (gv);
