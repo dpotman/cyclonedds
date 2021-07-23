@@ -50,23 +50,24 @@ struct descriptor_type_meta {
 static idl_retcode_t
 push_type (struct descriptor_type_meta *dtm, const void *node)
 {
-  struct type_meta *tmp, *tm = calloc (1, sizeof (*tm));
-  tm->node = node;
-  tm->ti_minimal = calloc (1, sizeof (*tm->ti_minimal));
-  tm->to_minimal = calloc (1, sizeof (*tm->to_minimal));
-  tm->ti_complete = calloc (1, sizeof (*tm->ti_complete));
-  tm->to_complete = calloc (1, sizeof (*tm->to_complete));
+  struct type_meta *tm, *tmp;
 
   // Check if node exist in admin
-  tmp = dtm->admin;
-  while (tmp && tmp->node != node)
-    tmp = tmp->admin_next;
-  if (!tmp) {
-    // Add to admin
-    tmp = dtm->admin;
-    if (tmp == NULL)
+  tm = dtm->admin;
+  while (tm && tm->node != node)
+    tm = tm->admin_next;
+  if (!tm) {
+    tm = calloc (1, sizeof (*tm));
+    tm->node = node;
+    tm->ti_minimal = calloc (1, sizeof (*tm->ti_minimal));
+    tm->to_minimal = calloc (1, sizeof (*tm->to_minimal));
+    tm->ti_complete = calloc (1, sizeof (*tm->ti_complete));
+    tm->to_complete = calloc (1, sizeof (*tm->to_complete));
+
+    if (dtm->admin == NULL)
       dtm->admin = tm;
     else {
+      tmp = dtm->admin;
       while (tmp->admin_next)
         tmp = tmp->admin_next;
       tmp->admin_next = tm;
@@ -125,6 +126,7 @@ add_to_seq (dds_sequence_t *seq, const void *obj, size_t sz)
     return -1;
   seq->_length++;
   seq->_maximum++;
+  seq->_release = true;
   memcpy (seq->_buffer + (seq->_length - 1) * sz, obj, sz);
   return 0;
 }
@@ -948,6 +950,18 @@ get_typeid_with_size (
   dds_ostream_fini (&os);
 }
 
+static void
+type_id_fini (DDS_XTypes_TypeIdentifier *ti)
+{
+  dds_stream_free_sample (ti, DDS_XTypes_TypeIdentifier_desc.m_ops);
+}
+
+static void
+type_obj_fini (DDS_XTypes_TypeObject *to)
+{
+  dds_stream_free_sample (to, DDS_XTypes_TypeObject_desc.m_ops);
+}
+
 idl_retcode_t
 print_type_meta_ser (
   FILE *fp,
@@ -1011,6 +1025,9 @@ print_type_meta_ser (
     dds_ostream_fini (&os);
   }
 
+  free (type_information.minimal.dependent_typeids._buffer);
+  free (type_information.complete.dependent_typeids._buffer);
+
   /* type id/obj seq for min and complete */
   DDS_XTypes_TypeMapping mapping;
   memset (&mapping, 0, sizeof (mapping));
@@ -1038,7 +1055,27 @@ print_type_meta_ser (
     dds_ostream_fini (&os);
   }
 
-  // FIXME: free allocated memory in dtm?
+  free (mapping.identifier_complete_minimal._buffer);
+  free (mapping.identifier_object_pair_complete._buffer);
+  free (mapping.identifier_object_pair_minimal._buffer);
+
+  struct type_meta *tm = dtm.admin;
+  while (tm) {
+    type_id_fini (tm->ti_minimal);
+    free (tm->ti_minimal);
+    type_obj_fini (tm->to_minimal);
+    free (tm->to_minimal);
+
+    type_id_fini (tm->ti_complete);
+    free (tm->ti_complete);
+    type_obj_fini (tm->to_complete);
+    free (tm->to_complete);
+
+    struct type_meta *tmp = tm;
+    tm = tm->admin_next;
+    free (tmp);
+  }
+
   return IDL_RETCODE_OK;
 
 err_emit:

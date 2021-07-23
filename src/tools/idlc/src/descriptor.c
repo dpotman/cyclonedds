@@ -765,10 +765,14 @@ add_ctype(struct descriptor *descriptor, const idl_scope_t *scope, const void *n
   ctype1->name = idl_name(node);
   ctype1->scope = scope;
 
-  struct constructed_type **tmp = &descriptor->constructed_types;
-  while (*tmp)
-    tmp = &(*tmp)->next;
-  *tmp = ctype1;
+  if (!descriptor->constructed_types)
+    descriptor->constructed_types = ctype1;
+  else {
+    struct constructed_type *tmp = descriptor->constructed_types;
+    while (tmp->next)
+      tmp = tmp->next;
+    tmp->next = ctype1;
+  }
   if (ctype)
     *ctype = ctype1;
   return IDL_RETCODE_OK;
@@ -2013,6 +2017,51 @@ resolve_offsets(struct descriptor *descriptor)
   return IDL_RETCODE_OK;
 }
 
+static void
+instructions_fini(struct instructions *instructions)
+{
+  for (size_t i = 0; i < instructions->count; i++) {
+    struct instruction *inst = &instructions->table[i];
+    switch (inst->type) {
+      case OFFSET:
+        if (inst->data.offset.member)
+          free(inst->data.offset.member);
+        if (inst->data.offset.type)
+          free(inst->data.offset.type);
+        break;
+      case SIZE:
+        if (inst->data.size.type)
+          free(inst->data.size.type);
+        break;
+      case CONSTANT:
+        if (inst->data.constant.value)
+          free(inst->data.constant.value);
+        break;
+      case KEY_OFFSET:
+        if (inst->data.key_offset.key_name)
+          free(inst->data.key_offset.key_name);
+      default:
+        break;
+    }
+  }
+}
+
+static void
+ctype_fini(struct constructed_type *ctype)
+{
+  instructions_fini(&ctype->instructions);
+
+  const struct constructed_type_fwd *fwd1, *fwd = ctype->fwd_decls;
+  while (fwd) {
+    fwd1 = fwd->next;
+    free((struct constructed_type_fwd *)fwd);
+    fwd = fwd1;
+  }
+
+  if (ctype->instructions.table)
+    free(ctype->instructions.table);
+}
+
 static idl_retcode_t
 remove_unused_types(struct descriptor *descriptor)
 {
@@ -2025,6 +2074,7 @@ remove_unused_types(struct descriptor *descriptor)
         descriptor->constructed_types = next;
       else
         prev->next = next;
+      ctype_fini(ctype);
       free(ctype);
     } else {
       prev = ctype;
@@ -2094,33 +2144,17 @@ err_add_keys:
 #pragma warning(push)
 #pragma warning(disable: 6001)
 #endif
-  for (struct constructed_type *ctype = descriptor.constructed_types; ctype; ctype = ctype->next) {
-    for (size_t i=0; i < ctype->instructions.count; i++) {
-      struct instruction *inst = &ctype->instructions.table[i];
-      switch (inst->type) {
-        case OFFSET:
-          if (inst->data.offset.member)
-            free(inst->data.offset.member);
-          if (inst->data.offset.type)
-            free(inst->data.offset.type);
-          break;
-        case SIZE:
-          if (inst->data.size.type)
-            free(inst->data.size.type);
-          break;
-        case CONSTANT:
-          if (inst->data.constant.value)
-            free(inst->data.constant.value);
-          break;
-        case KEY_OFFSET:
-          if (inst->data.key_offset.key_name)
-            free(inst->data.key_offset.key_name);
-        default:
-          break;
-      }
+  {
+    struct constructed_type *ctype1, *ctype = descriptor.constructed_types;
+    while (ctype) {
+      ctype_fini(ctype);
+      ctype1 = ctype->next;
+      free(ctype);
+      ctype = ctype1;
     }
-    if (ctype->instructions.table)
-      free(ctype->instructions.table);
+    instructions_fini(&descriptor.key_offsets);
+    free(descriptor.key_offsets.table);
+    assert(!descriptor.type_stack);
   }
 #if defined(_MSC_VER)
 #pragma warning(pop)

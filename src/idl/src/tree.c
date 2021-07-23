@@ -1058,7 +1058,8 @@ err_node:
 
 static void delete_struct_forward_decl(void *ptr)
 {
-  idl_case_label_t *node = ptr;
+  idl_forward_decl_t *node = ptr;
+  idl_delete_name(node->name);
   free(node);
 }
 
@@ -1712,7 +1713,8 @@ err_node:
 
 static void delete_union_forward_decl(void *ptr)
 {
-  idl_case_label_t *node = ptr;
+  idl_forward_decl_t *node = ptr;
+  idl_delete_name(node->name);
   free(node);
 }
 
