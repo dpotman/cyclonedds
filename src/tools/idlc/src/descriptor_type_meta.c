@@ -393,6 +393,7 @@ get_builtin_member_ann(
 )
 {
   /* FIXME: implement unit, min, max annotations */
+  memset (builtin_ann, 0, sizeof (*builtin_ann));
 
   if (idl_is_member (node) || idl_is_case (node))
   {
@@ -421,9 +422,12 @@ get_complete_type_detail(
   if (IDL_PRINTA(&type, print_type, node) < 0)
     return IDL_RETCODE_NO_MEMORY;
   strcpy (detail->type_name, type);
-  /* FIXME:
-    dtm->stack->to_complete->_u.complete._u.struct_type.header.detail.ann_builtin.verbatim
-    dtm->stack->to_complete->_u.complete._u.struct_type.header.detail.ann_custom */
+
+  memset (&detail->ann_builtin, 0, sizeof (detail->ann_builtin));
+  memset (&detail->ann_custom, 0, sizeof (detail->ann_custom));
+  /* FIXME */
+  // detail->ann_builtin =
+  // detail->ann_custom =
   return 0;
 }
 
@@ -434,9 +438,10 @@ get_complete_member_detail(
 {
   strcpy (detail->name, idl_identifier (node));
   get_builtin_member_ann (idl_parent (node), &detail->ann_builtin);
-  /* FIXME:
-    detail.ann_builtin
-    detail.ann_custom */
+
+  /* FIXME */
+  memset (&detail->ann_custom, 0, sizeof (detail->ann_custom));
+  // detail.ann_custom =
   return 0;
 }
 
@@ -489,7 +494,9 @@ add_union_case(struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minim
   if (get_complete_member_detail (node, &c.detail) < 0)
     return -1;
   get_builtin_member_ann (idl_parent (node), &c.detail.ann_builtin);
-  /* FIXME: c.detail.ann_custom */
+  /* FIXME*/
+  memset (&c.detail.ann_custom, 0, sizeof (c.detail.ann_custom));
+  // c.detail.ann_custom
 
   /* case labels */
   idl_case_t *case_node = (idl_case_t *) idl_parent (node);
@@ -685,9 +692,11 @@ emit_switch_type_spec(
   m_cdm->member_flags = c_cdm->member_flags = get_union_discriminator_flags (_union->switch_type_spec);
   if (get_type_spec_typeid (dtm, idl_type_spec (_union->switch_type_spec), &m_cdm->type_id, &c_cdm->type_id) < 0)
     return -1;
-  /* FIXME:
-    tm->to_complete->_u.complete._u.union_type.discriminator.ann_builtin
-    tm->to_complete->_u.complete._u.union_type.discriminator.ann_custom */
+  /* FIXME */
+  memset (&tm->to_complete->_u.complete._u.union_type.discriminator.ann_builtin, 0, sizeof (tm->to_complete->_u.complete._u.union_type.discriminator.ann_builtin));
+  memset (&tm->to_complete->_u.complete._u.union_type.discriminator.ann_custom, 0, sizeof (tm->to_complete->_u.complete._u.union_type.discriminator.ann_custom));
+  // tm->to_complete->_u.complete._u.union_type.discriminator.ann_builtin =
+  // tm->to_complete->_u.complete._u.union_type.discriminator.ann_custom =
 
   return IDL_RETCODE_OK;
 }

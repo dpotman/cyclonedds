@@ -1291,6 +1291,9 @@ emit_declarator(
   const idl_type_spec_t *type_spec;
   struct descriptor *descriptor = user_data;
 
+  if (idl_is_alias(node))
+    return IDL_VISIT_TYPE_SPEC;
+
   type_spec = idl_unalias(idl_type_spec(node), 0u);
   /* delegate array type specifiers or declarators */
   if (idl_is_array(node) || idl_is_array(type_spec))
