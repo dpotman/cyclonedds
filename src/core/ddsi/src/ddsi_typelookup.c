@@ -144,7 +144,6 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
 {
   assert (!(d->statusinfo & (NN_STATUSINFO_DISPOSE | NN_STATUSINFO_UNREGISTER)));
 
-  struct ddsi_type *type = NULL, *tmp;
   DDS_Builtin_TypeLookup_Request req;
   memset (&req, 0, sizeof (req));
   ddsi_serdata_to_sample (d, &req, NULL, NULL);
@@ -160,11 +159,9 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
       GVTRACE (" non-hash id " PTYPEIDFMT, PTYPEID (*type_id));
       continue;
     }
-    GVTRACE (" type "PTYPEIDFMT, PTYPEID (*type_id));
-    tmp = ddsi_type_lookup_locked (gv, type_id);
-    if (tmp->xt.has_obj)
-      type = tmp;
-    if (type)
+    GVTRACE (" id "PTYPEIDFMT, PTYPEID (*type_id));
+    const struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
+    if (type && type->xt.has_obj)
     {
       types._buffer = ddsrt_realloc (types._buffer, (types._length + 1) * sizeof (*types._buffer));
       ddsi_typeid_copy (&types._buffer[types._length].type_identifier, type_id);
@@ -180,13 +177,19 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
   else
     GVTRACE (" no tl-reply writer");
 
+  ddsi_sertype_free_sample (d->type, &req, DDS_FREE_CONTENTS);
+  for (uint32_t n = 0; n < types._length; n++)
+  {
+    ddsi_typeid_fini (&types._buffer[n].type_identifier);
+    ddsi_typeobj_fini (&types._buffer[n].type_object);
+  }
   ddsrt_free (types._buffer);
 }
 
 void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
 {
   struct generic_proxy_endpoint **gpe_match_upd = NULL;
-  uint32_t n = 0, n_match_upd = 0;
+  uint32_t n_match_upd = 0;
   assert (!(d->statusinfo & (NN_STATUSINFO_DISPOSE | NN_STATUSINFO_UNREGISTER)));
 
   DDS_Builtin_TypeLookup_Reply reply;
@@ -195,11 +198,17 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
   bool resolved = false;
   ddsrt_mutex_lock (&gv->typelib_lock);
   GVTRACE ("handle-tl-reply wr "PGUIDFMT " seqnr %"PRIi64" ntypeids %"PRIu32" ", PGUID (from_guid (&reply.header.requestId.writer_guid)), from_seqno (&reply.header.requestId.sequence_number), reply.return_data._u.getType._u.result.types._length);
-  while (n < reply.return_data._u.getType._u.result.types._length)
+  for (uint32_t n = 0; n < reply.return_data._u.getType._u.result.types._length; n++)
   {
     DDS_XTypes_TypeIdentifierTypeObjectPair r = reply.return_data._u.getType._u.result.types._buffer[n];
     GVTRACE (" type "PTYPEIDFMT, PTYPEID (r.type_identifier));
     struct ddsi_type *type = ddsi_type_lookup_locked (gv, &r.type_identifier);
+    if (!type)
+    {
+      /* received a typelookup reply for a type we don't know, so the type
+         object should not be stored as there is no endpoint using this type */
+      continue;
+    }
     if (!type->xt.has_obj)
     {
       GVTRACE (" resolve-minimal type %p", type);
@@ -208,10 +217,10 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
     }
     if (ddsi_typeid_is_minimal (&r.type_identifier))
     {
-        /* don't set resolved when a minimal type object is received, because
-            only when getting a complete type object a sertype (and thus a topic)
-            can be constructed, so find_topic should be triggered */
-        n_match_upd = ddsi_type_get_gpe_matches (gv, type, &gpe_match_upd);
+      /* don't set resolved when a minimal type object is received, because
+         only when getting a complete type object a sertype (and thus a topic)
+         can be constructed, so find_topic should be triggered */
+      n_match_upd = ddsi_type_get_gpe_matches (gv, type, &gpe_match_upd);
     }
     else
     {
@@ -231,16 +240,16 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
       // ddsrt_mutex_unlock (&gv->sertypes_lock);
       // type->sertype = &st->c; // refcounted by sertype_register/lookup
 
-      n_match_upd = ddsi_type_get_gpe_matches (gv, type, &gpe_match_upd);
-      if (n_match_upd > 0)
+      if ((n_match_upd = ddsi_type_get_gpe_matches (gv, type, &gpe_match_upd)) > 0)
         resolved = true;
     }
-    n++;
   }
   GVTRACE ("\n");
   if (resolved)
     ddsrt_cond_broadcast (&gv->typelib_resolved_cond);
   ddsrt_mutex_unlock (&gv->typelib_lock);
+
+  ddsi_sertype_free_sample (d->type, &reply, DDS_FREE_CONTENTS);
 
   if (gpe_match_upd != NULL)
   {

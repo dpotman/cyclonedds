@@ -260,22 +260,29 @@ void ddsi_typeid_ser (const ddsi_typeid_t *typeid, unsigned char **buf, uint32_t
   *sz = os.m_index;
 }
 
-void ddsi_typeid_deser (unsigned char *buf, uint32_t sz, ddsi_typeid_t **typeid)
-{
-  unsigned char *data;
-  uint32_t srcoff = 0;
-  bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
-  if (bswap)
-  {
-    data = ddsrt_memdup (buf, sz);
-    dds_stream_normalize1 ((char *) data, &srcoff, sz, bswap, CDR_ENC_VERSION_2, DDS_XTypes_TypeIdentifier_desc.m_ops);
-  }
-  else
-    data = buf;
+// void ddsi_typeid_deser (unsigned char *buf, uint32_t sz, ddsi_typeid_t **typeid)
+// {
+//   unsigned char *data;
+//   uint32_t srcoff = 0;
+//   bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
+//   if (bswap)
+//   {
+//     data = ddsrt_memdup (buf, sz);
+//     dds_stream_normalize1 ((char *) data, &srcoff, sz, bswap, CDR_ENC_VERSION_2, DDS_XTypes_TypeIdentifier_desc.m_ops);
+//   }
+//   else
+//     data = buf;
 
-  dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
-  *typeid = ddsrt_calloc (1, sizeof (**typeid));
-  dds_stream_read (&is, (void *) *typeid, DDS_XTypes_TypeIdentifier_desc.m_ops);
+//   dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
+//   *typeid = ddsrt_calloc (1, sizeof (**typeid));
+//   dds_stream_read (&is, (void *) *typeid, DDS_XTypes_TypeIdentifier_desc.m_ops);
+//   if (bswap)
+//     dds_free (data);
+// }
+
+void ddsi_typeid_fini (ddsi_typeid_t *typeid)
+{
+  dds_stream_free_sample (typeid, DDS_XTypes_TypeIdentifier_desc.m_ops);
 }
 
 bool ddsi_typeid_is_none (const ddsi_typeid_t *typeid)
@@ -328,31 +335,33 @@ static bool type_id_with_deps_equal (const struct DDS_XTypes_TypeIdentifierWithD
 }
 
 
-void ddsi_typeobj_ser (const ddsi_typeobj_t *typeobj, unsigned char **buf, uint32_t *sz)
-{
-  dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
-  dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typeobj, DDS_XTypes_TypeObject_desc.m_ops);
-  *buf = os.m_buffer;
-  *sz = os.m_index;
-}
+// void ddsi_typeobj_ser (const ddsi_typeobj_t *typeobj, unsigned char **buf, uint32_t *sz)
+// {
+//   dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
+//   dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typeobj, DDS_XTypes_TypeObject_desc.m_ops);
+//   *buf = os.m_buffer;
+//   *sz = os.m_index;
+// }
 
-void ddsi_typeobj_deser (unsigned char *buf, uint32_t sz, ddsi_typeobj_t **typeobj)
-{
-  unsigned char *data;
-  uint32_t srcoff = 0;
-  bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
-  if (bswap)
-  {
-    data = ddsrt_memdup (buf, sz);
-    dds_stream_normalize1 ((char *) data, &srcoff, sz, bswap, CDR_ENC_VERSION_2, DDS_XTypes_TypeObject_desc.m_ops);
-  }
-  else
-    data = buf;
+// void ddsi_typeobj_deser (unsigned char *buf, uint32_t sz, ddsi_typeobj_t **typeobj)
+// {
+//   unsigned char *data;
+//   uint32_t srcoff = 0;
+//   bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
+//   if (bswap)
+//   {
+//     data = ddsrt_memdup (buf, sz);
+//     dds_stream_normalize1 ((char *) data, &srcoff, sz, bswap, CDR_ENC_VERSION_2, DDS_XTypes_TypeObject_desc.m_ops);
+//   }
+//   else
+//     data = buf;
 
-  dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
-  *typeobj = ddsrt_calloc (1, sizeof (**typeobj));
-  dds_stream_read (&is, (void *) *typeobj, DDS_XTypes_TypeObject_desc.m_ops);
-}
+//   dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
+//   *typeobj = ddsrt_calloc (1, sizeof (**typeobj));
+//   dds_stream_read (&is, (void *) *typeobj, DDS_XTypes_TypeObject_desc.m_ops);
+//   if (bswap)
+//     dds_free (data);
+// }
 
 bool ddsi_typeobj_is_minimal (const ddsi_typeobj_t *typeobj)
 {
@@ -364,6 +373,10 @@ bool ddsi_typeobj_is_complete (const ddsi_typeobj_t *typeobj)
   return typeobj != NULL && typeobj->_d == DDS_XTypes_EK_COMPLETE;
 }
 
+void ddsi_typeobj_fini (ddsi_typeobj_t *typeobj)
+{
+  dds_stream_free_sample (typeobj, DDS_XTypes_TypeObject_desc.m_ops);
+}
 
 bool ddsi_typeinfo_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b)
 {
@@ -372,12 +385,40 @@ bool ddsi_typeinfo_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b)
   return type_id_with_deps_equal (&a->minimal, &b->minimal) && type_id_with_deps_equal (&a->complete, &b->complete);
 }
 
-void ddsi_typeinfo_ser (const ddsi_typeinfo_t *typeinfo, unsigned char **buf, uint32_t *sz)
+// void ddsi_typeinfo_ser (const ddsi_typeinfo_t *typeinfo, unsigned char **buf, uint32_t *sz)
+// {
+//   dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
+//   dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
+//   *buf = os.m_buffer;
+//   *sz = os.m_index;
+// }
+
+ddsi_typeinfo_t * ddsi_typeinfo_dup (const ddsi_typeinfo_t *src)
 {
-  dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
-  dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
-  *buf = os.m_buffer;
-  *sz = os.m_index;
+  ddsi_typeinfo_t *dst = ddsrt_calloc (1, sizeof (*dst));
+  ddsi_typeid_copy (&dst->minimal.typeid_with_size.type_id, &src->minimal.typeid_with_size.type_id);
+  dst->minimal.dependent_typeid_count = src->minimal.dependent_typeid_count;
+  dst->minimal.dependent_typeids._length = dst->minimal.dependent_typeids._maximum = src->minimal.dependent_typeids._length;
+  if (dst->minimal.dependent_typeids._length > 0)
+  {
+    dst->minimal.dependent_typeids._release = true;
+    dst->minimal.dependent_typeids._buffer = ddsrt_calloc (dst->minimal.dependent_typeids._length, sizeof (*dst->minimal.dependent_typeids._buffer));
+    for (uint32_t n = 0; n < dst->minimal.dependent_typeids._length; n++)
+      ddsi_typeid_copy (&dst->minimal.dependent_typeids._buffer[n].type_id, &src->minimal.dependent_typeids._buffer[n].type_id);
+  }
+
+  ddsi_typeid_copy (&dst->complete.typeid_with_size.type_id, &src->complete.typeid_with_size.type_id);
+  dst->complete.dependent_typeid_count = src->complete.dependent_typeid_count;
+  dst->complete.dependent_typeids._length = dst->complete.dependent_typeids._maximum = src->complete.dependent_typeids._length;
+  if (dst->complete.dependent_typeids._length > 0)
+  {
+    dst->complete.dependent_typeids._release = true;
+    dst->complete.dependent_typeids._buffer = ddsrt_calloc (dst->complete.dependent_typeids._length, sizeof (*dst->complete.dependent_typeids._buffer));
+    for (uint32_t n = 0; n < dst->complete.dependent_typeids._length; n++)
+      ddsi_typeid_copy (&dst->complete.dependent_typeids._buffer[n].type_id, &src->complete.dependent_typeids._buffer[n].type_id);
+  }
+
+  return dst;
 }
 
 void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typeinfo)
@@ -396,6 +437,13 @@ void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typ
   dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
   *typeinfo = ddsrt_calloc (1, sizeof (**typeinfo));
   dds_stream_read (&is, (void *) *typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
+  if (bswap)
+    dds_free (data);
+}
+
+void ddsi_typeinfo_fini (ddsi_typeinfo_t *typeinfo)
+{
+  dds_stream_free_sample (typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
 }
 
 const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const ddsi_typeid_t *type_id)
@@ -431,13 +479,13 @@ const ddsi_typeid_t * ddsi_typemap_matching_id (const ddsi_typemap_t *tmap, cons
   return NULL;
 }
 
-void ddsi_typemap_ser (const ddsi_typemap_t *typemap, unsigned char **buf, uint32_t *sz)
-{
-  dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
-  dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typemap, DDS_XTypes_TypeMapping_desc.m_ops);
-  *buf = os.m_buffer;
-  *sz = os.m_index;
-}
+// void ddsi_typemap_ser (const ddsi_typemap_t *typemap, unsigned char **buf, uint32_t *sz)
+// {
+//   dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
+//   dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typemap, DDS_XTypes_TypeMapping_desc.m_ops);
+//   *buf = os.m_buffer;
+//   *sz = os.m_index;
+// }
 
 void ddsi_typemap_deser (unsigned char *buf, uint32_t sz, ddsi_typemap_t **typemap)
 {
@@ -455,6 +503,13 @@ void ddsi_typemap_deser (unsigned char *buf, uint32_t sz, ddsi_typemap_t **typem
   dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
   *typemap = ddsrt_calloc (1, sizeof (**typemap));
   dds_stream_read (&is, (void *) *typemap, DDS_XTypes_TypeMapping_desc.m_ops);
+  if (bswap)
+    dds_free (data);
+}
+
+static void ddsi_typemap_fini (ddsi_typemap_t *typemap)
+{
+  dds_stream_free_sample (typemap, DDS_XTypes_TypeMapping_desc.m_ops);
 }
 
 static bool ddsi_type_proxy_guid_exists (struct ddsi_type *type, const ddsi_guid_t *proxy_guid)
@@ -490,8 +545,14 @@ static void ddsi_type_fini (struct ddsi_domaingv *gv, struct ddsi_type *type)
   ddsi_xt_type_fini (gv, &type->xt);
   if (type->sertype)
     ddsi_sertype_unref ((struct ddsi_sertype *) type->sertype);
-  for (struct ddsi_type_dep *dep = type->deps; dep; dep = dep->prev)
+  struct ddsi_type_dep *dep1, *dep = type->deps;
+  while (dep)
+  {
     ddsi_type_unref_locked (gv, dep->type);
+    dep1 = dep->prev;
+    dds_free (dep);
+    dep = dep1;
+  }
 #ifndef NDEBUG
   assert (!ddsi_type_proxy_guid_list_count (&type->proxy_guids));
 #endif
@@ -504,6 +565,7 @@ struct ddsi_type * ddsi_type_lookup_locked (struct ddsi_domaingv *gv, const ddsi
   struct ddsi_type templ, *type = NULL;
   ddsi_typeid_copy (&templ.xt.id, type_id);
   type = ddsrt_avl_lookup (&ddsi_typelib_treedef, &gv->typelib, &templ);
+  ddsi_typeid_fini (&templ.xt.id);
   return type;
 }
 
@@ -581,10 +643,10 @@ struct ddsi_type * ddsi_type_ref_id_locked (struct ddsi_domaingv *gv, const ddsi
 struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct ddsi_sertype *sertype, ddsi_typeid_kind_t kind)
 {
   assert (sertype != NULL);
-  const ddsi_typeinfo_t *type_info = ddsi_sertype_typeinfo (sertype);
+  ddsi_typeinfo_t *type_info = ddsi_sertype_typeinfo (sertype);
   if (!type_info)
     return NULL;
-  const ddsi_typemap_t *type_map = ddsi_sertype_typemap (sertype);
+  ddsi_typemap_t *type_map = ddsi_sertype_typemap (sertype);
   const ddsi_typeid_t *type_id = (kind == TYPE_ID_KIND_MINIMAL) ? &type_info->minimal.typeid_with_size.type_id : &type_info->complete.typeid_with_size.type_id;
   const ddsi_typeobj_t *type_obj = ddsi_typemap_typeobj (type_map, type_id);
   bool resolved = false;
@@ -600,6 +662,8 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
   GVTRACE (" refc %"PRIu32"\n", type->refc);
 
   type_add_deps (gv, type, type_info, kind);
+  ddsi_typeinfo_fini (type_info);
+  ddsrt_free (type_info);
 
   if (type->sertype == NULL)
   {
@@ -611,6 +675,8 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
   ddsrt_mutex_unlock (&gv->typelib_lock);
   if (resolved)
     ddsrt_cond_broadcast (&gv->typelib_resolved_cond);
+  ddsi_typemap_fini (type_map);
+  ddsrt_free (type_map);
   return type;
 }
 
@@ -688,6 +754,8 @@ void ddsi_type_unref_sertype (struct ddsi_domaingv *gv, const struct ddsi_sertyp
       GVTRACE ("unref ddsi_type id " PTYPEIDFMT, PTYPEID (type->xt.id));
       ddsi_type_unref_impl_locked (gv, type, NULL);
     }
+    ddsi_typeid_fini (type_id);
+    ddsrt_free (type_id);
   }
 
   ddsrt_mutex_unlock (&gv->typelib_lock);
@@ -741,6 +809,8 @@ void ddsi_type_register_with_proxy_endpoints (struct ddsi_domaingv *gv, const st
     struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
     ddsi_type_register_with_proxy_endpoints_locked (gv, type);
     ddsrt_mutex_unlock (&gv->typelib_lock);
+    ddsi_typeid_fini (type_id);
+    ddsrt_free (type_id);
   }
 }
 

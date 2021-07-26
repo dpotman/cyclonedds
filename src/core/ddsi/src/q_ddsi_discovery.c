@@ -1277,7 +1277,10 @@ int sedp_write_topic (struct topic *tp, bool alive)
     unsigned entityid = determine_topic_writer (tp);
     struct writer *sedp_wr = get_sedp_writer (tp->pp, entityid);
     ddsrt_mutex_lock (&tp->e.qos_lock);
-    res = sedp_write_topic_impl (sedp_wr, alive, &tp->e.guid, tp->definition->xqos, tp->definition->type_pair->complete->sertype);
+    const struct ddsi_sertype *sertype = NULL;
+    if (tp->definition->type_pair && tp->definition->type_pair->complete)
+      sertype = tp->definition->type_pair->complete->sertype;
+    res = sedp_write_topic_impl (sedp_wr, alive, &tp->e.guid, tp->definition->xqos, sertype);
     ddsrt_mutex_unlock (&tp->e.qos_lock);
   }
   return res;
@@ -1305,7 +1308,7 @@ int sedp_write_writer (struct writer *wr)
     }
 #endif
 #ifdef DDS_HAS_TYPE_DISCOVERY
-    return sedp_write_endpoint_impl (sedp_wr, 1, &wr->e.guid, &wr->e, &wr->c, wr->xqos, as, security, wr->c.type_pair->complete->sertype);
+    return sedp_write_endpoint_impl (sedp_wr, 1, &wr->e.guid, &wr->e, &wr->c, wr->xqos, as, security, wr->type);
 #else
     return sedp_write_endpoint_impl (sedp_wr, 1, &wr->e.guid, &wr->e, &wr->c, wr->xqos, as, security);
 #endif
@@ -1347,7 +1350,7 @@ int sedp_write_reader (struct reader *rd)
   }
 #endif
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  const int ret = sedp_write_endpoint_impl (sedp_wr, 1, &rd->e.guid, &rd->e, &rd->c, rd->xqos, as, security, rd->c.type_pair->complete->sertype);
+  const int ret = sedp_write_endpoint_impl (sedp_wr, 1, &rd->e.guid, &rd->e, &rd->c, rd->xqos, as, security, rd->type);
 #else
   const int ret = sedp_write_endpoint_impl (sedp_wr, 1, &rd->e.guid, &rd->e, &rd->c, rd->xqos, as, security);
 #endif

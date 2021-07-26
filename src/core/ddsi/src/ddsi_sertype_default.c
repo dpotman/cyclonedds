@@ -80,6 +80,8 @@ static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn,
     type_id = ddsrt_malloc (sizeof (*type_id));
     ddsi_typeid_copy (type_id, &type_info->complete.typeid_with_size.type_id);
   }
+  ddsi_typeinfo_fini (type_info);
+  ddsrt_free (type_info);
   return type_id;
 }
 
@@ -129,6 +131,9 @@ static void sertype_default_free (struct ddsi_sertype *tpcmn)
   struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
   ddsrt_free (tp->type.keys.keys);
   ddsrt_free (tp->type.ops.ops);
+  ddsrt_free (tp->type.typeinfo_ser.data);
+  ddsrt_free (tp->type.typemap_ser.data);
+
   ddsi_sertype_fini (&tp->c);
   ddsrt_free (tp);
 }
@@ -220,10 +225,21 @@ static bool sertype_default_assignable_from (const struct ddsi_sertype *sertype_
   if (a->type.flagset & DDS_TOPIC_DISABLE_TYPECHECK)
     return true;
 
-  if (!(type_a = ddsi_type_lookup_locked (gv, sertype_default_typeid (sertype_a, TYPE_ID_KIND_MINIMAL))))
-    type_a = ddsi_type_lookup_locked (gv, sertype_default_typeid (sertype_a, TYPE_ID_KIND_COMPLETE));
+  ddsi_typeid_t *type_id = sertype_default_typeid (sertype_a, TYPE_ID_KIND_MINIMAL);
+  type_a = ddsi_type_lookup_locked (gv, type_id);
+  ddsi_typeid_fini (type_id);
+  ddsrt_free (type_id);
+  if (!type_a)
+  {
+    type_id = sertype_default_typeid (sertype_a, TYPE_ID_KIND_COMPLETE);
+    type_a = ddsi_type_lookup_locked (gv, type_id);
+    ddsi_typeid_fini (type_id);
+    ddsrt_free (type_id);
+  }
 
-  assert (type_a);
+  if (!type_a)
+    return false;
+
   return (type_pair_b->minimal && ddsi_xt_is_assignable_from (gv, &type_a->xt, &type_pair_b->minimal->xt))
     || (type_pair_b->complete && ddsi_xt_is_assignable_from (gv, &type_a->xt, &type_pair_b->complete->xt));
 #else

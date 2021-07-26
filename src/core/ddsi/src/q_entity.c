@@ -2760,7 +2760,29 @@ static bool topickind_qos_match_p_lock (
     ddsrt_mutex_lock (locks[i + shift]);
 #ifdef DDS_HAS_TYPE_DISCOVERY
   bool rd_type_lookup, wr_type_lookup;
+  ddsi_typeid_t *req_type_id = NULL;
+  const ddsi_typeid_t ** req_dep_ids = NULL;
+  uint32_t req_ndep_ids = 0;
   bool ret = qos_match_p (gv, rdqos, wrqos, reason, rd_type_pair, wr_type_pair, &rd_type_lookup, &wr_type_lookup);
+  if (!ret)
+  {
+    /* In case qos_match_p returns false, one of rd_type_look and wr_type_lookup could
+       be set to indicate that type information is missing. At this point, we know this
+       is the case so do a type lookup request for either rd_type_pair->minimal or
+       wr_type_pair->minimal. */
+    if (rd_type_lookup)
+    {
+      req_type_id = &rd_type_pair->minimal->xt.id;
+      if (rdqos->present & QP_TYPE_INFORMATION)
+        req_ndep_ids = get_dependent_typeids (rdqos->type_information, &req_dep_ids, TYPE_ID_KIND_MINIMAL);
+    }
+    else if (wr_type_lookup)
+    {
+      req_type_id = &wr_type_pair->minimal->xt.id;
+      if (wrqos->present & QP_TYPE_INFORMATION)
+        req_ndep_ids = get_dependent_typeids (wrqos->type_information, &req_dep_ids, TYPE_ID_KIND_MINIMAL);
+    }
+  }
 #else
   bool ret = qos_match_p (gv, rdqos, wrqos, reason);
 #endif
@@ -2768,26 +2790,10 @@ static bool topickind_qos_match_p_lock (
     ddsrt_mutex_unlock (locks[i + shift]);
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  if (!ret)
+  if (req_type_id)
   {
-    /* In case qos_match_p returns false, one of rd_type_look and wr_type_lookup could
-       be set to indicate that type information is missing. At this point, we know this
-       is the case so pass either rd_type_pair->minimal->id or wr_type_pair->minimal->id to the tl_request_type function. */
-    const ddsi_typeid_t ** dep_ids = NULL;
-    uint32_t dep_id_cnt = 0;
-    if (rd_type_lookup && rd_type_pair->minimal)
-    {
-      if (rdqos->present & QP_TYPE_INFORMATION)
-        dep_id_cnt = get_dependent_typeids (rdqos->type_information, &dep_ids, TYPE_ID_KIND_MINIMAL);
-      (void) ddsi_tl_request_type (gv, &rd_type_pair->minimal->xt.id, dep_ids, dep_id_cnt);
-    }
-    else if (wr_type_lookup && wr_type_pair->minimal)
-    {
-      if (wrqos->present & QP_TYPE_INFORMATION)
-        dep_id_cnt = get_dependent_typeids (wrqos->type_information, &dep_ids, TYPE_ID_KIND_MINIMAL);
-      (void) ddsi_tl_request_type (gv, &wr_type_pair->minimal->xt.id, dep_ids, dep_id_cnt);
-    }
-    ddsrt_free (dep_ids);
+    (void) ddsi_tl_request_type (gv, req_type_id, req_dep_ids, req_ndep_ids);
+    ddsrt_free (req_dep_ids);
     return false;
   }
 #endif
@@ -5682,7 +5688,9 @@ static void set_topic_definition_hash (struct ddsi_topic_definition *tpd)
   unsigned char *buf = NULL;
   uint32_t sz = 0;
   ddsi_typeid_ser (&tpd->type_pair->complete->xt.id, &buf, &sz);
+  assert (sz && buf);
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) buf, sz);
+  dds_free (buf);
 
   /* Add serialized qos as part of the key. The type_information field
      of the QoS is not included, as this field may contain a list of
@@ -5806,6 +5814,7 @@ static void gc_delete_topic_definition (struct gcreq *gcreq)
     ddsi_type_unref (gv, tpd->type_pair->minimal, NULL);
     ddsi_type_unref (gv, tpd->type_pair->complete, NULL);
   }
+  ddsrt_free (tpd->type_pair);
   ddsi_xqos_fini (tpd->xqos);
   ddsrt_free (tpd->xqos);
   ddsrt_free (tpd);

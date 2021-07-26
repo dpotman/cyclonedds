@@ -91,6 +91,8 @@ static struct ktopic_type_guid * topic_guid_map_refc_impl (const struct dds_ktop
     m->refc--;
   else
     m->refc++;
+  ddsi_typeid_fini (tid);
+  ddsrt_free (tid);
   return m;
 }
 
@@ -351,17 +353,14 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
 {
   bool new_topic_def = false;
   /* create or reference ktopic-sertype meta-data entry */
-  ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype_registered, TYPE_ID_KIND_COMPLETE);
-  if (!tid)
+  ddsi_typeid_t *type_id = ddsi_sertype_typeid (sertype_registered, TYPE_ID_KIND_COMPLETE);
+  if (type_id)
   {
-    // ddsi_typeid_none is true for both a null pointer and all-zero ids
-    ddsrt_free (tid);
-  }
-  else
-  {
-    assert (!ddsi_typeid_is_none (tid));
-    struct ktopic_type_guid templ = { .type_id = tid }, *m;
-    if ((m = ddsrt_hh_lookup (ktp->topic_guid_map, &templ)) == NULL)
+    assert (!ddsi_typeid_is_none (type_id));
+    struct ktopic_type_guid templ = { .type_id = type_id }, *m;
+    if ((m = ddsrt_hh_lookup (ktp->topic_guid_map, &templ)))
+      m->refc++;
+    else
     {
       /* create ddsi topic and new ktopic-guid entry */
       thread_state_awake (lookup_thread_state (), gv);
@@ -369,7 +368,7 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
       struct participant * pp_ddsi = entidx_lookup_participant_guid (gv->entity_index, ppguid);
 
       m = ddsrt_malloc (sizeof (*m));
-      m->type_id = ddsi_typeid_dup (tid);
+      m->type_id = ddsi_typeid_dup (type_id);
       m->refc = 1;
       dds_return_t rc = ddsi_new_topic (&m->tp, &m->guid, pp_ddsi, ktp->name, sertype_registered, ktp->qos, is_builtin, &new_topic_def);
       assert (rc == DDS_RETCODE_OK); /* FIXME: can be out-of-resources at the very least */
@@ -377,12 +376,8 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
       ddsrt_hh_add (ktp->topic_guid_map, m);
       thread_state_asleep (lookup_thread_state ());
     }
-    else
-    {
-      /* refc existing */
-      m->refc++;
-      ddsrt_free (tid);
-    }
+    ddsi_typeid_fini (type_id);
+    ddsrt_free (type_id);
   }
   return new_topic_def;
 }

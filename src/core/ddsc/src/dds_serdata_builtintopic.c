@@ -122,7 +122,7 @@ static void from_entity_rd (struct ddsi_serdata_builtintopic_endpoint *d, const 
 {
   d->pphandle = rd->c.pp->e.iid;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  //d->type_info = ddsi_sertype_typeinfo (rd->type);
+  // FIXME: d->type_info = ddsi_sertype_typeinfo (rd->type);
 #endif
   from_qos (&d->common, rd->xqos);
 }
@@ -131,7 +131,7 @@ static void from_entity_wr (struct ddsi_serdata_builtintopic_endpoint *d, const 
 {
   d->pphandle = wr->c.pp->e.iid;
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  //d->type_info = ddsi_sertype_typeinfo (wr->type);
+  // FIXME: d->type_info = ddsi_sertype_typeinfo (wr->type);
 #endif
   from_qos (&d->common, wr->xqos);
 }
@@ -140,17 +140,6 @@ static void from_proxy_endpoint_common (struct ddsi_serdata_builtintopic_endpoin
 {
   d->pphandle = pec->proxypp->e.iid;
   from_qos (&d->common, pec->xqos);
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  if (pec->type_pair)
-  {
-    d->common.xqos.type_information = ddsrt_calloc (1, sizeof (*d->common.xqos.type_information));
-    ddsrt_mutex_lock (&pec->proxypp->e.gv->typelib_lock);
-    ddsi_typeid_copy (&d->common.xqos.type_information->minimal.typeid_with_size.type_id, &pec->type_pair->minimal->xt.id);
-    ddsi_typeid_copy (&d->common.xqos.type_information->complete.typeid_with_size.type_id, &pec->type_pair->complete->xt.id);
-    // FIXME: type obj ser size, dependent type ids
-    ddsrt_mutex_unlock (&pec->proxypp->e.gv->typelib_lock);
-  }
-#endif
 }
 
 static void from_entity_proxy_rd (struct ddsi_serdata_builtintopic_endpoint *d, const struct proxy_reader *proxyrd)

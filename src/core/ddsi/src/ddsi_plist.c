@@ -620,13 +620,14 @@ static dds_return_t ser_type_information (struct nn_xmsg *xmsg, nn_parameterid_t
     dds_stream_write (&os, (const void *) *x, DDS_XTypes_TypeInformation_desc.m_ops);
   char * const p = nn_xmsg_addpar_bo (xmsg, pid, os.m_index, bo);
   memcpy (p, os.m_buffer, os.m_index);
+  dds_ostream_fini (&os);
   return 0;
 }
 
 static dds_return_t valid_type_information (const void *src, size_t srcoff)
 {
   ddsi_typeinfo_t const * const * x = deser_generic_src (src, &srcoff, alignof (ddsi_typeinfo_t *));
-  /* FIXME: add more checks? */
+  /* FIXME: add more checks, e.g. if both min and complete type id are present */
   return *x != NULL && (*x)->minimal.typeid_with_size.type_id._d != DDS_XTypes_TK_NONE;
 }
 
@@ -640,8 +641,7 @@ static bool equal_type_information (const void *srcx, const void *srcy, size_t s
 static dds_return_t unalias_type_information (void * __restrict dst, size_t * __restrict dstoff)
 {
   ddsi_typeinfo_t const * * x = deser_generic_dst (dst, dstoff, alignof (ddsi_typeinfo_t *));
-  ddsi_typeinfo_t * new_type_info = ddsrt_malloc (sizeof (*new_type_info));
-  memcpy (new_type_info, *x, sizeof (*new_type_info));
+  ddsi_typeinfo_t * new_type_info = ddsi_typeinfo_dup (*x);
   *x = new_type_info;
   *dstoff += sizeof (*x);
   return 0;
@@ -651,7 +651,10 @@ static dds_return_t fini_type_information (void * __restrict dst, size_t * __res
 {
   ddsi_typeinfo_t const * const * x = deser_generic_src (dst, dstoff, alignof (ddsi_typeinfo_t *));
   if ((*flagset->present & flag) && !(*flagset->aliased & flag))
-    ddsrt_free ((void *) *x);
+  {
+    ddsi_typeinfo_fini ((ddsi_typeinfo_t *) *x);
+    ddsrt_free ((ddsi_typeinfo_t *) *x);
+  }
   return 0;
 }
 

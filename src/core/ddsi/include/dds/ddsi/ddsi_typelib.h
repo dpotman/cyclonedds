@@ -301,7 +301,8 @@ DDS_EXPORT void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src);
 DDS_EXPORT ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src);
 DDS_EXPORT int ddsi_typeid_compare (const ddsi_typeid_t *a, const ddsi_typeid_t *b);
 DDS_EXPORT void ddsi_typeid_ser (const ddsi_typeid_t *typeid, unsigned char **buf, uint32_t *sz);
-DDS_EXPORT void ddsi_typeid_deser (unsigned char *buf, uint32_t sz, ddsi_typeid_t **typeid);
+// DDS_EXPORT void ddsi_typeid_deser (unsigned char *buf, uint32_t sz, ddsi_typeid_t **typeid);
+DDS_EXPORT void ddsi_typeid_fini (ddsi_typeid_t *typeid);
 DDS_EXPORT bool ddsi_typeid_is_none (const ddsi_typeid_t *typeid);
 DDS_EXPORT bool ddsi_typeid_is_hash (const ddsi_typeid_t *typeid);
 DDS_EXPORT bool ddsi_typeid_is_minimal (const ddsi_typeid_t *typeid);
@@ -309,18 +310,21 @@ DDS_EXPORT bool ddsi_typeid_is_complete (const ddsi_typeid_t *typeid);
 DDS_EXPORT ddsi_typeid_kind_t ddsi_typeid_kind (const ddsi_typeid_t *type);
 DDS_EXPORT const char * ddsi_typeid_disc_descr (unsigned char disc);
 
-void ddsi_typeobj_ser (const ddsi_typeobj_t *typeobj, unsigned char **buf, uint32_t *sz);
-void ddsi_typeobj_deser (unsigned char *buf, uint32_t sz, ddsi_typeobj_t **typeobj);
+// void ddsi_typeobj_deser (unsigned char *buf, uint32_t sz, ddsi_typeobj_t **typeobj);
+// void ddsi_typeobj_ser (const ddsi_typeobj_t *typeobj, unsigned char **buf, uint32_t *sz);
 bool ddsi_typeobj_is_minimal (const ddsi_typeobj_t *typeobj);
 bool ddsi_typeobj_is_complete (const ddsi_typeobj_t *typeobj);
+void ddsi_typeobj_fini (ddsi_typeobj_t *typeobj);
 
 bool ddsi_typeinfo_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b);
-void ddsi_typeinfo_ser (const ddsi_typeinfo_t *typeinfo, unsigned char **buf, uint32_t *sz);
+// void ddsi_typeinfo_ser (const ddsi_typeinfo_t *typeinfo, unsigned char **buf, uint32_t *sz);
 void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typeinfo);
+void ddsi_typeinfo_fini (ddsi_typeinfo_t *typeinfo);
+ddsi_typeinfo_t * ddsi_typeinfo_dup (const ddsi_typeinfo_t *src);
 
 const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const ddsi_typeid_t *tid);
 const ddsi_typeid_t * ddsi_typemap_matching_id (const ddsi_typemap_t *tmap, const ddsi_typeid_t *type_id);
-void ddsi_typemap_ser (const ddsi_typemap_t *typemap, unsigned char **buf, uint32_t *sz);
+// void ddsi_typemap_ser (const ddsi_typemap_t *typemap, unsigned char **buf, uint32_t *sz);
 void ddsi_typemap_deser (unsigned char *buf, uint32_t sz, ddsi_typemap_t **typemap);
 
 /**

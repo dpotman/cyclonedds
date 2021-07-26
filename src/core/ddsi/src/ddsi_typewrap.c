@@ -324,6 +324,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
           ddsi_typeid_copy (&mstruct->header.base_type, &xt->_u.structure.base_type->xt.id);
         mstruct->member_seq._buffer = ddsrt_malloc (xt->_u.structure.members.length * sizeof (*mstruct->member_seq._buffer));
         mstruct->member_seq._length = xt->_u.structure.members.length;
+        mstruct->member_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.structure.members.length; n++)
         {
           mstruct->member_seq._buffer[n].common.member_id = xt->_u.structure.members.seq[n].id;
@@ -341,6 +342,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
         munion->discriminator.common.member_flags = xt->_u.union_type.disc_flags;
         munion->member_seq._buffer = ddsrt_malloc (xt->_u.union_type.members.length * sizeof (*munion->member_seq._buffer));
         munion->member_seq._length = munion->member_seq._maximum = xt->_u.union_type.members.length;
+        munion->member_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.union_type.members.length; n++)
         {
           munion->member_seq._buffer[n].common.member_id = xt->_u.union_type.members.seq[n].id;
@@ -349,6 +351,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
           munion->member_seq._buffer[n].common.label_seq._length = xt->_u.union_type.members.seq[n].label_seq._length;
           munion->member_seq._buffer[n].common.label_seq._buffer = ddsrt_memdup (xt->_u.union_type.members.seq[n].label_seq._buffer,
             xt->_u.union_type.members.seq[n].label_seq._length * sizeof (*xt->_u.union_type.members.seq[n].label_seq._buffer));
+          munion->member_seq._buffer[n].common.label_seq._release = true;
           get_minimal_member_detail (&munion->member_seq._buffer[n].detail, &xt->_u.union_type.members.seq[n].detail);
         }
         break;
@@ -358,6 +361,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
         struct DDS_XTypes_MinimalBitsetType *mbitset = &mto->_u.bitset_type;
         mbitset->field_seq._length = xt->_u.bitset.fields.length;
         mbitset->field_seq._buffer = ddsrt_malloc (xt->_u.bitset.fields.length * sizeof (*mbitset->field_seq._buffer));
+        mbitset->field_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.bitset.fields.length; n++)
         {
           mbitset->field_seq._buffer[n].common.position = xt->_u.bitset.fields.seq[n].position;
@@ -389,6 +393,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
         menum->header.common.bit_bound = xt->_u.enum_type.bit_bound;
         menum->literal_seq._length = xt->_u.enum_type.literals.length;
         menum->literal_seq._buffer = ddsrt_malloc (xt->_u.enum_type.literals.length * sizeof (*menum->literal_seq._buffer));
+        menum->literal_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.enum_type.literals.length; n++)
         {
           menum->literal_seq._buffer[n].common.value = xt->_u.enum_type.literals.seq[n].value;
@@ -404,6 +409,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
         mbitmask->header.common.bit_bound = xt->_u.bitmask.bit_bound;
         mbitmask->flag_seq._length = xt->_u.bitmask.bitflags.length;
         mbitmask->flag_seq._buffer = ddsrt_malloc (xt->_u.bitmask.bitflags.length * sizeof (*mbitmask->flag_seq._buffer));
+        mbitmask->flag_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.bitmask.bitflags.length; n++)
         {
           mbitmask->flag_seq._buffer[n].common.position = xt->_u.bitmask.bitflags.seq[n].position;
@@ -440,6 +446,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
         get_type_detail (&cstruct->header.detail, &xt->_u.structure.detail);
         cstruct->member_seq._buffer = ddsrt_malloc (xt->_u.structure.members.length * sizeof (*cstruct->member_seq._buffer));
         cstruct->member_seq._length = xt->_u.structure.members.length;
+        cstruct->member_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.structure.members.length; n++)
         {
           cstruct->member_seq._buffer[n].common.member_id = xt->_u.structure.members.seq[n].id;
@@ -458,6 +465,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
         cunion->discriminator.common.member_flags = xt->_u.union_type.disc_flags;
         cunion->member_seq._buffer = ddsrt_malloc (xt->_u.union_type.members.length * sizeof (*cunion->member_seq._buffer));
         cunion->member_seq._length = cunion->member_seq._maximum = xt->_u.union_type.members.length;
+        cunion->member_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.union_type.members.length; n++)
         {
           cunion->member_seq._buffer[n].common.member_id = xt->_u.union_type.members.seq[n].id;
@@ -466,6 +474,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
           cunion->member_seq._buffer[n].common.label_seq._length = xt->_u.union_type.members.seq[n].label_seq._length;
           cunion->member_seq._buffer[n].common.label_seq._buffer = ddsrt_memdup (xt->_u.union_type.members.seq[n].label_seq._buffer,
             xt->_u.union_type.members.seq[n].label_seq._length * sizeof (*xt->_u.union_type.members.seq[n].label_seq._buffer));
+          cunion->member_seq._buffer[n].common.label_seq._release = true;
           get_member_detail (&cunion->member_seq._buffer[n].detail, &xt->_u.union_type.members.seq[n].detail);
         }
         break;
@@ -476,6 +485,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
         get_type_detail (&cbitset->header.detail, &xt->_u.bitset.detail);
         cbitset->field_seq._length = xt->_u.bitset.fields.length;
         cbitset->field_seq._buffer = ddsrt_malloc (xt->_u.bitset.fields.length * sizeof (*cbitset->field_seq._buffer));
+        cbitset->field_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.bitset.fields.length; n++)
         {
           cbitset->field_seq._buffer[n].common.position = xt->_u.bitset.fields.seq[n].position;
@@ -508,6 +518,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
         cenum->header.common.bit_bound = xt->_u.enum_type.bit_bound;
         cenum->literal_seq._length = xt->_u.enum_type.literals.length;
         cenum->literal_seq._buffer = ddsrt_malloc (xt->_u.enum_type.literals.length * sizeof (*cenum->literal_seq._buffer));
+        cenum->literal_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.enum_type.literals.length; n++)
         {
           cenum->literal_seq._buffer[n].common.value = xt->_u.enum_type.literals.seq[n].value;
@@ -523,6 +534,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
         cbitmask->header.common.bit_bound = xt->_u.bitmask.bit_bound;
         cbitmask->flag_seq._length = xt->_u.bitmask.bitflags.length;
         cbitmask->flag_seq._buffer = ddsrt_malloc (xt->_u.bitmask.bitflags.length * sizeof (*cbitmask->flag_seq._buffer));
+        cbitmask->flag_seq._release = true;
         for (uint32_t n = 0; n < xt->_u.bitmask.bitflags.length; n++)
         {
           cbitmask->flag_seq._buffer[n].common.position = xt->_u.bitmask.bitflags.seq[n].position;
@@ -585,6 +597,7 @@ void ddsi_xt_type_fini (struct ddsi_domaingv *gv, struct xt_type *xt)
     default:
       break;
   }
+  ddsi_typeid_fini (&xt->id);
 }
 
 static void DDS_XTypes_AppliedVerbatimAnnotation_copy (struct DDS_XTypes_AppliedVerbatimAnnotation *dst, const struct DDS_XTypes_AppliedVerbatimAnnotation *src)
@@ -1323,7 +1336,10 @@ static bool xt_is_assignable_from_struct (struct ddsi_domaingv *gv, const struct
           *m2_ke = xt_type_key_erased (gv, &m2->type->xt);
         bool ke_assignable = ddsi_xt_is_assignable_from (gv, m1_ke, m2_ke);
         ddsi_xt_type_fini (gv, m1_ke);
+        ddsrt_free (m1_ke);
         ddsi_xt_type_fini (gv, m2_ke);
+        ddsrt_free (m2_ke);
+
         if (!ke_assignable)
           goto struct_failed;
         /* Rule: "For any string key member m2 in T2, the m1 member of T1 with the same member ID verifies m1.type.length >= m2.type.length. */
