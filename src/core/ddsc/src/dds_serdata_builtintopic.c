@@ -259,14 +259,6 @@ static char *dds_string_dup_reuse (char *old, const char *src)
   return memcpy (new, src, size);
 }
 
-#ifdef DDS_HAS_TYPE_DISCOVERY
-static void *dds_mem_dup_reuse (void *old, const void *src, size_t size)
-{
-  void *new = dds_realloc (old, size);
-  return memcpy (new, src, size);
-}
-#endif
-
 static dds_qos_t *dds_qos_from_xqos_reuse (dds_qos_t *old, const dds_qos_t *src)
 {
   if (old == NULL)
@@ -303,17 +295,6 @@ static bool to_sample_endpoint (const struct ddsi_serdata_builtintopic_endpoint 
     sample->topic_name = dds_string_dup_reuse (sample->topic_name, dep->common.xqos.topic_name);
     sample->type_name = dds_string_dup_reuse (sample->type_name, dep->common.xqos.type_name);
     sample->qos = dds_qos_from_xqos_reuse (sample->qos, &dep->common.xqos);
-#ifdef DDS_HAS_TYPE_DISCOVERY
-    if (dep->common.xqos.present & QP_TYPE_INFORMATION)
-    {
-      if (!(sample->qos->present & QP_TYPE_INFORMATION))
-      {
-        sample->qos->present |= QP_TYPE_INFORMATION;
-        sample->qos->type_information = NULL;
-      }
-      sample->qos->type_information = dds_mem_dup_reuse (sample->qos->type_information, dep->common.xqos.type_information, sizeof (*sample->qos->type_information));
-    }
-#endif
   }
   return true;
 }
@@ -329,16 +310,6 @@ static bool to_sample_topic (const struct ddsi_serdata_builtintopic_topic *dtp, 
     sample->topic_name = dds_string_dup_reuse (sample->topic_name, dtp->common.xqos.topic_name);
     sample->type_name = dds_string_dup_reuse (sample->type_name, dtp->common.xqos.type_name);
     sample->qos = dds_qos_from_xqos_reuse (sample->qos, &dtp->common.xqos);
-    if (dtp->common.xqos.present & QP_TYPE_INFORMATION)
-    {
-      if (!(sample->qos->present & QP_TYPE_INFORMATION))
-      {
-        sample->qos->present |= QP_TYPE_INFORMATION;
-        sample->qos->type_information = NULL;
-      }
-      // FIXME: always overwrite value from dtp->common.xqos?
-      sample->qos->type_information = dds_mem_dup_reuse (sample->qos->type_information, dtp->common.xqos.type_information, sizeof (*sample->qos->type_information));
-    }
   }
   return true;
 }

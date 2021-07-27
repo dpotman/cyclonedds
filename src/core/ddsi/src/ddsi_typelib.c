@@ -49,40 +49,50 @@ void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src)
     case DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL:
       dst->_u.seq_sdefn.header = src->_u.seq_sdefn.header;
       dst->_u.seq_sdefn.bound = src->_u.seq_sdefn.bound;
-      dst->_u.seq_sdefn.element_identifier = src->_u.seq_sdefn.element_identifier ? ddsrt_memdup (src->_u.seq_sdefn.element_identifier, sizeof (*src->_u.seq_sdefn.element_identifier)) : NULL;
+      dst->_u.seq_sdefn.element_identifier = ddsi_typeid_dup (src->_u.seq_sdefn.element_identifier);
       break;
     case DDS_XTypes_TI_PLAIN_SEQUENCE_LARGE:
       dst->_u.seq_ldefn.header = src->_u.seq_ldefn.header;
       dst->_u.seq_ldefn.bound = src->_u.seq_ldefn.bound;
-      dst->_u.seq_ldefn.element_identifier = src->_u.seq_ldefn.element_identifier ? ddsrt_memdup (src->_u.seq_ldefn.element_identifier, sizeof (*src->_u.seq_ldefn.element_identifier)) : NULL;
+      dst->_u.seq_ldefn.element_identifier = ddsi_typeid_dup (src->_u.seq_ldefn.element_identifier);
       break;
     case DDS_XTypes_TI_PLAIN_ARRAY_SMALL:
       dst->_u.array_sdefn.header = src->_u.array_sdefn.header;
-      dst->_u.array_sdefn.array_bound_seq._length = src->_u.array_sdefn.array_bound_seq._length;
+      dst->_u.array_sdefn.array_bound_seq._length = dst->_u.array_sdefn.array_bound_seq._maximum = src->_u.array_sdefn.array_bound_seq._length;
       if (src->_u.array_sdefn.array_bound_seq._length > 0)
+      {
         dst->_u.array_sdefn.array_bound_seq._buffer = ddsrt_memdup (src->_u.array_sdefn.array_bound_seq._buffer, src->_u.array_sdefn.array_bound_seq._length * sizeof (*src->_u.array_sdefn.array_bound_seq._buffer));
-      dst->_u.array_sdefn.element_identifier = src->_u.array_sdefn.element_identifier ? ddsrt_memdup (src->_u.array_sdefn.element_identifier, sizeof (*src->_u.array_sdefn.element_identifier)) : NULL;
+        dst->_u.array_sdefn.array_bound_seq._release = true;
+      }
+      else
+        dst->_u.array_sdefn.array_bound_seq._release = false;
+      dst->_u.array_sdefn.element_identifier = ddsi_typeid_dup (src->_u.array_sdefn.element_identifier);
       break;
     case DDS_XTypes_TI_PLAIN_ARRAY_LARGE:
       dst->_u.array_ldefn.header = src->_u.array_ldefn.header;
-      dst->_u.array_ldefn.array_bound_seq._length = src->_u.array_ldefn.array_bound_seq._length;
+      dst->_u.array_ldefn.array_bound_seq._length = dst->_u.array_ldefn.array_bound_seq._maximum = src->_u.array_ldefn.array_bound_seq._length;
       if (src->_u.array_ldefn.array_bound_seq._length > 0)
+      {
         dst->_u.array_ldefn.array_bound_seq._buffer = ddsrt_memdup (src->_u.array_ldefn.array_bound_seq._buffer, src->_u.array_ldefn.array_bound_seq._length * sizeof (*src->_u.array_ldefn.array_bound_seq._buffer));
-      dst->_u.array_ldefn.element_identifier = src->_u.array_ldefn.element_identifier ? ddsrt_memdup (src->_u.array_ldefn.element_identifier, sizeof (*src->_u.array_ldefn.element_identifier)) : NULL;
+        dst->_u.array_ldefn.array_bound_seq._release = true;
+      }
+      else
+        dst->_u.array_ldefn.array_bound_seq._release = false;
+      dst->_u.array_ldefn.element_identifier = ddsi_typeid_dup (src->_u.array_ldefn.element_identifier);
       break;
     case DDS_XTypes_TI_PLAIN_MAP_SMALL:
       dst->_u.map_sdefn.header = src->_u.map_sdefn.header;
       dst->_u.map_sdefn.bound = src->_u.map_sdefn.bound;
-      dst->_u.map_sdefn.element_identifier = src->_u.map_sdefn.element_identifier ? ddsrt_memdup (src->_u.map_sdefn.element_identifier, sizeof (*src->_u.map_sdefn.element_identifier)) : NULL;
+      dst->_u.map_sdefn.element_identifier = ddsi_typeid_dup (src->_u.map_sdefn.element_identifier);
       dst->_u.map_sdefn.key_flags = src->_u.map_sdefn.key_flags;
-      dst->_u.map_sdefn.key_identifier = src->_u.map_sdefn.key_identifier ? ddsrt_memdup (src->_u.map_sdefn.key_identifier, sizeof (*src->_u.map_sdefn.key_identifier)) : NULL;
+      dst->_u.map_sdefn.key_identifier = ddsi_typeid_dup (src->_u.map_sdefn.key_identifier);
       break;
     case DDS_XTypes_TI_PLAIN_MAP_LARGE:
       dst->_u.map_ldefn.header = src->_u.map_ldefn.header;
       dst->_u.map_ldefn.bound = src->_u.map_ldefn.bound;
-      dst->_u.map_ldefn.element_identifier = src->_u.map_ldefn.element_identifier ? ddsrt_memdup (src->_u.map_ldefn.element_identifier, sizeof (*src->_u.map_ldefn.element_identifier)) : NULL;
+      dst->_u.map_ldefn.element_identifier = ddsi_typeid_dup (src->_u.map_ldefn.element_identifier);
       dst->_u.map_ldefn.key_flags = src->_u.map_ldefn.key_flags;
-      dst->_u.map_ldefn.key_identifier = src->_u.map_ldefn.key_identifier ? ddsrt_memdup (src->_u.map_ldefn.key_identifier, sizeof (*src->_u.map_ldefn.key_identifier)) : NULL;
+      dst->_u.map_ldefn.key_identifier = ddsi_typeid_dup (src->_u.map_ldefn.key_identifier);
       break;
     case DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT:
       dst->_u.sc_component_id.sc_component_id = src->_u.sc_component_id.sc_component_id;
@@ -101,6 +111,8 @@ void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src)
 
 ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src)
 {
+  if (ddsi_typeid_is_none (src))
+    return NULL;
   ddsi_typeid_t *tid = ddsrt_malloc (sizeof (*tid));
   ddsi_typeid_copy (tid, src);
   return tid;
@@ -754,8 +766,11 @@ void ddsi_type_unref_sertype (struct ddsi_domaingv *gv, const struct ddsi_sertyp
       GVTRACE ("unref ddsi_type id " PTYPEIDFMT, PTYPEID (type->xt.id));
       ddsi_type_unref_impl_locked (gv, type, NULL);
     }
-    ddsi_typeid_fini (type_id);
-    ddsrt_free (type_id);
+    if (type_id)
+    {
+      ddsi_typeid_fini (type_id);
+      ddsrt_free (type_id);
+    }
   }
 
   ddsrt_mutex_unlock (&gv->typelib_lock);
