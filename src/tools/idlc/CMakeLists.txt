@@ -96,5 +96,5 @@ endif()
 
 include(Generate.cmake)
 
-add_subdirectory(tests)
+# add_subdirectory(tests)
 

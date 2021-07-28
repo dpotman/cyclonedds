@@ -3411,8 +3411,8 @@ static void endpoint_common_fini (struct entity_common *e, struct endpoint_commo
 #ifdef DDS_HAS_TYPE_DISCOVERY
     if (c->type_pair)
     {
-      ddsi_type_unref (e->gv, c->type_pair->minimal, NULL);
-      ddsi_type_unref (e->gv, c->type_pair->complete, NULL);
+      ddsi_type_unref (e->gv, c->type_pair->minimal);
+      ddsi_type_unref (e->gv, c->type_pair->complete);
       ddsrt_free (c->type_pair);
     }
 #endif
@@ -5811,10 +5811,10 @@ static void gc_delete_topic_definition (struct gcreq *gcreq)
   builtintopic_write_topic (gv->builtin_topic_interface, tpd, gcdata->timestamp, false);
   if (tpd->type_pair)
   {
-    ddsi_type_unref (gv, tpd->type_pair->minimal, NULL);
-    ddsi_type_unref (gv, tpd->type_pair->complete, NULL);
+    ddsi_type_unref (gv, tpd->type_pair->minimal);
+    ddsi_type_unref (gv, tpd->type_pair->complete);
+    ddsrt_free (tpd->type_pair);
   }
-  ddsrt_free (tpd->type_pair);
   ddsi_xqos_fini (tpd->xqos);
   ddsrt_free (tpd->xqos);
   ddsrt_free (tpd);
@@ -6026,8 +6026,10 @@ static int proxy_endpoint_common_init (struct entity_common *e, struct proxy_end
 #ifdef DDS_HAS_TYPE_DISCOVERY
     if (c->type_pair != NULL)
     {
-      ddsi_type_unref (proxypp->e.gv, c->type_pair->minimal, guid);
-      ddsi_type_unref (proxypp->e.gv, c->type_pair->complete, guid);
+      ddsi_type_unreg_proxy (proxypp->e.gv, c->type_pair->minimal, guid);
+      ddsi_type_unreg_proxy (proxypp->e.gv, c->type_pair->complete, guid);
+      ddsi_type_unref (proxypp->e.gv, c->type_pair->minimal);
+      ddsi_type_unref (proxypp->e.gv, c->type_pair->complete);
       ddsrt_free (c->type_pair);
     }
 #endif
@@ -6328,6 +6330,14 @@ static void gc_delete_proxy_writer (struct gcreq *gcreq)
   struct proxy_writer *pwr = gcreq->arg;
   ELOGDISC (pwr, "gc_delete_proxy_writer(%p, "PGUIDFMT")\n", (void *) gcreq, PGUID (pwr->e.guid));
   gcreq_free (gcreq);
+
+  if (pwr->c.type_pair != NULL)
+  {
+    ddsi_type_unref (pwr->e.gv, pwr->c.type_pair->minimal);
+    ddsi_type_unref (pwr->e.gv, pwr->c.type_pair->complete);
+    ddsrt_free (pwr->c.type_pair);
+  }
+
   while (!ddsrt_avl_is_empty (&pwr->readers))
   {
     struct pwr_rd_match *m = ddsrt_avl_root_non_empty (&pwr_readers_treedef, &pwr->readers);
@@ -6379,9 +6389,8 @@ int delete_proxy_writer (struct ddsi_domaingv *gv, const struct ddsi_guid *guid,
      the endpoint list. */
   if (pwr->c.type_pair != NULL)
   {
-    ddsi_type_unref (gv, pwr->c.type_pair->minimal, &pwr->e.guid);
-    ddsi_type_unref (gv, pwr->c.type_pair->complete, &pwr->e.guid);
-    ddsrt_free (pwr->c.type_pair);
+    ddsi_type_unreg_proxy (gv, pwr->c.type_pair->minimal, &pwr->e.guid);
+    ddsi_type_unreg_proxy (gv, pwr->c.type_pair->complete, &pwr->e.guid);
   }
 #endif
   entidx_remove_proxy_writer_guid (gv->entity_index, pwr);
@@ -6587,6 +6596,13 @@ static void gc_delete_proxy_reader (struct gcreq *gcreq)
   ELOGDISC (prd, "gc_delete_proxy_reader(%p, "PGUIDFMT")\n", (void *) gcreq, PGUID (prd->e.guid));
   gcreq_free (gcreq);
 
+  if (prd->c.type_pair != NULL)
+  {
+    ddsi_type_unref (prd->e.gv, prd->c.type_pair->minimal);
+    ddsi_type_unref (prd->e.gv, prd->c.type_pair->complete);
+    ddsrt_free (prd->c.type_pair);
+  }
+
   while (!ddsrt_avl_is_empty (&prd->writers))
   {
     struct prd_wr_match *m = ddsrt_avl_root_non_empty (&prd_writers_treedef, &prd->writers);
@@ -6616,16 +6632,15 @@ int delete_proxy_reader (struct ddsi_domaingv *gv, const struct ddsi_guid *guid,
   }
   builtintopic_write_endpoint (gv->builtin_topic_interface, &prd->e, timestamp, false);
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  /* Unref ddsi_type before removing from entity index, because
-     a tl_lookup_reply could be pending and will trigger an update
-     of the endpoint matching for all endpoints that are registered
-     for the type. The unref removes this proxy writer from
-     the endpoint list. */
+  /* Unregister the proxy guid with the ddsi_type before removing from
+     entity index, because a tl_lookup_reply could be pending and will
+     trigger an update of the endpoint matching for all endpoints that
+     are registered for the type. This removes this proxy writer from
+     the endpoint list for the type. */
   if (prd->c.type_pair != NULL)
   {
-    ddsi_type_unref (gv, prd->c.type_pair->minimal, &prd->e.guid);
-    ddsi_type_unref (gv, prd->c.type_pair->complete, &prd->e.guid);
-    ddsrt_free (prd->c.type_pair);
+    ddsi_type_unreg_proxy (gv, prd->c.type_pair->minimal, &prd->e.guid);
+    ddsi_type_unreg_proxy (gv, prd->c.type_pair->complete, &prd->e.guid);
   }
 #endif
   entidx_remove_proxy_reader_guid (gv->entity_index, prd);

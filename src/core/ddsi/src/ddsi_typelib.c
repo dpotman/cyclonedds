@@ -604,20 +604,28 @@ static bool type_has_dep (const struct ddsi_type *type, const ddsi_typeid_t *dep
   return false;
 }
 
-static void type_add_dep (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_typeid_t *dep_type_id)
+static void type_add_dep (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_typeid_t *dep_type_id, const ddsi_typeobj_t *dep_type_obj, uint32_t *n_match_upd, struct generic_proxy_endpoint ***gpe_match_upd)
 {
-  GVTRACE (" add dep " PTYPEIDFMT " (", PTYPEID(*dep_type_id));
+  GVTRACE ("type "PTYPEIDFMT" add dep "PTYPEIDFMT"\n", PTYPEID (type->xt.id), PTYPEID (*dep_type_id));
   struct ddsi_type *dep_type = ddsi_type_ref_id_locked (gv, dep_type_id);
   assert (dep_type);
+  if (dep_type_obj)
+  {
+    assert (n_match_upd);
+    assert (gpe_match_upd);
+    ddsi_xt_type_add_typeobj (gv, &dep_type->xt, dep_type_obj);
+    dep_type->state = DDSI_TYPE_RESOLVED;
+    (void) ddsi_type_get_gpe_matches (gv, type, gpe_match_upd, n_match_upd);
+  }
   struct ddsi_type_dep *tmp = type->deps;
   type->deps = ddsrt_malloc (sizeof (*type->deps));
   type->deps->prev = tmp;
   type->deps->type = dep_type;
-  GVTRACE (") ");
 }
 
-static void type_add_deps (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_typeinfo_t *type_info, ddsi_typeid_kind_t kind)
+static void type_add_deps (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_typeinfo_t *type_info, const ddsi_typemap_t *type_map, ddsi_typeid_kind_t kind, uint32_t *n_match_upd, struct generic_proxy_endpoint ***gpe_match_upd)
 {
+  assert (type_info);
   if ((kind == TYPE_ID_KIND_MINIMAL && type_info->minimal.dependent_typeid_count > 0)
     || (kind == TYPE_ID_KIND_COMPLETE && type_info->complete.dependent_typeid_count > 0))
   {
@@ -626,8 +634,9 @@ static void type_add_deps (struct ddsi_domaingv *gv, struct ddsi_type *type, con
 
     for (uint32_t n = 0; dep_ids && n < dep_ids->_length; n++)
     {
-      if (ddsi_typeid_compare (&type->xt.id, &dep_ids->_buffer[n].type_id) && !type_has_dep (type, &dep_ids->_buffer[n].type_id))
-        type_add_dep (gv, type, &dep_ids->_buffer[n].type_id);
+      const ddsi_typeid_t *dep_type_id = &dep_ids->_buffer[n].type_id;
+      if (ddsi_typeid_compare (&type->xt.id, dep_type_id) && !type_has_dep (type, dep_type_id))
+        type_add_dep (gv, type, dep_type_id, type_map ? ddsi_typemap_typeobj (type_map, dep_type_id) : NULL, n_match_upd, gpe_match_upd);
     }
   }
 }
@@ -636,14 +645,14 @@ struct ddsi_type * ddsi_type_ref_locked (struct ddsi_domaingv *gv, struct ddsi_t
 {
   assert (type);
   type->refc++;
-  GVTRACE (" ref ddsi_type %p refc %"PRIu32"\n", type, type->refc);
+  GVTRACE ("ref ddsi_type %p refc %"PRIu32"\n", type, type->refc);
   return type;
 }
 
 struct ddsi_type * ddsi_type_ref_id_locked (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id)
 {
   assert (!ddsi_typeid_is_none (type_id));
-  GVTRACE (" ref ddsi_type type-id " PTYPEIDFMT, PTYPEID(*type_id));
+  GVTRACE ("ref ddsi_type type-id " PTYPEIDFMT, PTYPEID(*type_id));
   struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
   if (!type)
     type = ddsi_type_new (gv, type_id, NULL);
@@ -654,6 +663,9 @@ struct ddsi_type * ddsi_type_ref_id_locked (struct ddsi_domaingv *gv, const ddsi
 
 struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct ddsi_sertype *sertype, ddsi_typeid_kind_t kind)
 {
+  struct generic_proxy_endpoint **gpe_match_upd = NULL;
+  uint32_t n_match_upd = 0;
+
   assert (sertype != NULL);
   ddsi_typeinfo_t *type_info = ddsi_sertype_typeinfo (sertype);
   if (!type_info)
@@ -663,7 +675,7 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
   const ddsi_typeobj_t *type_obj = ddsi_typemap_typeobj (type_map, type_id);
   bool resolved = false;
 
-  GVTRACE (" ref ddsi_type local sertype %p id " PTYPEIDFMT, sertype, PTYPEID(*type_id));
+  GVTRACE ("ref ddsi_type local sertype %p id " PTYPEIDFMT, sertype, PTYPEID(*type_id));
 
   ddsrt_mutex_lock (&gv->typelib_lock);
 
@@ -673,22 +685,34 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
   type->refc++;
   GVTRACE (" refc %"PRIu32"\n", type->refc);
 
-  type_add_deps (gv, type, type_info, kind);
-  ddsi_typeinfo_fini (type_info);
-  ddsrt_free (type_info);
+  type_add_deps (gv, type, type_info, type_map, kind, &n_match_upd, &gpe_match_upd);
 
   if (type->sertype == NULL)
   {
     type->sertype = ddsi_sertype_ref (sertype);
-    GVTRACE (" resolved");
+    GVTRACE ("type "PTYPEIDFMT" resolved\n", PTYPEID(*type_id));
     resolved = true;
   }
 
   ddsrt_mutex_unlock (&gv->typelib_lock);
+
   if (resolved)
     ddsrt_cond_broadcast (&gv->typelib_resolved_cond);
+
+  if (gpe_match_upd != NULL)
+  {
+    for (uint32_t e = 0; e < n_match_upd; e++)
+    {
+      GVTRACE ("type " PTYPEIDFMT " trigger matching "PGUIDFMT"\n", PTYPEID (*type_id), PGUID(gpe_match_upd[e]->e.guid));
+      update_proxy_endpoint_matching (gv, gpe_match_upd[e]);
+    }
+    ddsrt_free (gpe_match_upd);
+  }
+
   ddsi_typemap_fini (type_map);
   ddsrt_free (type_map);
+  ddsi_typeinfo_fini (type_info);
+  ddsrt_free (type_info);
   return type;
 }
 
@@ -696,39 +720,34 @@ struct ddsi_type * ddsi_type_ref_proxy (struct ddsi_domaingv *gv, const ddsi_typ
 {
   assert (type_info);
   const ddsi_typeid_t *type_id = (kind == TYPE_ID_KIND_MINIMAL) ? &type_info->minimal.typeid_with_size.type_id : &type_info->complete.typeid_with_size.type_id;
-  GVTRACE (" ref ddsi_type proxy");
 
   ddsrt_mutex_lock (&gv->typelib_lock);
 
+  GVTRACE ("ref ddsi_type proxy id " PTYPEIDFMT, PTYPEID(*type_id));
   struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
   if (!type)
     type = ddsi_type_new (gv, type_id, NULL);
   type->refc++;
-  GVTRACE (" id " PTYPEIDFMT " refc %"PRIu32"\n", PTYPEID(*type_id), type->refc);
+  GVTRACE(" refc %"PRIu32"\n", type->refc);
 
-  type_add_deps (gv, type, type_info, kind);
+  type_add_deps (gv, type, type_info, NULL, kind, NULL, NULL);
 
   if (proxy_guid != NULL && !ddsi_type_proxy_guid_exists (type, proxy_guid))
   {
     ddsi_type_proxy_guid_list_insert (&type->proxy_guids, *proxy_guid);
-    GVTRACE (" add ep "PGUIDFMT, PGUID (*proxy_guid));
+    GVTRACE ("type "PTYPEIDFMT" add ep "PGUIDFMT"\n", PTYPEID (*type_id), PGUID (*proxy_guid));
   }
 
   ddsrt_mutex_unlock (&gv->typelib_lock);
   return type;
 }
 
-static void ddsi_type_unref_impl_locked (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_guid_t *proxy_guid)
+static void ddsi_type_unref_impl_locked (struct ddsi_domaingv *gv, struct ddsi_type *type)
 {
   assert (type->refc > 0);
-  if (proxy_guid != NULL)
-  {
-    ddsi_type_proxy_guid_list_remove (&type->proxy_guids, *proxy_guid, ddsi_type_proxy_guids_eq);
-    GVTRACE (" remove ep "PGUIDFMT, PGUID (*proxy_guid));
-  }
   if (--type->refc == 0)
   {
-    GVTRACE (" refc 0 remove type\n");
+    GVTRACE (" refc 0 remove type");
     ddsrt_avl_delete (&ddsi_typelib_treedef, &gv->typelib, type);
     ddsi_type_fini (gv, type);
   }
@@ -736,19 +755,26 @@ static void ddsi_type_unref_impl_locked (struct ddsi_domaingv *gv, struct ddsi_t
     GVTRACE (" refc %" PRIu32, type->refc);
 }
 
-static void ddsi_type_unref_impl (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_guid_t *proxy_guid)
+void ddsi_type_unreg_proxy (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_guid_t *proxy_guid)
 {
+  assert (proxy_guid);
+  if (!type)
+    return;
   ddsrt_mutex_lock (&gv->typelib_lock);
-  GVTRACE ("unref ddsi_type id " PTYPEIDFMT, PTYPEID (type->xt.id));
-  ddsi_type_unref_impl_locked (gv, type, proxy_guid);
+  GVTRACE ("unreg proxy guid " PGUIDFMT " ddsi_type id " PTYPEIDFMT "\n", PGUID (*proxy_guid), PTYPEID (type->xt.id));
+  ddsi_type_proxy_guid_list_remove (&type->proxy_guids, *proxy_guid, ddsi_type_proxy_guids_eq);
   ddsrt_mutex_unlock (&gv->typelib_lock);
-  GVTRACE ("\n");
 }
 
-void ddsi_type_unref (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_guid_t *proxy_guid)
+void ddsi_type_unref (struct ddsi_domaingv *gv, struct ddsi_type *type)
 {
-  if (type)
-    ddsi_type_unref_impl (gv, type, proxy_guid);
+  if (!type)
+    return;
+  ddsrt_mutex_lock (&gv->typelib_lock);
+  GVTRACE ("unref ddsi_type id " PTYPEIDFMT, PTYPEID (type->xt.id));
+  ddsi_type_unref_impl_locked (gv, type);
+  ddsrt_mutex_unlock (&gv->typelib_lock);
+  GVTRACE ("\n");
 }
 
 void ddsi_type_unref_sertype (struct ddsi_domaingv *gv, const struct ddsi_sertype *sertype)
@@ -764,7 +790,7 @@ void ddsi_type_unref_sertype (struct ddsi_domaingv *gv, const struct ddsi_sertyp
     if (!ddsi_typeid_is_none (type_id) && ((type = ddsi_type_lookup_locked (gv, type_id))))
     {
       GVTRACE ("unref ddsi_type id " PTYPEIDFMT, PTYPEID (type->xt.id));
-      ddsi_type_unref_impl_locked (gv, type, NULL);
+      ddsi_type_unref_impl_locked (gv, type);
     }
     if (type_id)
     {
@@ -779,7 +805,7 @@ void ddsi_type_unref_sertype (struct ddsi_domaingv *gv, const struct ddsi_sertyp
 void ddsi_type_unref_locked (struct ddsi_domaingv *gv, struct ddsi_type *type)
 {
   if (type)
-    ddsi_type_unref_impl_locked (gv, type, NULL);
+    ddsi_type_unref_impl_locked (gv, type);
 }
 
 static void ddsi_type_register_with_proxy_endpoints_locked (struct ddsi_domaingv *gv, const struct ddsi_type *type)
@@ -829,27 +855,27 @@ void ddsi_type_register_with_proxy_endpoints (struct ddsi_domaingv *gv, const st
   }
 }
 
-uint32_t ddsi_type_get_gpe_matches (struct ddsi_domaingv *gv, const struct ddsi_type *type, struct generic_proxy_endpoint ***gpe_match_upd)
+uint32_t ddsi_type_get_gpe_matches (struct ddsi_domaingv *gv, const struct ddsi_type *type, struct generic_proxy_endpoint ***gpe_match_upd, uint32_t *n_match_upd)
 {
-  if (ddsi_type_proxy_guid_list_count (&type->proxy_guids) > 0)
+  if (!ddsi_type_proxy_guid_list_count (&type->proxy_guids))
+    return 0;
+
+  uint32_t n = 0;
+  *gpe_match_upd = ddsrt_realloc (*gpe_match_upd, (*n_match_upd + ddsi_type_proxy_guid_list_count (&type->proxy_guids)) * sizeof (**gpe_match_upd));
+  struct ddsi_type_proxy_guid_list_iter it;
+  for (ddsi_guid_t guid = ddsi_type_proxy_guid_list_iter_first (&type->proxy_guids, &it); !is_null_guid (&guid); guid = ddsi_type_proxy_guid_list_iter_next (&it))
   {
-    uint32_t n_match_upd = 0;
-    *gpe_match_upd = ddsrt_realloc (*gpe_match_upd, (n_match_upd + ddsi_type_proxy_guid_list_count (&type->proxy_guids)) * sizeof (**gpe_match_upd));
-    struct ddsi_type_proxy_guid_list_iter it;
-    for (ddsi_guid_t guid = ddsi_type_proxy_guid_list_iter_first (&type->proxy_guids, &it); !is_null_guid (&guid); guid = ddsi_type_proxy_guid_list_iter_next (&it))
+    if (!is_topic_entityid (guid.entityid))
     {
-      if (!is_topic_entityid (guid.entityid))
+      struct entity_common *ec = entidx_lookup_guid_untyped (gv->entity_index, &guid);
+      if (ec != NULL)
       {
-        struct entity_common *ec = entidx_lookup_guid_untyped (gv->entity_index, &guid);
-        if (ec != NULL)
-        {
-          assert (ec->kind == EK_PROXY_READER || ec->kind == EK_PROXY_WRITER);
-          (*gpe_match_upd)[n_match_upd++] = (struct generic_proxy_endpoint *) ec;
-        }
+        assert (ec->kind == EK_PROXY_READER || ec->kind == EK_PROXY_WRITER);
+        (*gpe_match_upd)[*n_match_upd + n++] = (struct generic_proxy_endpoint *) ec;
       }
     }
-    ddsi_type_register_with_proxy_endpoints_locked (gv, type);
-    return n_match_upd;
   }
-  return 0;
+  *n_match_upd += n;
+  ddsi_type_register_with_proxy_endpoints_locked (gv, type);
+  return n;
 }

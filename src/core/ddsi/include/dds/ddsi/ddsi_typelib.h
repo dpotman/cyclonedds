@@ -351,10 +351,14 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
 struct ddsi_type * ddsi_type_ref_proxy (struct ddsi_domaingv *gv, const ddsi_typeinfo_t *type_info, ddsi_typeid_kind_t kind, const ddsi_guid_t *proxy_guid);
 
 /**
- * Dereference the type identified by the provided type identifier.
- * If provided, the proxy endpoint will be deregistered for this entry.
+ * Deregister the proxy entity from the type provided type.
  */
-void ddsi_type_unref (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_guid_t *proxy_guid);
+void ddsi_type_unreg_proxy (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_guid_t *proxy_guid);
+
+/**
+ * Dereference the type identified by the provided type.
+ */
+void ddsi_type_unref (struct ddsi_domaingv *gv, struct ddsi_type *type);
 
 /**
  * Dereference the types (min/compl) for the provided type sertype
@@ -385,9 +389,12 @@ void ddsi_type_register_with_proxy_endpoints (struct ddsi_domaingv *gv, const st
 
 /**
  * Gets a list of proxy endpoints that are registered for the provided type
- * and returns the number of entries stored in gpe_match_upd
+ * and stores it in the gpe_match_upd parameter. The parameter n_match_upd
+ * should contain the actual number of entries in gpe_match_upd and will
+ * be updated if new entries are added. The return value is the number
+ * of entries appended to the list.
  */
-uint32_t ddsi_type_get_gpe_matches (struct ddsi_domaingv *gv, const struct ddsi_type *type, struct generic_proxy_endpoint ***gpe_match_upd);
+uint32_t ddsi_type_get_gpe_matches (struct ddsi_domaingv *gv, const struct ddsi_type *type, struct generic_proxy_endpoint ***gpe_match_upd, uint32_t *n_match_upd);
 
 /**
  * Compares the provided type lookup meta objects.

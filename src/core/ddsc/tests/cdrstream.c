@@ -1303,6 +1303,7 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_empty 
     ret = dds_instance_get_key(wr, ih, key_data);
     bool eq = keys_equal_fn (msg, key_data);
     CU_ASSERT_FATAL (eq);
+    sample_free_fn (key_data);
   }
 
   dds_attach_t triggered;

@@ -229,6 +229,8 @@ CU_Test(ddsc_typelookup, basic, .init = typelookup_init, .fini = typelookup_fini
   assert (writer_ep && reader_ep); // clang static analyzer
   endpoint_info_free (writer_ep);
   endpoint_info_free (reader_ep);
+  dds_free (wr_type_name);
+  dds_free (rd_type_name);
   dds_free (wr_type_id);
   dds_free (rd_type_id);
 }

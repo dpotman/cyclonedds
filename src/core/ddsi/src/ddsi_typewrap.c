@@ -165,6 +165,8 @@ void ddsi_xt_type_add_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, con
 {
   assert (xt);
   assert (to);
+  if (xt->has_obj)
+    return;
   if (xt->kind == TYPE_ID_KIND_MINIMAL)
   {
     assert (to->_d == DDS_XTypes_EK_MINIMAL);

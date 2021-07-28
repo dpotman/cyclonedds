@@ -197,7 +197,7 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
   ddsi_serdata_to_sample (d, &reply, NULL, NULL);
   bool resolved = false;
   ddsrt_mutex_lock (&gv->typelib_lock);
-  GVTRACE ("handle-tl-reply wr "PGUIDFMT " seqnr %"PRIi64" ntypeids %"PRIu32" ", PGUID (from_guid (&reply.header.requestId.writer_guid)), from_seqno (&reply.header.requestId.sequence_number), reply.return_data._u.getType._u.result.types._length);
+  GVTRACE ("handle-tl-reply wr "PGUIDFMT " seqnr %"PRIi64" ntypeids %"PRIu32"\n", PGUID (from_guid (&reply.header.requestId.writer_guid)), from_seqno (&reply.header.requestId.sequence_number), reply.return_data._u.getType._u.result.types._length);
   for (uint32_t n = 0; n < reply.return_data._u.getType._u.result.types._length; n++)
   {
     DDS_XTypes_TypeIdentifierTypeObjectPair r = reply.return_data._u.getType._u.result.types._buffer[n];
@@ -211,20 +211,24 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
     }
     if (!type->xt.has_obj)
     {
-      GVTRACE (" resolve-minimal type %p", type);
+      GVTRACE (" resolve-minimal type %p\n", type);
       ddsi_xt_type_add_typeobj (gv, &type->xt, &r.type_object);
       type->state = DDSI_TYPE_RESOLVED;
+    }
+    else
+    {
+      GVTRACE (" already resolved\n");
     }
     if (ddsi_typeid_is_minimal (&r.type_identifier))
     {
       /* don't set resolved when a minimal type object is received, because
          only when getting a complete type object a sertype (and thus a topic)
          can be constructed, so find_topic should be triggered */
-      n_match_upd = ddsi_type_get_gpe_matches (gv, type, &gpe_match_upd);
+      ddsi_type_get_gpe_matches (gv, type, &gpe_match_upd, &n_match_upd);
     }
     else
     {
-      GVTRACE (" resolve-complete type %p", type);
+      GVTRACE (" resolve-complete type %p\n", type);
 
       // FIXME: create sertype from received (complete) type object, check if it exists and register if not
       // bool sertype_new = false;
@@ -240,11 +244,10 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
       // ddsrt_mutex_unlock (&gv->sertypes_lock);
       // type->sertype = &st->c; // refcounted by sertype_register/lookup
 
-      if ((n_match_upd = ddsi_type_get_gpe_matches (gv, type, &gpe_match_upd)) > 0)
+      if (ddsi_type_get_gpe_matches (gv, type, &gpe_match_upd, &n_match_upd))
         resolved = true;
     }
   }
-  GVTRACE ("\n");
   if (resolved)
     ddsrt_cond_broadcast (&gv->typelib_resolved_cond);
   ddsrt_mutex_unlock (&gv->typelib_lock);
@@ -254,7 +257,10 @@ void ddsi_tl_handle_reply (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
   if (gpe_match_upd != NULL)
   {
     for (uint32_t e = 0; e < n_match_upd; e++)
+    {
+      GVTRACE (" trigger matching "PGUIDFMT"\n", PGUID(gpe_match_upd[e]->e.guid));
       update_proxy_endpoint_matching (gv, gpe_match_upd[e]);
+    }
     ddsrt_free (gpe_match_upd);
   }
 }

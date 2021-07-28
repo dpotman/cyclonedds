@@ -68,16 +68,16 @@ static int partitions_match_p (const dds_qos_t *a, const dds_qos_t *b)
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
 
-static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, const struct ddsi_type_pair *type_pair, bool *req_lookup)
+static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, const struct ddsi_type_pair *type_pair, bool *req_lookup, const char *entity)
   ddsrt_nonnull((1, 2, 3));
 
-static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, const struct ddsi_type_pair *type_pair, bool *req_lookup)
+static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, const struct ddsi_type_pair *type_pair, bool *req_lookup, const char *entity)
 {
   assert (type_pair);
   ddsrt_mutex_lock (&gv->typelib_lock);
   if ((!type_pair->minimal || !type_pair->minimal->xt.has_obj) && (!type_pair->complete || !type_pair->complete->xt.has_obj))
   {
-    GVTRACE ("unresolved type object for %s / " PTYPEIDFMT " / " PTYPEIDFMT, type_name, PTYPEID(type_pair->minimal->xt.id), PTYPEID(type_pair->complete->xt.id));
+    GVTRACE ("unresolved %s type %s / " PTYPEIDFMT " / " PTYPEIDFMT"\n", entity, type_name, PTYPEID(type_pair->minimal->xt.id), PTYPEID(type_pair->complete->xt.id));
     /* defer requesting unresolved type until after the endpoint qos lock
        has been released, so just set a bool value indicating that a type
        lookup is required */
@@ -177,9 +177,9 @@ bool qos_match_mask_p (
   }
   else
   {
-    if (!check_endpoint_typeid (gv, rd_qos->type_name, rd_type_pair, rd_typeid_req_lookup))
+    if (!check_endpoint_typeid (gv, rd_qos->type_name, rd_type_pair, rd_typeid_req_lookup, "rd"))
       return false;
-    if (!check_endpoint_typeid (gv, wr_qos->type_name, wr_type_pair, wr_typeid_req_lookup))
+    if (!check_endpoint_typeid (gv, wr_qos->type_name, wr_type_pair, wr_typeid_req_lookup, "wr"))
       return false;
     ddsrt_mutex_lock (&gv->typelib_lock);
     if ((rd_type_pair->complete && rd_type_pair->complete->sertype && !ddsi_sertype_assignable_from (rd_type_pair->complete->sertype, wr_type_pair))
