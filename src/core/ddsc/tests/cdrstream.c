@@ -444,15 +444,17 @@ static void sample_free_appendable (void *s)
 }
 
 /**********************************************
- * Keys in nested types
+ * Keys in nested (appendable/mutable) types
  **********************************************/
 
+/* @mutable */
 typedef struct TestIdl_SubMsgKeysNested2
 {
   uint32_t submsg2_field1;
   uint32_t submsg2_field2;
 } TestIdl_SubMsgKeysNested2;
 
+/* @appendable */
 typedef struct TestIdl_SubMsgKeysNested
 {
   uint32_t submsg_field1;
@@ -469,6 +471,7 @@ typedef struct TestIdl_MsgKeysNested_msg_field2_seq
   bool _release;
 } TestIdl_MsgKeysNested_msg_field2_seq;
 
+/* @final */
 typedef struct TestIdl_MsgKeysNested
 {
   TestIdl_SubMsgKeysNested msg_field1;
@@ -483,6 +486,7 @@ static const uint32_t TestIdl_MsgKeysNested_ops [] =
   DDS_OP_RTS,
 
   // SubMsg
+  DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgKeysNested, submsg_field1),
   DDS_OP_ADR | DDS_OP_TYPE_4BY | DDS_OP_FLAG_KEY, offsetof (TestIdl_SubMsgKeysNested, submsg_field2),
   DDS_OP_ADR | DDS_OP_TYPE_4BY | DDS_OP_FLAG_KEY, offsetof (TestIdl_SubMsgKeysNested, submsg_field3),
@@ -490,20 +494,25 @@ static const uint32_t TestIdl_MsgKeysNested_ops [] =
   DDS_OP_RTS,
 
   // SubMsg2
+  DDS_OP_PLC,
+    DDS_OP_JEQ | 5u, 1,
+    DDS_OP_JEQ | 6u, 2,
+  DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (TestIdl_SubMsgKeysNested2, submsg2_field1),
+  DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_4BY | DDS_OP_FLAG_KEY, offsetof (TestIdl_SubMsgKeysNested2, submsg2_field2),
   DDS_OP_RTS,
 
-  DDS_OP_KOF | 2u, 0u, 2u,      // msg_field1.submsg_field2
-  DDS_OP_KOF | 2u, 0u, 4u,      // msg_field1.submsg_field3
-  DDS_OP_KOF | 3u, 0u, 6u, 2u   // msg_field1.submsg_field4.submsg2_field2
+  DDS_OP_KOF | 2u, 0u, 3u,      // msg_field1.submsg_field2
+  DDS_OP_KOF | 2u, 0u, 5u,      // msg_field1.submsg_field3
+  DDS_OP_KOF | 3u, 0u, 7u, 9u   // msg_field1.submsg_field4.submsg2_field2
 };
 
 static const dds_key_descriptor_t TestIdl_MsgKeysNested_keys[3] =
 {
-  { "msg_field1.submsg_field2", 23 },
-  { "msg_field1.submsg_field3", 26 },
-  { "msg_field1.submsg_field4.submsg2_field2", 29 }
+  { "msg_field1.submsg_field2", 31 },
+  { "msg_field1.submsg_field3", 34 },
+  { "msg_field1.submsg_field4.submsg2_field2", 37 }
 };
 
 const dds_topic_descriptor_t TestIdl_MsgKeysNested_desc = { sizeof (TestIdl_MsgKeysNested), sizeof (char *), DDS_TOPIC_FIXED_KEY | DDS_TOPIC_NO_OPTIMIZE, 3u, "TestIdl::MsgKeysNested", TestIdl_MsgKeysNested_keys, 8, TestIdl_MsgKeysNested_ops, "" };
@@ -1230,21 +1239,6 @@ static void write_key_sample (void * msg)
   ddsi_serdata_unref (sd);
   ddsi_sertype_unref (stype);
 }
-
-// static void read_key ()
-// {
-//   struct dds_topic *x;
-//   if (dds_topic_pin (tp1, &x) < 0) abort();
-//   struct ddsi_sertype *stype = ddsi_sertype_ref (x->m_stype);
-//   dds_topic_unpin (x);
-//   struct ddsi_serdata *sd = ddsi_serdata_from_sample (stype, SDK_KEY, msg);
-//   ddsi_serdata_unref (sd);
-
-//   dds_istream_from_serdata_default(&is, d);
-//   dds_stream_read_key (&is, sample, tp);
-
-//   ddsi_sertype_unref (stype);
-// }
 
 static void cdrstream_fini (void)
 {

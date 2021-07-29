@@ -42,31 +42,33 @@
 #define EMHEADER_MEMBERID_MASK  0x0fffffffu
 #define EMHEADER_MEMBERID(x)    ((x) & EMHEADER_MEMBERID_MASK)
 
-#define dds_os_put1BO                               NAME_BO(dds_os_put1)
-#define dds_os_put2BO                               NAME_BO(dds_os_put2)
-#define dds_os_put4BO                               NAME_BO(dds_os_put4)
-#define dds_os_put8BO                               NAME_BO(dds_os_put8)
-#define dds_stream_write_stringBO                   NAME_BO(dds_stream_write_string)
-#define dds_stream_writeBO                          NAME_BO(dds_stream_write)
-#define dds_stream_write_seqBO                      NAME_BO(dds_stream_write_seq)
-#define dds_stream_write_arrBO                      NAME_BO(dds_stream_write_arr)
-#define write_union_discriminantBO                  NAME_BO(write_union_discriminant)
-#define dds_stream_write_uniBO                      NAME_BO(dds_stream_write_uni)
-#define dds_stream_writeBO                          NAME_BO(dds_stream_write)
-#define dds_stream_write_plBO                       NAME_BO(dds_stream_write_pl)
-#define dds_stream_write_delimitedBO                NAME_BO(dds_stream_write_delimited)
-#define dds_stream_write_sampleBO                   NAME_BO(dds_stream_write_sample)
-#define dds_stream_write_keyBO                      NAME_BO(dds_stream_write_key)
-#define dds_stream_write_key_implBO                 NAME_BO(dds_stream_write_key_impl)
-#define dds_cdr_alignto_clear_and_resizeBO          NAME_BO(dds_cdr_alignto_clear_and_resize)
-#define dds_stream_swap_insituBO                    NAME_BO(dds_stream_swap_insitu)
-#define dds_stream_extract_key_from_dataBO          NAME_BO(dds_stream_extract_key_from_data)
-#define dds_stream_extract_key_from_data1BO         NAME_BO(dds_stream_extract_key_from_data1)
-#define dds_stream_extract_key_from_key_prim_opBO   NAME_BO(dds_stream_extract_key_from_key_prim_op)
+#define dds_os_put1BO                                 NAME_BO(dds_os_put1)
+#define dds_os_put2BO                                 NAME_BO(dds_os_put2)
+#define dds_os_put4BO                                 NAME_BO(dds_os_put4)
+#define dds_os_put8BO                                 NAME_BO(dds_os_put8)
+#define dds_stream_write_stringBO                     NAME_BO(dds_stream_write_string)
+#define dds_stream_writeBO                            NAME_BO(dds_stream_write)
+#define dds_stream_write_seqBO                        NAME_BO(dds_stream_write_seq)
+#define dds_stream_write_arrBO                        NAME_BO(dds_stream_write_arr)
+#define write_union_discriminantBO                    NAME_BO(write_union_discriminant)
+#define dds_stream_write_uniBO                        NAME_BO(dds_stream_write_uni)
+#define dds_stream_writeBO                            NAME_BO(dds_stream_write)
+#define dds_stream_write_plBO                         NAME_BO(dds_stream_write_pl)
+#define dds_stream_write_delimitedBO                  NAME_BO(dds_stream_write_delimited)
+#define dds_stream_write_sampleBO                     NAME_BO(dds_stream_write_sample)
+#define dds_stream_write_keyBO                        NAME_BO(dds_stream_write_key)
+#define dds_stream_write_key_implBO                   NAME_BO(dds_stream_write_key_impl)
+#define dds_cdr_alignto_clear_and_resizeBO            NAME_BO(dds_cdr_alignto_clear_and_resize)
+#define dds_stream_swap_insituBO                      NAME_BO(dds_stream_swap_insitu)
+#define dds_stream_extract_key_from_dataBO            NAME_BO(dds_stream_extract_key_from_data)
+#define dds_stream_extract_key_from_data1BO           NAME_BO(dds_stream_extract_key_from_data1)
+#define dds_stream_extract_key_from_key_prim_opBO     NAME_BO(dds_stream_extract_key_from_key_prim_op)
+#define dds_stream_extract_key_from_data_delimitedBO  NAME_BO(dds_stream_extract_key_from_data_delimited)
+#define dds_stream_extract_key_from_data_plBO         NAME_BO(dds_stream_extract_key_from_data_pl)
 
 static const uint32_t *dds_stream_skip_default (char * __restrict data, const uint32_t * __restrict ops);
-static void dds_stream_extract_key_from_data1 (dds_istream_t * __restrict is, dds_ostream_t * __restrict os, const uint32_t * __restrict ops, uint32_t * __restrict keys_remaining);
-static void dds_stream_extract_key_from_data1BE (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const uint32_t * __restrict ops, uint32_t * __restrict keys_remaining);
+static const uint32_t *dds_stream_extract_key_from_data1 (dds_istream_t * __restrict is, dds_ostream_t * __restrict os, const uint32_t * __restrict ops, uint32_t * __restrict keys_remaining);
+static const uint32_t *dds_stream_extract_key_from_data1BE (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const uint32_t * __restrict ops, uint32_t * __restrict keys_remaining);
 
 static void dds_ostream_grow (dds_ostream_t * __restrict st, uint32_t size)
 {
@@ -1451,8 +1453,8 @@ static const uint32_t *dds_stream_read_pl (dds_istream_t * __restrict is, char *
     uint32_t insn, ops_csr = 0;
     bool found = false;
 
-    /* FIXME: continue finding the member from the last found one,
-       because in many cases the members will be in the data sequentially */
+    /* FIXME: continue finding the member in the ops member list starting from the last
+       found one, because in many cases the members will be in the data sequentially */
     while (!found && (insn = ops[ops_csr]) != DDS_OP_RTS)
     {
       assert (DDS_OP (insn) == DDS_OP_JEQ);
@@ -2532,6 +2534,30 @@ static const uint32_t *dds_stream_extract_key_from_data_skip_union (dds_istream_
   if (jeq_op)
     dds_stream_extract_key_from_data_skip_subtype (is, 1, DDS_JEQ_TYPE (jeq_op[0]), jeq_op + DDS_OP_ADR_JSR (jeq_op[0]));
   return ops + DDS_OP_ADR_JMP (ops[3]);
+}
+
+static const uint32_t *dds_stream_extract_key_from_data_skip_adr (dds_istream_t * __restrict is, const uint32_t * __restrict ops, uint32_t type)
+{
+  switch (type)
+  {
+    case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: case DDS_OP_VAL_STR: case DDS_OP_VAL_BST: case DDS_OP_VAL_BSP: case DDS_OP_VAL_ENU:
+      dds_stream_extract_key_from_data_skip_subtype (is, 1, type, NULL);
+      ops += 2 + (type == DDS_OP_VAL_BST || type == DDS_OP_VAL_BSP || type == DDS_OP_VAL_ARR || type == DDS_OP_VAL_ENU);
+      break;
+    case DDS_OP_VAL_SEQ:
+      ops = dds_stream_extract_key_from_data_skip_sequence (is, ops);
+      break;
+    case DDS_OP_VAL_ARR:
+      ops = dds_stream_extract_key_from_data_skip_array (is, ops);
+      break;
+    case DDS_OP_VAL_UNI:
+      ops = dds_stream_extract_key_from_data_skip_union (is, ops);
+      break;
+    case DDS_OP_VAL_STU:
+      abort (); /* op type STU only supported as subtype */
+      break;
+  }
+  return ops;
 }
 
 void dds_stream_extract_keyhash (dds_istream_t * __restrict is, dds_keyhash_t * __restrict kh, const struct ddsi_sertype_default * __restrict type, const bool just_key)
