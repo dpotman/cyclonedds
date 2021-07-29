@@ -193,7 +193,7 @@ static void test_pmd_count(dds_liveliness_kind_t kind, uint32_t ldur, double mul
   dds_delete_qos(wqos);
 
   /* wait for writer to be alive */
-  CU_ASSERT_EQUAL_FATAL(dds_waitset_wait(waitset, &triggered, 1, DDS_SECS(1)), 1);
+  CU_ASSERT_EQUAL_FATAL(dds_waitset_wait(waitset, &triggered, 1, DDS_SECS(3)), 1);
   CU_ASSERT_EQUAL_FATAL(dds_take_status(reader, &status, DDS_LIVELINESS_CHANGED_STATUS), DDS_RETCODE_OK);
 
   /* check no of PMD messages sent */
@@ -578,7 +578,7 @@ static void test_create_delete_writer_stress(bool remote_reader)
   CU_ASSERT_FATAL((wqos = dds_create_qos()) != NULL);
   dds_qset_liveliness(wqos, DDS_LIVELINESS_MANUAL_BY_PARTICIPANT, DDS_MSECS(ldur));
   CU_ASSERT_FATAL((writers[0] = dds_create_writer(g_pub_participant, pub_topic, wqos, NULL)) > 0);
-  CU_ASSERT_EQUAL_FATAL(dds_waitset_wait(waitset, &triggered, 1, DDS_MSECS(1000)), 1);
+  CU_ASSERT_EQUAL_FATAL(dds_waitset_wait(waitset, &triggered, 1, DDS_SECS(3)), 1);
   alive_writers_man++;
 
   /* create writers */

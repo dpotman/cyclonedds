@@ -1089,7 +1089,7 @@ static int sedp_write_endpoint_impl
    const struct entity_common *common, const struct endpoint_common *epcommon,
    const dds_qos_t *xqos, struct addrset *as, nn_security_info_t *security
 #ifdef DDS_HAS_TYPE_DISCOVERY
-   , const struct ddsi_sertype *type
+   , const struct ddsi_sertype *sertype
 #endif
 )
 {
@@ -1225,8 +1225,8 @@ static int sedp_write_endpoint_impl
 #endif
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
-    assert (type);
-    if ((ps.qos.type_information = ddsi_sertype_typeinfo (type)))
+    assert (sertype);
+    if ((ps.qos.type_information = ddsi_sertype_typeinfo (sertype)))
       ps.qos.present |= QP_TYPE_INFORMATION;
 #endif
   }
@@ -1238,7 +1238,7 @@ static int sedp_write_endpoint_impl
 
 #ifdef DDS_HAS_TOPIC_DISCOVERY
 
-static int sedp_write_topic_impl (struct writer *wr, int alive, const ddsi_guid_t *guid, const dds_qos_t *xqos, const struct ddsi_sertype *type)
+static int sedp_write_topic_impl (struct writer *wr, int alive, const ddsi_guid_t *guid, const dds_qos_t *xqos, const struct ddsi_sertype *sertype)
 {
   struct ddsi_domaingv * const gv = wr->e.gv;
   const dds_qos_t *defqos = &ddsi_default_qos_topic;
@@ -1258,8 +1258,8 @@ static int sedp_write_topic_impl (struct writer *wr, int alive, const ddsi_guid_
   if (gv->config.explicitly_publish_qos_set_to_default)
     qosdiff |= ~QP_UNRECOGNIZED_INCOMPATIBLE_MASK;
 
-  assert (type);
-  if ((ps.qos.type_information = ddsi_sertype_typeinfo (type)))
+  assert (sertype);
+  if ((ps.qos.type_information = ddsi_sertype_typeinfo (sertype)))
     ps.qos.present |= QP_TYPE_INFORMATION;
 
   if (xqos)

@@ -121,18 +121,12 @@ static void from_qos (struct ddsi_serdata_builtintopic *d, const dds_qos_t *xqos
 static void from_entity_rd (struct ddsi_serdata_builtintopic_endpoint *d, const struct reader *rd)
 {
   d->pphandle = rd->c.pp->e.iid;
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  // FIXME: d->type_info = ddsi_sertype_typeinfo (rd->type);
-#endif
   from_qos (&d->common, rd->xqos);
 }
 
 static void from_entity_wr (struct ddsi_serdata_builtintopic_endpoint *d, const struct writer *wr)
 {
   d->pphandle = wr->c.pp->e.iid;
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  // FIXME: d->type_info = ddsi_sertype_typeinfo (wr->type);
-#endif
   from_qos (&d->common, wr->xqos);
 }
 
@@ -399,11 +393,7 @@ struct ddsi_serdata *dds_serdata_builtin_from_topic_definition (const struct dds
   struct ddsi_serdata_builtintopic_topic *d = (struct ddsi_serdata_builtintopic_topic *) serdata_builtin_new (tp, kind);
   memcpy (&d->common.key.raw, key, sizeof (d->common.key.raw));
   if (tpd != NULL && kind == SDK_DATA)
-  {
-    // FIXME
-    // d->type_info = ddsi_sertype_typeinfo (tpd->type_pair->complete->sertype);
     from_qos (&d->common, tpd->xqos);
-  }
   return fix_serdata_builtin (&d->common, DSBT_TOPIC, tp->c.serdata_basehash);
 }
 

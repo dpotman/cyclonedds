@@ -129,7 +129,7 @@ union TypeLookup_Return switch(long) {
 @RPCReplyType
 struct TypeLookup_Reply {
     DDS::RPC::RequestHeader header;
-    TypeLookup_Return return_data; // FIXME: changed manually from return to return_data
+    TypeLookup_Return return_data; // changed from return to return_data to avoid collision with return keyword
 };
 
 }; }; // dds::builtin

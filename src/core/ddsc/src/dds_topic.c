@@ -78,9 +78,9 @@ static dds_return_t dds_topic_status_validate (uint32_t mask)
 #ifdef DDS_HAS_TOPIC_DISCOVERY
 static struct ktopic_type_guid * topic_guid_map_refc_impl (const struct dds_ktopic * ktp, const struct ddsi_sertype *sertype, bool unref)
 {
-  ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype, TYPE_ID_KIND_COMPLETE);
+  ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype, DDSI_TYPEID_KIND_COMPLETE);
   if (ddsi_typeid_is_none (tid))
-    tid = ddsi_sertype_typeid (sertype, TYPE_ID_KIND_MINIMAL);
+    tid = ddsi_sertype_typeid (sertype, DDSI_TYPEID_KIND_MINIMAL);
   if (ddsi_typeid_is_none (tid))
     return NULL;
   struct ktopic_type_guid
@@ -115,6 +115,7 @@ static void topic_guid_map_unref (struct ddsi_domaingv * const gv, const struct 
     thread_state_awake (lookup_thread_state (), gv);
     (void) delete_topic (gv, &m->guid);
     thread_state_asleep (lookup_thread_state ());
+    ddsi_typeid_fini (m->type_id);
     ddsrt_free (m->type_id);
     ddsrt_free (m);
   }
@@ -353,13 +354,17 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
 {
   bool new_topic_def = false;
   /* create or reference ktopic-sertype meta-data entry */
-  ddsi_typeid_t *type_id = ddsi_sertype_typeid (sertype_registered, TYPE_ID_KIND_COMPLETE);
+  ddsi_typeid_t *type_id = ddsi_sertype_typeid (sertype_registered, DDSI_TYPEID_KIND_COMPLETE);
   if (type_id)
   {
     assert (!ddsi_typeid_is_none (type_id));
     struct ktopic_type_guid templ = { .type_id = type_id }, *m;
     if ((m = ddsrt_hh_lookup (ktp->topic_guid_map, &templ)))
+    {
       m->refc++;
+      ddsi_typeid_fini (type_id);
+      ddsrt_free (type_id);
+    }
     else
     {
       /* create ddsi topic and new ktopic-guid entry */
@@ -368,7 +373,7 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
       struct participant * pp_ddsi = entidx_lookup_participant_guid (gv->entity_index, ppguid);
 
       m = ddsrt_malloc (sizeof (*m));
-      m->type_id = ddsi_typeid_dup (type_id);
+      m->type_id = type_id;
       m->refc = 1;
       dds_return_t rc = ddsi_new_topic (&m->tp, &m->guid, pp_ddsi, ktp->name, sertype_registered, ktp->qos, is_builtin, &new_topic_def);
       assert (rc == DDS_RETCODE_OK); /* FIXME: can be out-of-resources at the very least */
@@ -376,8 +381,6 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
       ddsrt_hh_add (ktp->topic_guid_map, m);
       thread_state_asleep (lookup_thread_state ());
     }
-    ddsi_typeid_fini (type_id);
-    ddsrt_free (type_id);
   }
   return new_topic_def;
 }
@@ -386,7 +389,7 @@ static int ktopic_type_guid_equal (const void *ktp_guid_a, const void *ktp_guid_
 {
   struct ktopic_type_guid *a = (struct ktopic_type_guid *) ktp_guid_a;
   struct ktopic_type_guid *b = (struct ktopic_type_guid *) ktp_guid_b;
-  return ddsi_typeid_compare (a->type_id, b->type_id) == 0;
+  return !ddsi_typeid_compare (a->type_id, b->type_id);
 }
 
 static uint32_t ktopic_type_guid_hash (const void *ktp_guid)
@@ -522,8 +525,8 @@ dds_entity_t dds_create_topic_impl (
   *sertype = sertype_registered;
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  (void) ddsi_type_ref_local (gv, sertype_registered, TYPE_ID_KIND_MINIMAL);
-  (void) ddsi_type_ref_local (gv, sertype_registered, TYPE_ID_KIND_COMPLETE);
+  (void) ddsi_type_ref_local (gv, sertype_registered, DDSI_TYPEID_KIND_MINIMAL);
+  (void) ddsi_type_ref_local (gv, sertype_registered, DDSI_TYPEID_KIND_COMPLETE);
 #endif
 
   const bool new_topic_def = register_topic_type_for_discovery (gv, pp, ktp, is_builtin, sertype_registered);
@@ -636,16 +639,10 @@ dds_entity_t dds_create_topic (dds_entity_t participant, const dds_topic_descrip
   st->type.ops.ops = ddsrt_memdup (desc->m_ops, st->type.ops.nops * sizeof (*st->type.ops.ops));
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  if (desc->type_information.sz > 0)
-  {
-    st->type.typeinfo_ser.data = ddsrt_memdup (desc->type_information.data, desc->type_information.sz);
-    st->type.typeinfo_ser.sz = desc->type_information.sz;
-  }
-  if (desc->type_mapping.sz > 0)
-  {
-    st->type.typemap_ser.data = ddsrt_memdup (desc->type_mapping.data, desc->type_mapping.sz);
-    st->type.typemap_ser.sz = desc->type_mapping.sz;
-  }
+  st->type.typeinfo_ser.data = desc->type_information.sz ? ddsrt_memdup (desc->type_information.data, desc->type_information.sz) : NULL;
+  st->type.typeinfo_ser.sz = desc->type_information.sz;
+  st->type.typemap_ser.data = desc->type_mapping.sz ? ddsrt_memdup (desc->type_mapping.data, desc->type_mapping.sz) : NULL;
+  st->type.typemap_ser.sz = desc->type_mapping.sz;
 #endif
 
   /* Check if topic cannot be optimised (memcpy marshal) */

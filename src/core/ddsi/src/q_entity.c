@@ -2713,7 +2713,7 @@ static void reader_qos_mismatch (struct reader * rd, dds_qos_policy_id_t reason)
 static uint32_t get_dependent_typeids (const ddsi_typeinfo_t *type_info, const ddsi_typeid_t *** dep_ids, ddsi_typeid_kind_t kind)
 {
   assert (dep_ids);
-  int32_t cnt = (kind == TYPE_ID_KIND_MINIMAL) ? type_info->minimal.dependent_typeid_count : type_info->complete.dependent_typeid_count;
+  int32_t cnt = (kind == DDSI_TYPEID_KIND_MINIMAL) ? type_info->minimal.dependent_typeid_count : type_info->complete.dependent_typeid_count;
   if (cnt <= 0)
   {
     *dep_ids = NULL;
@@ -2721,7 +2721,7 @@ static uint32_t get_dependent_typeids (const ddsi_typeinfo_t *type_info, const d
   }
 
   *dep_ids = ddsrt_malloc ((uint32_t) cnt * sizeof (**dep_ids));
-  if (kind == TYPE_ID_KIND_MINIMAL)
+  if (kind == DDSI_TYPEID_KIND_MINIMAL)
   {
     for (int32_t n = 0; n < type_info->minimal.dependent_typeid_count; n++)
       (*dep_ids)[n] = &type_info->minimal.dependent_typeids._buffer[n].type_id;
@@ -2774,13 +2774,13 @@ static bool topickind_qos_match_p_lock (
     {
       req_type_id = &rd_type_pair->minimal->xt.id;
       if (rdqos->present & QP_TYPE_INFORMATION)
-        req_ndep_ids = get_dependent_typeids (rdqos->type_information, &req_dep_ids, TYPE_ID_KIND_MINIMAL);
+        req_ndep_ids = get_dependent_typeids (rdqos->type_information, &req_dep_ids, DDSI_TYPEID_KIND_MINIMAL);
     }
     else if (wr_type_lookup)
     {
       req_type_id = &wr_type_pair->minimal->xt.id;
       if (wrqos->present & QP_TYPE_INFORMATION)
-        req_ndep_ids = get_dependent_typeids (wrqos->type_information, &req_dep_ids, TYPE_ID_KIND_MINIMAL);
+        req_ndep_ids = get_dependent_typeids (wrqos->type_information, &req_dep_ids, DDSI_TYPEID_KIND_MINIMAL);
     }
   }
 #else
@@ -3394,8 +3394,8 @@ static void endpoint_common_init (struct entity_common *e, struct endpoint_commo
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
   c->type_pair = ddsrt_malloc (sizeof (*c->type_pair));
-  c->type_pair->minimal = ddsi_type_ref_local (pp->e.gv, sertype, TYPE_ID_KIND_MINIMAL);
-  c->type_pair->complete = ddsi_type_ref_local (pp->e.gv, sertype, TYPE_ID_KIND_COMPLETE);
+  c->type_pair->minimal = ddsi_type_ref_local (pp->e.gv, sertype, DDSI_TYPEID_KIND_MINIMAL);
+  c->type_pair->complete = ddsi_type_ref_local (pp->e.gv, sertype, DDSI_TYPEID_KIND_COMPLETE);
 #else
   c->type_pair = NULL;
 #endif
@@ -5717,14 +5717,14 @@ static struct ddsi_topic_definition * new_topic_definition (struct ddsi_domaingv
   tpd->type_pair = ddsrt_malloc (sizeof (*tpd->type_pair));
   if (type != NULL)
   {
-    tpd->type_pair->minimal = ddsi_type_ref_local (gv, type, TYPE_ID_KIND_MINIMAL);
-    tpd->type_pair->complete = ddsi_type_ref_local (gv, type, TYPE_ID_KIND_COMPLETE);
+    tpd->type_pair->minimal = ddsi_type_ref_local (gv, type, DDSI_TYPEID_KIND_MINIMAL);
+    tpd->type_pair->complete = ddsi_type_ref_local (gv, type, DDSI_TYPEID_KIND_COMPLETE);
   }
   else
   {
     assert (qos->present & QP_TYPE_INFORMATION);
-    tpd->type_pair->minimal = ddsi_type_ref_proxy (gv, qos->type_information, TYPE_ID_KIND_MINIMAL, NULL);
-    tpd->type_pair->complete = ddsi_type_ref_proxy (gv, qos->type_information, TYPE_ID_KIND_COMPLETE, NULL);
+    tpd->type_pair->minimal = ddsi_type_ref_proxy (gv, qos->type_information, DDSI_TYPEID_KIND_MINIMAL, NULL);
+    tpd->type_pair->complete = ddsi_type_ref_proxy (gv, qos->type_information, DDSI_TYPEID_KIND_COMPLETE, NULL);
   }
 
   set_topic_definition_hash (tpd);
@@ -5747,7 +5747,6 @@ static struct ddsi_topic_definition * new_topic_definition (struct ddsi_domaingv
 
 static struct ddsi_topic_definition *lookup_topic_definition_locked (struct ddsi_domaingv *gv, struct dds_qos *qos, const ddsi_typeid_t *type_id, const struct ddsi_sertype *type, bool *is_new)
 {
-  bool new = false;
   struct ddsi_topic_definition templ;
   templ.xqos = qos;
   templ.type_pair = ddsrt_malloc (sizeof (*templ.type_pair));
@@ -5756,17 +5755,12 @@ static struct ddsi_topic_definition *lookup_topic_definition_locked (struct ddsi
   templ.gv = gv;
   set_topic_definition_hash (&templ);
   struct ddsi_topic_definition *tpd = ddsrt_hh_lookup (gv->topic_defs, &templ);
+  ddsi_typeid_fini (&templ.type_pair->complete->xt.id);
   ddsrt_free (templ.type_pair->complete);
   ddsrt_free (templ.type_pair);
-  if (tpd == NULL)
-  {
-    tpd = new_topic_definition (gv, type, qos);
-    assert (tpd != NULL);
-    new = true;
-  }
-  if (is_new != NULL)
-    *is_new = new;
-  return tpd;
+  if (is_new)
+    *is_new = !tpd;
+  return tpd ? tpd : new_topic_definition (gv, type, qos);
 }
 
 static struct ddsi_topic_definition *lookup_topic_definition (struct ddsi_domaingv *gv, struct dds_qos *qos, const ddsi_typeid_t *type_id, const struct ddsi_sertype *type, bool *is_new)
@@ -6002,8 +5996,8 @@ static int proxy_endpoint_common_init (struct entity_common *e, struct proxy_end
   if (plist->qos.present & QP_TYPE_INFORMATION)
   {
     c->type_pair = ddsrt_malloc (sizeof (*c->type_pair));
-    c->type_pair->minimal = ddsi_type_ref_proxy (proxypp->e.gv, plist->qos.type_information, TYPE_ID_KIND_MINIMAL, guid);
-    c->type_pair->complete = ddsi_type_ref_proxy (proxypp->e.gv, plist->qos.type_information, TYPE_ID_KIND_COMPLETE, guid);
+    c->type_pair->minimal = ddsi_type_ref_proxy (proxypp->e.gv, plist->qos.type_information, DDSI_TYPEID_KIND_MINIMAL, guid);
+    c->type_pair->complete = ddsi_type_ref_proxy (proxypp->e.gv, plist->qos.type_information, DDSI_TYPEID_KIND_COMPLETE, guid);
   }
   else
   {
@@ -6382,11 +6376,10 @@ int delete_proxy_writer (struct ddsi_domaingv *gv, const struct ddsi_guid *guid,
   GVLOGDISC ("- deleting\n");
   builtintopic_write_endpoint (gv->builtin_topic_interface, &pwr->e, timestamp, false);
 #ifdef DDS_HAS_TYPE_DISCOVERY
-  /* Unref type before removing from entity index, because
-     a tl_lookup_reply could be pending and will trigger an update
-     of the endpoint matching for all endpoints that are registered
-     for the type. The unref removes this proxy writer from
-     the endpoint list. */
+  /* Unregister from type before removing from entity index, because a tl_lookup_reply
+     could be pending and will trigger an update of the endpoint matching for all
+     endpoints that are registered for the type. This call removes this proxy writer
+     from the type's endpoint list. */
   if (pwr->c.type_pair != NULL)
   {
     ddsi_type_unreg_proxy (gv, pwr->c.type_pair->minimal, &pwr->e.guid);

@@ -63,14 +63,14 @@ static bool sertype_default_equal (const struct ddsi_sertype *acmn, const struct
 static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn, ddsi_typeid_kind_t kind)
 {
   assert (tpcmn);
-  assert (kind == TYPE_ID_KIND_MINIMAL || kind == TYPE_ID_KIND_COMPLETE);
+  assert (kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDSI_TYPEID_KIND_COMPLETE);
   const struct ddsi_sertype_default *type = (struct ddsi_sertype_default *) tpcmn;
   if (type->type.typeinfo_ser.sz == 0 || type->type.typeinfo_ser.data == NULL)
     return NULL;
   ddsi_typeinfo_t *type_info = NULL;
   ddsi_typeid_t *type_id = NULL;
   ddsi_typeinfo_deser (type->type.typeinfo_ser.data, type->type.typeinfo_ser.sz, &type_info);
-  if (kind == TYPE_ID_KIND_MINIMAL && !ddsi_typeid_is_none (&type_info->minimal.typeid_with_size.type_id))
+  if (kind == DDSI_TYPEID_KIND_MINIMAL && !ddsi_typeid_is_none (&type_info->minimal.typeid_with_size.type_id))
   {
     type_id = ddsrt_malloc (sizeof (*type_id));
     ddsi_typeid_copy (type_id, &type_info->minimal.typeid_with_size.type_id);
@@ -185,34 +185,6 @@ static void sertype_default_free_samples (const struct ddsi_sertype *sertype_com
   }
 }
 
-const enum pserop ddsi_sertype_default_desc_ops[] = { Xux3, XE2, XO, XO, XO, XO, XQ, Xu, XSTOP, XQ, Xu, XSTOP, XSTOP };
-
-static void sertype_default_serialized_size (const struct ddsi_sertype *stc, size_t *dst_offset)
-{
-  const struct ddsi_sertype_default *st = (const struct ddsi_sertype_default *) stc;
-  plist_ser_generic_size_embeddable (dst_offset, &st->type, 0, ddsi_sertype_default_desc_ops);
-}
-
-static bool sertype_default_serialize (const struct ddsi_sertype *stc, size_t *dst_offset, unsigned char *dst_buf)
-{
-  const struct ddsi_sertype_default *st = (const struct ddsi_sertype_default *) stc;
-  return (plist_ser_generic_embeddable ((char *) dst_buf, dst_offset, &st->type, 0, ddsi_sertype_default_desc_ops, DDSRT_BOSEL_LE) >= 0); // xtypes spec (7.3.4.5) requires LE encoding for type serialization
-}
-
-static bool sertype_default_deserialize (struct ddsi_domaingv *gv, struct ddsi_sertype *stc, size_t src_sz, const unsigned char *src_data, size_t *src_offset)
-{
-  struct ddsi_sertype_default *st = (struct ddsi_sertype_default *) stc;
-  st->encoding_format = ddsi_sertype_get_encoding_format (CDR_ENC_FORMAT_PLAIN);
-  st->serpool = gv->serpool;
-  st->c.serdata_ops = st->c.typekind_no_key ? &ddsi_serdata_ops_cdr_nokey : &ddsi_serdata_ops_cdr;
-  DDSRT_WARNING_MSVC_OFF(6326)
-  if (plist_deser_generic_srcoff (&st->type, src_data, src_sz, src_offset, DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN, ddsi_sertype_default_desc_ops) < 0)
-    return false;
-  DDSRT_WARNING_MSVC_ON(6326)
-  st->opt_size = (st->type.flagset & DDS_TOPIC_NO_OPTIMIZE) ? 0 : dds_stream_check_optimize (&st->type);
-  return true;
-}
-
 static bool sertype_default_assignable_from (const struct ddsi_sertype *sertype_a, const struct ddsi_type_pair *type_pair_b)
 {
 #ifdef DDS_HAS_TYPE_DISCOVERY
@@ -225,13 +197,13 @@ static bool sertype_default_assignable_from (const struct ddsi_sertype *sertype_
   if (a->type.flagset & DDS_TOPIC_DISABLE_TYPECHECK)
     return true;
 
-  ddsi_typeid_t *type_id = sertype_default_typeid (sertype_a, TYPE_ID_KIND_MINIMAL);
+  ddsi_typeid_t *type_id = sertype_default_typeid (sertype_a, DDSI_TYPEID_KIND_MINIMAL);
   type_a = ddsi_type_lookup_locked (gv, type_id);
   ddsi_typeid_fini (type_id);
   ddsrt_free (type_id);
   if (!type_a)
   {
-    type_id = sertype_default_typeid (sertype_a, TYPE_ID_KIND_COMPLETE);
+    type_id = sertype_default_typeid (sertype_a, DDSI_TYPEID_KIND_COMPLETE);
     type_a = ddsi_type_lookup_locked (gv, type_id);
     ddsi_typeid_fini (type_id);
     ddsrt_free (type_id);
@@ -254,15 +226,12 @@ const struct ddsi_sertype_ops ddsi_sertype_ops_default = {
   .arg = 0,
   .equal = sertype_default_equal,
   .hash = sertype_default_hash,
-  .typeid = sertype_default_typeid,
-  .typemap = sertype_default_typemap,
-  .typeinfo = sertype_default_typeinfo,
   .free = sertype_default_free,
   .zero_samples = sertype_default_zero_samples,
   .realloc_samples = sertype_default_realloc_samples,
   .free_samples = sertype_default_free_samples,
-  .serialized_size = sertype_default_serialized_size,
-  .serialize = sertype_default_serialize,
-  .deserialize = sertype_default_deserialize,
+  .typeid = sertype_default_typeid,
+  .typemap = sertype_default_typemap,
+  .typeinfo = sertype_default_typeinfo,
   .assignable_from = sertype_default_assignable_from
 };

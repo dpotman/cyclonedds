@@ -126,15 +126,7 @@ dds_return_t dds_get_matched_publications (dds_entity_t reader, dds_instance_han
   }
 }
 
-static dds_builtintopic_endpoint_t *make_builtintopic_endpoint (
-    const ddsi_guid_t *guid,
-    const ddsi_guid_t *ppguid,
-    dds_instance_handle_t ppiid,
-    const dds_qos_t *qos
-#ifdef DDS_HAS_TYPE_DISCOVERY
-    , const struct ddsi_type_pair *type_pair
-#endif
-)
+static dds_builtintopic_endpoint_t *make_builtintopic_endpoint (const ddsi_guid_t *guid, const ddsi_guid_t *ppguid, dds_instance_handle_t ppiid, const dds_qos_t *qos)
 {
   dds_builtintopic_endpoint_t *ep;
   ddsi_guid_t tmp;
@@ -145,19 +137,9 @@ static dds_builtintopic_endpoint_t *make_builtintopic_endpoint (
   tmp = nn_hton_guid (*ppguid);
   memcpy (&ep->participant_key, &tmp, sizeof (ep->participant_key));
   ep->qos = dds_create_qos ();
-  ddsi_xqos_mergein_missing (ep->qos, qos, ~(QP_TOPIC_NAME | QP_TYPE_NAME | QP_TYPE_INFORMATION));
+  ddsi_xqos_mergein_missing (ep->qos, qos, ~(QP_TOPIC_NAME | QP_TYPE_NAME));
   ep->topic_name = dds_string_dup (qos->topic_name);
   ep->type_name = dds_string_dup (qos->type_name);
-
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  if (type_pair != NULL && (type_pair->minimal || type_pair->complete))
-  {
-    // FIXME: get type information
-    // if ((ep->qos->type_information = ddsi_sertype_typeinfo (type->sertype)))
-      // ep->qos->present |= QP_TYPE_INFORMATION;
-  }
-#endif
-
   return ep;
 }
 
@@ -182,13 +164,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_subscription_data (dds_entity_t wri
       if ((prd = entidx_lookup_proxy_reader_guid (gh, &m->prd_guid)) != NULL)
       {
         if (prd->e.iid == ih)
-        {
-#ifdef DDS_HAS_TYPE_DISCOVERY
-          ret = make_builtintopic_endpoint (&prd->e.guid, &prd->c.proxypp->e.guid, prd->c.proxypp->e.iid, prd->c.xqos, prd->c.type_pair);
-#else
           ret = make_builtintopic_endpoint (&prd->e.guid, &prd->c.proxypp->e.guid, prd->c.proxypp->e.iid, prd->c.xqos);
-#endif
-        }
       }
     }
     for (const struct wr_rd_match *m = ddsrt_avl_iter_first (&wr_local_readers_treedef, &wr->m_wr->local_readers, &it);
@@ -199,13 +175,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_subscription_data (dds_entity_t wri
       if ((rd = entidx_lookup_reader_guid (gh, &m->rd_guid)) != NULL)
       {
         if (rd->e.iid == ih)
-        {
-#ifdef DDS_HAS_TYPE_DISCOVERY
-          ret = make_builtintopic_endpoint (&rd->e.guid, &rd->c.pp->e.guid, rd->c.pp->e.iid, rd->xqos, rd->c.type_pair);
-#else
           ret = make_builtintopic_endpoint (&rd->e.guid, &rd->c.pp->e.guid, rd->c.pp->e.iid, rd->xqos);
-#endif
-        }
       }
     }
 
@@ -237,13 +207,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_publication_data (dds_entity_t read
       if ((pwr = entidx_lookup_proxy_writer_guid (gh, &m->pwr_guid)) != NULL)
       {
         if (pwr->e.iid == ih)
-        {
-#ifdef DDS_HAS_TYPE_DISCOVERY
-          ret = make_builtintopic_endpoint (&pwr->e.guid, &pwr->c.proxypp->e.guid, pwr->c.proxypp->e.iid, pwr->c.xqos, pwr->c.type_pair);
-#else
           ret = make_builtintopic_endpoint (&pwr->e.guid, &pwr->c.proxypp->e.guid, pwr->c.proxypp->e.iid, pwr->c.xqos);
-#endif
-        }
       }
     }
     for (const struct rd_wr_match *m = ddsrt_avl_iter_first (&rd_local_writers_treedef, &rd->m_rd->local_writers, &it);
@@ -254,13 +218,7 @@ dds_builtintopic_endpoint_t *dds_get_matched_publication_data (dds_entity_t read
       if ((wr = entidx_lookup_writer_guid (gh, &m->wr_guid)) != NULL)
       {
         if (wr->e.iid == ih)
-        {
-#ifdef DDS_HAS_TYPE_DISCOVERY
-          ret = make_builtintopic_endpoint (&wr->e.guid, &wr->c.pp->e.guid, wr->c.pp->e.iid, wr->xqos, wr->c.type_pair);
-#else
           ret = make_builtintopic_endpoint (&wr->e.guid, &wr->c.pp->e.guid, wr->c.pp->e.iid, wr->xqos);
-#endif
-        }
       }
     }
     ddsrt_mutex_unlock (&rd->m_rd->e.lock);
@@ -271,16 +229,15 @@ dds_builtintopic_endpoint_t *dds_get_matched_publication_data (dds_entity_t read
 }
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
+// FIXME: minimal/complete type id?
 dds_return_t dds_builtintopic_get_endpoint_typeid (dds_builtintopic_endpoint_t * builtintopic_endpoint, ddsi_typeid_t **type_identifier)
 {
   if (builtintopic_endpoint == NULL)
     return DDS_RETCODE_BAD_PARAMETER;
-  *type_identifier = NULL;
   if (builtintopic_endpoint->qos->present & QP_TYPE_INFORMATION)
-  {
-    *type_identifier = ddsrt_malloc (sizeof (**type_identifier));
-    ddsi_typeid_copy (*type_identifier, &builtintopic_endpoint->qos->type_information->minimal.typeid_with_size.type_id);
-  }
+    *type_identifier = ddsi_typeid_dup (&builtintopic_endpoint->qos->type_information->minimal.typeid_with_size.type_id);
+  else
+    *type_identifier = NULL;
   return DDS_RETCODE_OK;
 }
 #endif

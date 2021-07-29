@@ -167,12 +167,12 @@ void ddsi_xt_type_add_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, con
   assert (to);
   if (xt->has_obj)
     return;
-  if (xt->kind == TYPE_ID_KIND_MINIMAL)
+  if (xt->kind == DDSI_TYPEID_KIND_MINIMAL)
   {
     assert (to->_d == DDS_XTypes_EK_MINIMAL);
     add_minimal_typeobj (gv, xt, to);
   }
-  else if (xt->kind == TYPE_ID_KIND_COMPLETE)
+  else if (xt->kind == DDSI_TYPEID_KIND_COMPLETE)
   {
     assert (to->_d == DDS_XTypes_EK_COMPLETE);
     add_complete_typeobj (gv, xt, to);
@@ -188,11 +188,11 @@ void ddsi_xt_type_init (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi
 
   ddsi_typeid_copy (&xt->id, ti);
   if (!ddsi_typeid_is_hash (ti))
-    xt->kind = TYPE_ID_KIND_FULLY_DESCRIPTIVE;
+    xt->kind = DDSI_TYPEID_KIND_FULLY_DESCRIPTIVE;
   else if (ddsi_typeid_is_complete (ti))
-    xt->kind = TYPE_ID_KIND_COMPLETE;
+    xt->kind = DDSI_TYPEID_KIND_COMPLETE;
   else
-    xt->kind = TYPE_ID_KIND_MINIMAL;
+    xt->kind = DDSI_TYPEID_KIND_MINIMAL;
 
   /* Primitive types */
   if (ti->_d <= DDS_XTypes_TK_CHAR16)
@@ -305,7 +305,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
   assert (!xt_is_fully_descriptive_typeid (xt));
 
   memset (to, 0, sizeof (*to));
-  if (xt->kind == TYPE_ID_KIND_MINIMAL)
+  if (xt->kind == DDSI_TYPEID_KIND_MINIMAL)
   {
     to->_d = DDS_XTypes_EK_MINIMAL;
     struct DDS_XTypes_MinimalTypeObject *mto = &to->_u.minimal;
@@ -426,7 +426,7 @@ void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
   }
   else
   {
-    assert (xt->kind == TYPE_ID_KIND_COMPLETE);
+    assert (xt->kind == DDSI_TYPEID_KIND_COMPLETE);
     to->_d = DDS_XTypes_EK_COMPLETE;
     struct DDS_XTypes_CompleteTypeObject *cto = &to->_u.complete;
     cto->_d = xt->_d;
@@ -1070,8 +1070,8 @@ static bool xt_is_plain_collection_fully_descriptive_typeid (const struct xt_typ
 
 static bool xt_is_equiv_kind_hash_typeid (const struct xt_type *t, DDS_XTypes_EquivalenceKind ek)
 {
-  return (ek == DDS_XTypes_EK_MINIMAL && t->kind == TYPE_ID_KIND_MINIMAL)
-    || (ek == DDS_XTypes_EK_COMPLETE && t->kind == TYPE_ID_KIND_COMPLETE)
+  return (ek == DDS_XTypes_EK_MINIMAL && t->kind == DDSI_TYPEID_KIND_MINIMAL)
+    || (ek == DDS_XTypes_EK_COMPLETE && t->kind == DDSI_TYPEID_KIND_COMPLETE)
     || (t->_d == DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT && t->sc_component_id.sc_component_id._d == ek)
     || xt_is_plain_collection_equiv_kind (t, ek);
 }

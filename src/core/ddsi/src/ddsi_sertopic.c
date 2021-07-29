@@ -159,9 +159,6 @@ static const struct ddsi_sertype_ops sertopic_ops_wrap = {
   .typeid = 0,
   .typemap = 0,
   .typeinfo = 0,
-  .serialized_size = 0,
-  .serialize = 0,
-  .deserialize = 0,
   .assignable_from = 0
 };
 

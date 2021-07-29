@@ -76,10 +76,9 @@ static void typelookup_fini (void)
   dds_delete (g_domain1);
 }
 
-static void get_type(dds_entity_t entity, ddsi_typeid_t **type_id, char **type_name)
+static void get_type (dds_entity_t entity, ddsi_typeid_t **type_id, char **type_name)
 {
   struct dds_entity *e;
-  *type_id = ddsrt_calloc (1, sizeof (**type_id));
   CU_ASSERT_EQUAL_FATAL (dds_entity_pin (entity, &e), 0);
   thread_state_awake (lookup_thread_state (), &e->m_domain->gv);
   struct entity_common *ec = entidx_lookup_guid_untyped (e->m_domain->gv.entity_index, &e->m_guid);
@@ -87,23 +86,25 @@ static void get_type(dds_entity_t entity, ddsi_typeid_t **type_id, char **type_n
   {
     struct generic_proxy_endpoint *gpe = (struct generic_proxy_endpoint *)ec;
     CU_ASSERT_FATAL (gpe->c.type_pair != NULL);
-    ddsi_typeid_copy (*type_id, &gpe->c.type_pair->minimal->xt.id);
+    *type_id = ddsi_typeid_dup (&gpe->c.type_pair->minimal->xt.id);
     *type_name = ddsrt_strdup (gpe->c.xqos->type_name);
   }
   else if (ec->kind == EK_READER)
   {
     struct reader *rd = (struct reader *) ec;
     CU_ASSERT_FATAL (rd->c.type_pair != NULL);
-    ddsi_typeid_copy (*type_id, &rd->c.type_pair->minimal->xt.id);
+    *type_id = ddsi_typeid_dup (&rd->c.type_pair->minimal->xt.id);
     *type_name = ddsrt_strdup (rd->xqos->type_name);
   }
   else if (ec->kind == EK_WRITER)
   {
     struct writer *wr = (struct writer *) ec;
     CU_ASSERT_FATAL (wr->c.type_pair != NULL);
-    ddsi_typeid_copy (*type_id, &wr->c.type_pair->minimal->xt.id);
+    *type_id = ddsi_typeid_dup (&wr->c.type_pair->minimal->xt.id);
     *type_name = ddsrt_strdup (wr->xqos->type_name);
   }
+  else
+    abort ();
   thread_state_asleep (lookup_thread_state ());
   dds_entity_unpin (e);
 }
@@ -231,7 +232,9 @@ CU_Test(ddsc_typelookup, basic, .init = typelookup_init, .fini = typelookup_fini
   endpoint_info_free (reader_ep);
   dds_free (wr_type_name);
   dds_free (rd_type_name);
+  ddsi_typeid_fini (wr_type_id);
   dds_free (wr_type_id);
+  ddsi_typeid_fini (rd_type_id);
   dds_free (rd_type_id);
 }
 

@@ -45,11 +45,10 @@ struct xt_type;
 struct ddsi_domaingv;
 struct generic_proxy_endpoint;
 
-// FIXME: rename enumerators
 typedef enum ddsi_typeid_kind {
-  TYPE_ID_KIND_MINIMAL,
-  TYPE_ID_KIND_COMPLETE,
-  TYPE_ID_KIND_FULLY_DESCRIPTIVE
+  DDSI_TYPEID_KIND_MINIMAL,
+  DDSI_TYPEID_KIND_COMPLETE,
+  DDSI_TYPEID_KIND_FULLY_DESCRIPTIVE
 } ddsi_typeid_kind_t;
 
 typedef DDS_XTypes_TypeIdentifier ddsi_typeid_t;
