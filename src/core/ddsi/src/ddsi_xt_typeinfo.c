@@ -11,7 +11,7 @@
 static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 {
   /* TypeIdentifier */
-  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_TypeIdentifier, _d), 14u, (50u << 16u) + 4u,
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_TypeIdentifier, _d), 13u, (50u << 16u) + 4u,
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 47 /* StringSTypeDefn */, 112, offsetof (DDS_XTypes_TypeIdentifier, _u.string_sdefn),
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 44 /* StringSTypeDefn */, 114, offsetof (DDS_XTypes_TypeIdentifier, _u.string_sdefn),
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 44 /* StringLTypeDefn */, 113, offsetof (DDS_XTypes_TypeIdentifier, _u.string_ldefn),
@@ -25,7 +25,9 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 100 /* StronglyConnectedComponentId */, 176, offsetof (DDS_XTypes_TypeIdentifier, _u.sc_component_id),
   DDS_OP_JEQ | DDS_OP_TYPE_ARR | 9, 242, offsetof (DDS_XTypes_TypeIdentifier, _u.equivalence_hash),
   DDS_OP_JEQ | DDS_OP_TYPE_ARR | 6, 241, offsetof (DDS_XTypes_TypeIdentifier, _u.equivalence_hash),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 115 /* ExtendedTypeDefn */, 0, offsetof (DDS_XTypes_TypeIdentifier, _u.extended_defn),
+  DDS_OP_RTS,
+  DDS_OP_RTS,
+  DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_1BY, 0u, 14u,
   DDS_OP_RTS,
   DDS_OP_RTS,
@@ -98,16 +100,8 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   DDS_OP_RTS,
   DDS_OP_RTS,
 
-  /* ExtendedTypeDefn */
-  DDS_OP_PLC,
-  DDS_OP_RTS,
-
-  /* ExtendedAnnotationParameterValue */
-  DDS_OP_PLC,
-  DDS_OP_RTS,
-
   /* AnnotationParameterValue */
-  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_AnnotationParameterValue, _d), 14u, (50u << 16u) + 4u,
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_AnnotationParameterValue, _d), 13u, (50u << 16u) + 4u,
   DDS_OP_JEQ | DDS_OP_TYPE_1BY | 0, 1, offsetof (DDS_XTypes_AnnotationParameterValue, _u.boolean_value),
   DDS_OP_JEQ | DDS_OP_TYPE_1BY | 0, 2, offsetof (DDS_XTypes_AnnotationParameterValue, _u.byte_value),
   DDS_OP_JEQ | DDS_OP_TYPE_2BY | 0, 3, offsetof (DDS_XTypes_AnnotationParameterValue, _u.int16_value),
@@ -121,7 +115,9 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   DDS_OP_JEQ | DDS_OP_TYPE_1BY | 0, 16, offsetof (DDS_XTypes_AnnotationParameterValue, _u.char_value),
   DDS_OP_JEQ | DDS_OP_TYPE_4BY | 0, 64, offsetof (DDS_XTypes_AnnotationParameterValue, _u.enumerated_value),
   DDS_OP_JEQ | DDS_OP_TYPE_BST | 6, 32, offsetof (DDS_XTypes_AnnotationParameterValue, _u.string8_value),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65491 /* ExtendedAnnotationParameterValue */, 0, offsetof (DDS_XTypes_AnnotationParameterValue, _u.extended_value),
+  DDS_OP_RTS,
+  DDS_OP_RTS,
+  DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_BST, offsetof (DDS_XTypes_AnnotationParameterValue, _u.string8_value), 129u,
   DDS_OP_RTS,
   DDS_OP_RTS,
@@ -134,7 +130,7 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 
   /* AppliedAnnotation */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_AppliedAnnotation, annotation_typeid), (3u << 16u) + 65314u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_AppliedAnnotation, annotation_typeid), (3u << 16u) + 65316u /* TypeIdentifier */,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_AppliedAnnotation, param_seq), sizeof (DDS_XTypes_AppliedAnnotationParameter), (4u << 16u) + 65524u /* AppliedAnnotationParameter */,
   DDS_OP_RTS,
 
@@ -155,7 +151,7 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   /* CommonStructMember */
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_CommonStructMember, member_id),
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonStructMember, member_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonStructMember, member_type_id), (3u << 16u) + 65281u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonStructMember, member_type_id), (3u << 16u) + 65283u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteMemberDetail */
@@ -185,9 +181,6 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_AppliedBuiltinTypeAnnotations, verbatim), (3u << 16u) + 65475u /* AppliedVerbatimAnnotation */,
   DDS_OP_RTS,
 
-  /* MinimalTypeDetail */
-  DDS_OP_RTS,
-
   /* CompleteTypeDetail */
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteTypeDetail, ann_builtin), (3u << 16u) + 65530u /* AppliedBuiltinTypeAnnotations */,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteTypeDetail, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65458u /* AppliedAnnotation */,
@@ -196,57 +189,56 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 
   /* CompleteStructHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteStructHeader, base_type), (3u << 16u) + 65228u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteStructHeader, base_type), (3u << 16u) + 65230u /* TypeIdentifier */,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteStructHeader, detail), (3u << 16u) + 65521u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* MinimalStructHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructHeader, base_type), (3u << 16u) + 65220u /* TypeIdentifier */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructHeader, detail), (3u << 16u) + 65512u /* MinimalTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructHeader, base_type), (3u << 16u) + 65222u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteStructType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CompleteStructType, struct_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteStructType, header), (3u << 16u) + 65518u /* CompleteStructHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteStructType, member_seq), sizeof (DDS_XTypes_CompleteStructMember), (4u << 16u) + 65482u /* CompleteStructMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteStructType, header), (3u << 16u) + 65521u /* CompleteStructHeader */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteStructType, member_seq), sizeof (DDS_XTypes_CompleteStructMember), (4u << 16u) + 65485u /* CompleteStructMember */,
   DDS_OP_RTS,
 
   /* MinimalStructType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalStructType, struct_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructType, header), (3u << 16u) + 65516u /* MinimalStructHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalStructType, member_seq), sizeof (DDS_XTypes_MinimalStructMember), (4u << 16u) + 65480u /* MinimalStructMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructType, header), (3u << 16u) + 65519u /* MinimalStructHeader */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalStructType, member_seq), sizeof (DDS_XTypes_MinimalStructMember), (4u << 16u) + 65483u /* MinimalStructMember */,
   DDS_OP_RTS,
 
   /* CommonUnionMember */
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_CommonUnionMember, member_id),
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonUnionMember, member_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonUnionMember, type_id), (3u << 16u) + 65189u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonUnionMember, type_id), (3u << 16u) + 65194u /* TypeIdentifier */,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_4BY | DDS_OP_FLAG_SGN, offsetof (DDS_XTypes_CommonUnionMember, label_seq),
   DDS_OP_RTS,
 
   /* CompleteUnionMember */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionMember, common), (3u << 16u) + 65525u /* CommonUnionMember */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionMember, detail), (3u << 16u) + 65438u /* CompleteMemberDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionMember, detail), (3u << 16u) + 65441u /* CompleteMemberDetail */,
   DDS_OP_RTS,
 
   /* MinimalUnionMember */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionMember, common), (3u << 16u) + 65517u /* CommonUnionMember */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionMember, detail), (3u << 16u) + 65441u /* MinimalMemberDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionMember, detail), (3u << 16u) + 65444u /* MinimalMemberDetail */,
   DDS_OP_RTS,
 
   /* CommonDiscriminatorMember */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonDiscriminatorMember, member_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonDiscriminatorMember, type_id), (3u << 16u) + 65165u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonDiscriminatorMember, type_id), (3u << 16u) + 65170u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteDiscriminatorMember */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteDiscriminatorMember, common), (3u << 16u) + 65529u /* CommonDiscriminatorMember */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteDiscriminatorMember, ann_builtin), (3u << 16u) + 65447u /* AppliedBuiltinTypeAnnotations */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteDiscriminatorMember, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65375u /* AppliedAnnotation */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteDiscriminatorMember, ann_builtin), (3u << 16u) + 65450u /* AppliedBuiltinTypeAnnotations */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteDiscriminatorMember, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65378u /* AppliedAnnotation */,
   DDS_OP_RTS,
 
   /* MinimalDiscriminatorMember */
@@ -256,54 +248,49 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 
   /* CompleteUnionHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionHeader, detail), (3u << 16u) + 65439u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionHeader, detail), (3u << 16u) + 65442u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* MinimalUnionHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionHeader, detail), (3u << 16u) + 65433u /* MinimalTypeDetail */,
   DDS_OP_RTS,
 
   /* CompleteUnionType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CompleteUnionType, union_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionType, header), (3u << 16u) + 65524u /* CompleteUnionHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionType, discriminator), (3u << 16u) + 65504u /* CompleteDiscriminatorMember */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteUnionType, member_seq), sizeof (DDS_XTypes_CompleteUnionMember), (4u << 16u) + 65479u /* CompleteUnionMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionType, header), (3u << 16u) + 65527u /* CompleteUnionHeader */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionType, discriminator), (3u << 16u) + 65507u /* CompleteDiscriminatorMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteUnionType, member_seq), sizeof (DDS_XTypes_CompleteUnionMember), (4u << 16u) + 65482u /* CompleteUnionMember */,
   DDS_OP_RTS,
 
   /* MinimalUnionType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalUnionType, union_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionType, header), (3u << 16u) + 65516u /* MinimalUnionHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionType, discriminator), (3u << 16u) + 65503u /* MinimalDiscriminatorMember */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalUnionType, member_seq), sizeof (DDS_XTypes_MinimalUnionMember), (4u << 16u) + 65474u /* MinimalUnionMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionType, header), (3u << 16u) + 65519u /* MinimalUnionHeader */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionType, discriminator), (3u << 16u) + 65506u /* MinimalDiscriminatorMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalUnionType, member_seq), sizeof (DDS_XTypes_MinimalUnionMember), (4u << 16u) + 65477u /* MinimalUnionMember */,
   DDS_OP_RTS,
 
   /* CommonAnnotationParameter */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonAnnotationParameter, member_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonAnnotationParameter, member_type_id), (3u << 16u) + 65106u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonAnnotationParameter, member_type_id), (3u << 16u) + 65114u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteAnnotationParameter */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAnnotationParameter, common), (3u << 16u) + 65529u /* CommonAnnotationParameter */,
   DDS_OP_ADR | DDS_OP_TYPE_BST, offsetof (DDS_XTypes_CompleteAnnotationParameter, name), 257u,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAnnotationParameter, default_value), (3u << 16u) + 65257u /* AnnotationParameterValue */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAnnotationParameter, default_value), (3u << 16u) + 65263u /* AnnotationParameterValue */,
   DDS_OP_RTS,
 
   /* MinimalAnnotationParameter */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAnnotationParameter, common), (3u << 16u) + 65518u /* CommonAnnotationParameter */,
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_1BY, offsetof (DDS_XTypes_MinimalAnnotationParameter, name_hash), 4u,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAnnotationParameter, default_value), (3u << 16u) + 65246u /* AnnotationParameterValue */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAnnotationParameter, default_value), (3u << 16u) + 65252u /* AnnotationParameterValue */,
   DDS_OP_RTS,
 
   /* CompleteAnnotationHeader */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_BST, offsetof (DDS_XTypes_CompleteAnnotationHeader, annotation_name), 257u,
-  DDS_OP_RTS,
-
-  /* MinimalAnnotationHeader */
-  DDS_OP_DLC,
   DDS_OP_RTS,
 
   /* CompleteAnnotationType */
@@ -314,20 +301,19 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 
   /* MinimalAnnotationType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalAnnotationType, annotation_flag),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAnnotationType, header), (3u << 16u) + 65522u /* MinimalAnnotationHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalAnnotationType, member_seq), sizeof (DDS_XTypes_MinimalAnnotationParameter), (4u << 16u) + 65503u /* MinimalAnnotationParameter */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalAnnotationType, member_seq), sizeof (DDS_XTypes_MinimalAnnotationParameter), (4u << 16u) + 65506u /* MinimalAnnotationParameter */,
   DDS_OP_RTS,
 
   /* CommonAliasBody */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonAliasBody, related_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonAliasBody, related_type), (3u << 16u) + 65051u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonAliasBody, related_type), (3u << 16u) + 65062u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteAliasBody */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasBody, common), (3u << 16u) + 65529u /* CommonAliasBody */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasBody, ann_builtin), (3u << 16u) + 65282u /* AppliedBuiltinMemberAnnotations */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteAliasBody, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65261u /* AppliedAnnotation */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasBody, ann_builtin), (3u << 16u) + 65291u /* AppliedBuiltinMemberAnnotations */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteAliasBody, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65270u /* AppliedAnnotation */,
   DDS_OP_RTS,
 
   /* MinimalAliasBody */
@@ -337,11 +323,7 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 
   /* CompleteAliasHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasHeader, detail), (3u << 16u) + 65325u /* CompleteTypeDetail */,
-  DDS_OP_RTS,
-
-  /* MinimalAliasHeader */
-  DDS_OP_DLC,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasHeader, detail), (3u << 16u) + 65334u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* CompleteAliasType */
@@ -352,18 +334,17 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 
   /* MinimalAliasType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalAliasType, alias_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAliasType, header), (3u << 16u) + 65523u /* MinimalAliasHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAliasType, body), (3u << 16u) + 65510u /* MinimalAliasBody */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAliasType, body), (3u << 16u) + 65513u /* MinimalAliasBody */,
   DDS_OP_RTS,
 
   /* CompleteElementDetail */
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteElementDetail, ann_builtin), (3u << 16u) + 65244u /* AppliedBuiltinMemberAnnotations */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteElementDetail, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65223u /* AppliedAnnotation */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteElementDetail, ann_builtin), (3u << 16u) + 65256u /* AppliedBuiltinMemberAnnotations */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteElementDetail, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65235u /* AppliedAnnotation */,
   DDS_OP_RTS,
 
   /* CommonCollectionElement */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonCollectionElement, element_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonCollectionElement, type), (3u << 16u) + 64995u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonCollectionElement, type), (3u << 16u) + 65009u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteCollectionElement */
@@ -384,7 +365,7 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   /* CompleteCollectionHeader */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteCollectionHeader, common), (3u << 16u) + 65532u /* CommonCollectionHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteCollectionHeader, detail), (3u << 16u) + 65267u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteCollectionHeader, detail), (3u << 16u) + 65279u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* MinimalCollectionHeader */
@@ -411,7 +392,7 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   /* CompleteArrayHeader */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteArrayHeader, common), (3u << 16u) + 65532u /* CommonArrayHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteArrayHeader, detail), (3u << 16u) + 65233u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteArrayHeader, detail), (3u << 16u) + 65245u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* MinimalArrayHeader */
@@ -455,13 +436,13 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   /* CompleteEnumeratedLiteral */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteEnumeratedLiteral, common), (3u << 16u) + 65529u /* CommonEnumeratedLiteral */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteEnumeratedLiteral, detail), (3u << 16u) + 65134u /* CompleteMemberDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteEnumeratedLiteral, detail), (3u << 16u) + 65146u /* CompleteMemberDetail */,
   DDS_OP_RTS,
 
   /* MinimalEnumeratedLiteral */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalEnumeratedLiteral, common), (3u << 16u) + 65521u /* CommonEnumeratedLiteral */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalEnumeratedLiteral, detail), (3u << 16u) + 65137u /* MinimalMemberDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalEnumeratedLiteral, detail), (3u << 16u) + 65149u /* MinimalMemberDetail */,
   DDS_OP_RTS,
 
   /* CommonEnumeratedHeader */
@@ -471,7 +452,7 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   /* CompleteEnumeratedHeader */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteEnumeratedHeader, common), (3u << 16u) + 65532u /* CommonEnumeratedHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteEnumeratedHeader, detail), (3u << 16u) + 65152u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteEnumeratedHeader, detail), (3u << 16u) + 65164u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* MinimalEnumeratedHeader */
@@ -499,13 +480,13 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   /* CompleteBitflag */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitflag, common), (3u << 16u) + 65530u /* CommonBitflag */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitflag, detail), (3u << 16u) + 65077u /* CompleteMemberDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitflag, detail), (3u << 16u) + 65089u /* CompleteMemberDetail */,
   DDS_OP_RTS,
 
   /* MinimalBitflag */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitflag, common), (3u << 16u) + 65522u /* CommonBitflag */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitflag, detail), (3u << 16u) + 65080u /* MinimalMemberDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitflag, detail), (3u << 16u) + 65092u /* MinimalMemberDetail */,
   DDS_OP_RTS,
 
   /* CompleteBitmaskType */
@@ -532,7 +513,7 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   /* CompleteBitfield */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitfield, common), (3u << 16u) + 65526u /* CommonBitfield */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitfield, detail), (3u << 16u) + 65027u /* CompleteMemberDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitfield, detail), (3u << 16u) + 65039u /* CompleteMemberDetail */,
   DDS_OP_RTS,
 
   /* MinimalBitfield */
@@ -543,11 +524,7 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 
   /* CompleteBitsetHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitsetHeader, detail), (3u << 16u) + 65051u /* CompleteTypeDetail */,
-  DDS_OP_RTS,
-
-  /* MinimalBitsetHeader */
-  DDS_OP_DLC,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitsetHeader, detail), (3u << 16u) + 65063u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* CompleteBitsetType */
@@ -560,46 +537,41 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
   /* MinimalBitsetType */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalBitsetType, bitset_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitsetType, header), (3u << 16u) + 65520u /* MinimalBitsetHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalBitsetType, field_seq), sizeof (DDS_XTypes_MinimalBitfield), (4u << 16u) + 65504u /* MinimalBitfield */,
-  DDS_OP_RTS,
-
-  /* CompleteExtendedType */
-  DDS_OP_PLC,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalBitsetType, field_seq), sizeof (DDS_XTypes_MinimalBitfield), (4u << 16u) + 65507u /* MinimalBitfield */,
   DDS_OP_RTS,
 
   /* CompleteTypeObject */
-  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_CompleteTypeObject, _d), 11u, (37u << 16u) + 4u,
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65234 /* CompleteAliasType */, 48, offsetof (DDS_XTypes_CompleteTypeObject, _u.alias_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65181 /* CompleteAnnotationType */, 80, offsetof (DDS_XTypes_CompleteTypeObject, _u.annotation_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65038 /* CompleteStructType */, 81, offsetof (DDS_XTypes_CompleteTypeObject, _u.struct_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65114 /* CompleteUnionType */, 82, offsetof (DDS_XTypes_CompleteTypeObject, _u.union_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65496 /* CompleteBitsetType */, 83, offsetof (DDS_XTypes_CompleteTypeObject, _u.bitset_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65280 /* CompleteSequenceType */, 96, offsetof (DDS_XTypes_CompleteTypeObject, _u.sequence_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65311 /* CompleteArrayType */, 97, offsetof (DDS_XTypes_CompleteTypeObject, _u.array_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65327 /* CompleteMapType */, 98, offsetof (DDS_XTypes_CompleteTypeObject, _u.map_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65386 /* CompleteEnumeratedType */, 64, offsetof (DDS_XTypes_CompleteTypeObject, _u.enumerated_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65427 /* CompleteBitmaskType */, 65, offsetof (DDS_XTypes_CompleteTypeObject, _u.bitmask_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65500 /* CompleteExtendedType */, 0, offsetof (DDS_XTypes_CompleteTypeObject, _u.extended_type),
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_CompleteTypeObject, _d), 10u, (37u << 16u) + 4u,
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65240 /* CompleteAliasType */, 48, offsetof (DDS_XTypes_CompleteTypeObject, _u.alias_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65190 /* CompleteAnnotationType */, 80, offsetof (DDS_XTypes_CompleteTypeObject, _u.annotation_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65050 /* CompleteStructType */, 81, offsetof (DDS_XTypes_CompleteTypeObject, _u.struct_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65123 /* CompleteUnionType */, 82, offsetof (DDS_XTypes_CompleteTypeObject, _u.union_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65499 /* CompleteBitsetType */, 83, offsetof (DDS_XTypes_CompleteTypeObject, _u.bitset_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65283 /* CompleteSequenceType */, 96, offsetof (DDS_XTypes_CompleteTypeObject, _u.sequence_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65314 /* CompleteArrayType */, 97, offsetof (DDS_XTypes_CompleteTypeObject, _u.array_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65330 /* CompleteMapType */, 98, offsetof (DDS_XTypes_CompleteTypeObject, _u.map_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65389 /* CompleteEnumeratedType */, 64, offsetof (DDS_XTypes_CompleteTypeObject, _u.enumerated_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65430 /* CompleteBitmaskType */, 65, offsetof (DDS_XTypes_CompleteTypeObject, _u.bitmask_type),
   DDS_OP_RTS,
-
-  /* MinimalExtendedType */
-  DDS_OP_PLC,
+  DDS_OP_RTS,
+  DDS_OP_RTS,
   DDS_OP_RTS,
 
   /* MinimalTypeObject */
-  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_MinimalTypeObject, _d), 11u, (37u << 16u) + 4u,
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65203 /* MinimalAliasType */, 48, offsetof (DDS_XTypes_MinimalTypeObject, _u.alias_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65151 /* MinimalAnnotationType */, 80, offsetof (DDS_XTypes_MinimalTypeObject, _u.annotation_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65008 /* MinimalStructType */, 81, offsetof (DDS_XTypes_MinimalTypeObject, _u.struct_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65087 /* MinimalUnionType */, 82, offsetof (DDS_XTypes_MinimalTypeObject, _u.union_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65467 /* MinimalBitsetType */, 83, offsetof (DDS_XTypes_MinimalTypeObject, _u.bitset_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65249 /* MinimalSequenceType */, 96, offsetof (DDS_XTypes_MinimalTypeObject, _u.sequence_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65281 /* MinimalArrayType */, 97, offsetof (DDS_XTypes_MinimalTypeObject, _u.array_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65299 /* MinimalMapType */, 98, offsetof (DDS_XTypes_MinimalTypeObject, _u.map_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65356 /* MinimalEnumeratedType */, 64, offsetof (DDS_XTypes_MinimalTypeObject, _u.enumerated_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65398 /* MinimalBitmaskType */, 65, offsetof (DDS_XTypes_MinimalTypeObject, _u.bitmask_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65500 /* MinimalExtendedType */, 0, offsetof (DDS_XTypes_MinimalTypeObject, _u.extended_type),
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_MinimalTypeObject, _d), 10u, (37u << 16u) + 4u,
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65209 /* MinimalAliasType */, 48, offsetof (DDS_XTypes_MinimalTypeObject, _u.alias_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65160 /* MinimalAnnotationType */, 80, offsetof (DDS_XTypes_MinimalTypeObject, _u.annotation_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65020 /* MinimalStructType */, 81, offsetof (DDS_XTypes_MinimalTypeObject, _u.struct_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65096 /* MinimalUnionType */, 82, offsetof (DDS_XTypes_MinimalTypeObject, _u.union_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65470 /* MinimalBitsetType */, 83, offsetof (DDS_XTypes_MinimalTypeObject, _u.bitset_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65252 /* MinimalSequenceType */, 96, offsetof (DDS_XTypes_MinimalTypeObject, _u.sequence_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65284 /* MinimalArrayType */, 97, offsetof (DDS_XTypes_MinimalTypeObject, _u.array_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65302 /* MinimalMapType */, 98, offsetof (DDS_XTypes_MinimalTypeObject, _u.map_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65359 /* MinimalEnumeratedType */, 64, offsetof (DDS_XTypes_MinimalTypeObject, _u.enumerated_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 65401 /* MinimalBitmaskType */, 65, offsetof (DDS_XTypes_MinimalTypeObject, _u.bitmask_type),
+  DDS_OP_RTS,
+  DDS_OP_RTS,
+  DDS_OP_RTS,
   DDS_OP_RTS,
 
   /* TypeObject */
@@ -611,7 +583,7 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 
   /* TypeIdentifierWithSize */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithSize, type_id), (3u << 16u) + 64620u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithSize, type_id), (3u << 16u) + 64637u /* TypeIdentifier */,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_TypeIdentifierWithSize, typeobject_serialized_size),
   DDS_OP_RTS,
 
@@ -631,7 +603,7 @@ const dds_topic_descriptor_t DDS_XTypes_TypeIdentifier_desc =
   0u,
   "DDS::XTypes::TypeIdentifier",
   NULL,
-  393,
+  398,
   DDS_XTypes_TypeIdentifier_ops,
   "",
   { .data = NULL, .sz = 0u },
@@ -643,28 +615,30 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY, offsetof (DDS_XTypes_TypeObject, _d), 2u, (10u << 16u) + 4u,
   DDS_OP_JEQ | DDS_OP_TYPE_UNI | 7 /* CompleteTypeObject */, 242, offsetof (DDS_XTypes_TypeObject, _u.complete),
-  DDS_OP_JEQ | DDS_OP_TYPE_UNI | 641 /* MinimalTypeObject */, 241, offsetof (DDS_XTypes_TypeObject, _u.minimal),
+  DDS_OP_JEQ | DDS_OP_TYPE_UNI | 635 /* MinimalTypeObject */, 241, offsetof (DDS_XTypes_TypeObject, _u.minimal),
   DDS_OP_RTS,
 
   /* CompleteTypeObject */
-  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_CompleteTypeObject, _d), 11u, (37u << 16u) + 4u,
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_CompleteTypeObject, _d), 10u, (37u << 16u) + 4u,
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 34 /* CompleteAliasType */, 48, offsetof (DDS_XTypes_CompleteTypeObject, _u.alias_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 330 /* CompleteAnnotationType */, 80, offsetof (DDS_XTypes_CompleteTypeObject, _u.annotation_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 359 /* CompleteStructType */, 81, offsetof (DDS_XTypes_CompleteTypeObject, _u.struct_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 401 /* CompleteUnionType */, 82, offsetof (DDS_XTypes_CompleteTypeObject, _u.union_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 452 /* CompleteBitsetType */, 83, offsetof (DDS_XTypes_CompleteTypeObject, _u.bitset_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 482 /* CompleteSequenceType */, 96, offsetof (DDS_XTypes_CompleteTypeObject, _u.sequence_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 521 /* CompleteArrayType */, 97, offsetof (DDS_XTypes_CompleteTypeObject, _u.array_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 539 /* CompleteMapType */, 98, offsetof (DDS_XTypes_CompleteTypeObject, _u.map_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 548 /* CompleteEnumeratedType */, 64, offsetof (DDS_XTypes_CompleteTypeObject, _u.enumerated_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 580 /* CompleteBitmaskType */, 65, offsetof (DDS_XTypes_CompleteTypeObject, _u.bitmask_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 601 /* CompleteExtendedType */, 0, offsetof (DDS_XTypes_CompleteTypeObject, _u.extended_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 326 /* CompleteAnnotationType */, 80, offsetof (DDS_XTypes_CompleteTypeObject, _u.annotation_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 355 /* CompleteStructType */, 81, offsetof (DDS_XTypes_CompleteTypeObject, _u.struct_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 397 /* CompleteUnionType */, 82, offsetof (DDS_XTypes_CompleteTypeObject, _u.union_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 448 /* CompleteBitsetType */, 83, offsetof (DDS_XTypes_CompleteTypeObject, _u.bitset_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 478 /* CompleteSequenceType */, 96, offsetof (DDS_XTypes_CompleteTypeObject, _u.sequence_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 517 /* CompleteArrayType */, 97, offsetof (DDS_XTypes_CompleteTypeObject, _u.array_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 535 /* CompleteMapType */, 98, offsetof (DDS_XTypes_CompleteTypeObject, _u.map_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 544 /* CompleteEnumeratedType */, 64, offsetof (DDS_XTypes_CompleteTypeObject, _u.enumerated_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 576 /* CompleteBitmaskType */, 65, offsetof (DDS_XTypes_CompleteTypeObject, _u.bitmask_type),
+  DDS_OP_RTS,
+  DDS_OP_RTS,
+  DDS_OP_RTS,
   DDS_OP_RTS,
 
   /* CompleteAliasType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CompleteAliasType, alias_flags),
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasType, header), (3u << 16u) + 7u /* CompleteAliasHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasType, body), (3u << 16u) + 264u /* CompleteAliasBody */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasType, body), (3u << 16u) + 260u /* CompleteAliasBody */,
   DDS_OP_RTS,
 
   /* CompleteAliasHeader */
@@ -692,11 +666,11 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   /* AppliedAnnotation */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_AppliedAnnotation, annotation_typeid), (3u << 16u) + 8u /* TypeIdentifier */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_AppliedAnnotation, param_seq), sizeof (DDS_XTypes_AppliedAnnotationParameter), (4u << 16u) + 165u /* AppliedAnnotationParameter */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_AppliedAnnotation, param_seq), sizeof (DDS_XTypes_AppliedAnnotationParameter), (4u << 16u) + 163u /* AppliedAnnotationParameter */,
   DDS_OP_RTS,
 
   /* TypeIdentifier */
-  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_TypeIdentifier, _d), 14u, (50u << 16u) + 4u,
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_TypeIdentifier, _d), 13u, (50u << 16u) + 4u,
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 47 /* StringSTypeDefn */, 112, offsetof (DDS_XTypes_TypeIdentifier, _u.string_sdefn),
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 44 /* StringSTypeDefn */, 114, offsetof (DDS_XTypes_TypeIdentifier, _u.string_sdefn),
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 44 /* StringLTypeDefn */, 113, offsetof (DDS_XTypes_TypeIdentifier, _u.string_ldefn),
@@ -710,7 +684,9 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 100 /* StronglyConnectedComponentId */, 176, offsetof (DDS_XTypes_TypeIdentifier, _u.sc_component_id),
   DDS_OP_JEQ | DDS_OP_TYPE_ARR | 9, 242, offsetof (DDS_XTypes_TypeIdentifier, _u.equivalence_hash),
   DDS_OP_JEQ | DDS_OP_TYPE_ARR | 6, 241, offsetof (DDS_XTypes_TypeIdentifier, _u.equivalence_hash),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 115 /* ExtendedTypeDefn */, 0, offsetof (DDS_XTypes_TypeIdentifier, _u.extended_defn),
+  DDS_OP_RTS,
+  DDS_OP_RTS,
+  DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_1BY, 0u, 14u,
   DDS_OP_RTS,
   DDS_OP_RTS,
@@ -783,10 +759,6 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   DDS_OP_RTS,
   DDS_OP_RTS,
 
-  /* ExtendedTypeDefn */
-  DDS_OP_PLC,
-  DDS_OP_RTS,
-
   /* AppliedAnnotationParameter */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_1BY, offsetof (DDS_XTypes_AppliedAnnotationParameter, paramname_hash), 4u,
@@ -794,7 +766,7 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   DDS_OP_RTS,
 
   /* AnnotationParameterValue */
-  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_AnnotationParameterValue, _d), 14u, (50u << 16u) + 4u,
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_AnnotationParameterValue, _d), 13u, (50u << 16u) + 4u,
   DDS_OP_JEQ | DDS_OP_TYPE_1BY | 0, 1, offsetof (DDS_XTypes_AnnotationParameterValue, _u.boolean_value),
   DDS_OP_JEQ | DDS_OP_TYPE_1BY | 0, 2, offsetof (DDS_XTypes_AnnotationParameterValue, _u.byte_value),
   DDS_OP_JEQ | DDS_OP_TYPE_2BY | 0, 3, offsetof (DDS_XTypes_AnnotationParameterValue, _u.int16_value),
@@ -808,32 +780,30 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   DDS_OP_JEQ | DDS_OP_TYPE_1BY | 0, 16, offsetof (DDS_XTypes_AnnotationParameterValue, _u.char_value),
   DDS_OP_JEQ | DDS_OP_TYPE_4BY | 0, 64, offsetof (DDS_XTypes_AnnotationParameterValue, _u.enumerated_value),
   DDS_OP_JEQ | DDS_OP_TYPE_BST | 6, 32, offsetof (DDS_XTypes_AnnotationParameterValue, _u.string8_value),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 8 /* ExtendedAnnotationParameterValue */, 0, offsetof (DDS_XTypes_AnnotationParameterValue, _u.extended_value),
+  DDS_OP_RTS,
+  DDS_OP_RTS,
+  DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_BST, offsetof (DDS_XTypes_AnnotationParameterValue, _u.string8_value), 129u,
   DDS_OP_RTS,
-  DDS_OP_RTS,
-
-  /* ExtendedAnnotationParameterValue */
-  DDS_OP_PLC,
   DDS_OP_RTS,
 
   /* CompleteAliasBody */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasBody, common), (3u << 16u) + 11u /* CommonAliasBody */,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAliasBody, ann_builtin), (3u << 16u) + 14u /* AppliedBuiltinMemberAnnotations */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteAliasBody, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65299u /* AppliedAnnotation */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteAliasBody, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65303u /* AppliedAnnotation */,
   DDS_OP_RTS,
 
   /* CommonAliasBody */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonAliasBody, related_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonAliasBody, related_type), (3u << 16u) + 65301u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonAliasBody, related_type), (3u << 16u) + 65305u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* AppliedBuiltinMemberAnnotations */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_STR, offsetof (DDS_XTypes_AppliedBuiltinMemberAnnotations, unit),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_AppliedBuiltinMemberAnnotations, min), (3u << 16u) + 65462u /* AnnotationParameterValue */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_AppliedBuiltinMemberAnnotations, max), (3u << 16u) + 65459u /* AnnotationParameterValue */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_AppliedBuiltinMemberAnnotations, min), (3u << 16u) + 65464u /* AnnotationParameterValue */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_AppliedBuiltinMemberAnnotations, max), (3u << 16u) + 65461u /* AnnotationParameterValue */,
   DDS_OP_ADR | DDS_OP_TYPE_STR, offsetof (DDS_XTypes_AppliedBuiltinMemberAnnotations, hash_id),
   DDS_OP_RTS,
 
@@ -852,12 +822,12 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAnnotationParameter, common), (3u << 16u) + 10u /* CommonAnnotationParameter */,
   DDS_OP_ADR | DDS_OP_TYPE_BST, offsetof (DDS_XTypes_CompleteAnnotationParameter, name), 257u,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAnnotationParameter, default_value), (3u << 16u) + 65431u /* AnnotationParameterValue */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteAnnotationParameter, default_value), (3u << 16u) + 65433u /* AnnotationParameterValue */,
   DDS_OP_RTS,
 
   /* CommonAnnotationParameter */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonAnnotationParameter, member_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonAnnotationParameter, member_type_id), (3u << 16u) + 65257u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonAnnotationParameter, member_type_id), (3u << 16u) + 65261u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteStructType */
@@ -868,8 +838,8 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
 
   /* CompleteStructHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteStructHeader, base_type), (3u << 16u) + 65242u /* TypeIdentifier */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteStructHeader, detail), (3u << 16u) + 65205u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteStructHeader, base_type), (3u << 16u) + 65246u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteStructHeader, detail), (3u << 16u) + 65209u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* CompleteStructMember */
@@ -881,13 +851,13 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   /* CommonStructMember */
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_CommonStructMember, member_id),
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonStructMember, member_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonStructMember, member_type_id), (3u << 16u) + 65223u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonStructMember, member_type_id), (3u << 16u) + 65227u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteMemberDetail */
   DDS_OP_ADR | DDS_OP_TYPE_BST, offsetof (DDS_XTypes_CompleteMemberDetail, name), 257u,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteMemberDetail, ann_builtin), (3u << 16u) + 65455u /* AppliedBuiltinMemberAnnotations */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteMemberDetail, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65204u /* AppliedAnnotation */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteMemberDetail, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65208u /* AppliedAnnotation */,
   DDS_OP_RTS,
 
   /* CompleteUnionType */
@@ -899,19 +869,19 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
 
   /* CompleteUnionHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionHeader, detail), (3u << 16u) + 65160u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteUnionHeader, detail), (3u << 16u) + 65164u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* CompleteDiscriminatorMember */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteDiscriminatorMember, common), (3u << 16u) + 11u /* CommonDiscriminatorMember */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteDiscriminatorMember, ann_builtin), (3u << 16u) + 65163u /* AppliedBuiltinTypeAnnotations */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteDiscriminatorMember, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65174u /* AppliedAnnotation */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteDiscriminatorMember, ann_builtin), (3u << 16u) + 65167u /* AppliedBuiltinTypeAnnotations */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteDiscriminatorMember, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65178u /* AppliedAnnotation */,
   DDS_OP_RTS,
 
   /* CommonDiscriminatorMember */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonDiscriminatorMember, member_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonDiscriminatorMember, type_id), (3u << 16u) + 65176u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonDiscriminatorMember, type_id), (3u << 16u) + 65180u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteUnionMember */
@@ -923,7 +893,7 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   /* CommonUnionMember */
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_CommonUnionMember, member_id),
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonUnionMember, member_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonUnionMember, type_id), (3u << 16u) + 65160u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonUnionMember, type_id), (3u << 16u) + 65164u /* TypeIdentifier */,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_4BY | DDS_OP_FLAG_SGN, offsetof (DDS_XTypes_CommonUnionMember, label_seq),
   DDS_OP_RTS,
 
@@ -936,7 +906,7 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
 
   /* CompleteBitsetHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitsetHeader, detail), (3u << 16u) + 65108u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteBitsetHeader, detail), (3u << 16u) + 65112u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* CompleteBitfield */
@@ -961,7 +931,7 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   /* CompleteCollectionHeader */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteCollectionHeader, common), (3u << 16u) + 7u /* CommonCollectionHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteCollectionHeader, detail), (3u << 16u) + 65074u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteCollectionHeader, detail), (3u << 16u) + 65078u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* CommonCollectionHeader */
@@ -976,12 +946,12 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
 
   /* CommonCollectionElement */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonCollectionElement, element_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonCollectionElement, type), (3u << 16u) + 65091u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CommonCollectionElement, type), (3u << 16u) + 65095u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* CompleteElementDetail */
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteElementDetail, ann_builtin), (3u << 16u) + 65326u /* AppliedBuiltinMemberAnnotations */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteElementDetail, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65075u /* AppliedAnnotation */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_CompleteElementDetail, ann_custom), sizeof (DDS_XTypes_AppliedAnnotation), (4u << 16u) + 65079u /* AppliedAnnotation */,
   DDS_OP_RTS,
 
   /* CompleteArrayType */
@@ -994,7 +964,7 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   /* CompleteArrayHeader */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteArrayHeader, common), (3u << 16u) + 7u /* CommonArrayHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteArrayHeader, detail), (3u << 16u) + 65031u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteArrayHeader, detail), (3u << 16u) + 65035u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* CommonArrayHeader */
@@ -1017,7 +987,7 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   /* CompleteEnumeratedHeader */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteEnumeratedHeader, common), (3u << 16u) + 7u /* CommonEnumeratedHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteEnumeratedHeader, detail), (3u << 16u) + 64998u /* CompleteTypeDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_CompleteEnumeratedHeader, detail), (3u << 16u) + 65002u /* CompleteTypeDetail */,
   DDS_OP_RTS,
 
   /* CommonEnumeratedHeader */
@@ -1054,75 +1024,59 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_CommonBitflag, flags),
   DDS_OP_RTS,
 
-  /* CompleteExtendedType */
-  DDS_OP_PLC,
-  DDS_OP_RTS,
-
   /* MinimalTypeObject */
-  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_MinimalTypeObject, _d), 11u, (37u << 16u) + 4u,
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_MinimalTypeObject, _d), 10u, (37u << 16u) + 4u,
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 34 /* MinimalAliasType */, 48, offsetof (DDS_XTypes_MinimalTypeObject, _u.alias_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 47 /* MinimalAnnotationType */, 80, offsetof (DDS_XTypes_MinimalTypeObject, _u.annotation_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 67 /* MinimalStructType */, 81, offsetof (DDS_XTypes_MinimalTypeObject, _u.struct_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 95 /* MinimalUnionType */, 82, offsetof (DDS_XTypes_MinimalTypeObject, _u.union_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 123 /* MinimalBitsetType */, 83, offsetof (DDS_XTypes_MinimalTypeObject, _u.bitset_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 141 /* MinimalSequenceType */, 96, offsetof (DDS_XTypes_MinimalTypeObject, _u.sequence_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 157 /* MinimalArrayType */, 97, offsetof (DDS_XTypes_MinimalTypeObject, _u.array_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 168 /* MinimalMapType */, 98, offsetof (DDS_XTypes_MinimalTypeObject, _u.map_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 177 /* MinimalEnumeratedType */, 64, offsetof (DDS_XTypes_MinimalTypeObject, _u.enumerated_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 197 /* MinimalBitmaskType */, 65, offsetof (DDS_XTypes_MinimalTypeObject, _u.bitmask_type),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 213 /* MinimalExtendedType */, 0, offsetof (DDS_XTypes_MinimalTypeObject, _u.extended_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 42 /* MinimalAnnotationType */, 80, offsetof (DDS_XTypes_MinimalTypeObject, _u.annotation_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 57 /* MinimalStructType */, 81, offsetof (DDS_XTypes_MinimalTypeObject, _u.struct_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 81 /* MinimalUnionType */, 82, offsetof (DDS_XTypes_MinimalTypeObject, _u.union_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 106 /* MinimalBitsetType */, 83, offsetof (DDS_XTypes_MinimalTypeObject, _u.bitset_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 119 /* MinimalSequenceType */, 96, offsetof (DDS_XTypes_MinimalTypeObject, _u.sequence_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 135 /* MinimalArrayType */, 97, offsetof (DDS_XTypes_MinimalTypeObject, _u.array_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 146 /* MinimalMapType */, 98, offsetof (DDS_XTypes_MinimalTypeObject, _u.map_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 155 /* MinimalEnumeratedType */, 64, offsetof (DDS_XTypes_MinimalTypeObject, _u.enumerated_type),
+  DDS_OP_JEQ | DDS_OP_TYPE_STU | 175 /* MinimalBitmaskType */, 65, offsetof (DDS_XTypes_MinimalTypeObject, _u.bitmask_type),
+  DDS_OP_RTS,
+  DDS_OP_RTS,
+  DDS_OP_RTS,
   DDS_OP_RTS,
 
   /* MinimalAliasType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalAliasType, alias_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAliasType, header), (3u << 16u) + 7u /* MinimalAliasHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAliasType, body), (3u << 16u) + 6u /* MinimalAliasBody */,
-  DDS_OP_RTS,
-
-  /* MinimalAliasHeader */
-  DDS_OP_DLC,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAliasType, body), (3u << 16u) + 4u /* MinimalAliasBody */,
   DDS_OP_RTS,
 
   /* MinimalAliasBody */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAliasBody, common), (3u << 16u) + 65168u /* CommonAliasBody */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAliasBody, common), (3u << 16u) + 65175u /* CommonAliasBody */,
   DDS_OP_RTS,
 
   /* MinimalAnnotationType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalAnnotationType, annotation_flag),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAnnotationType, header), (3u << 16u) + 8u /* MinimalAnnotationHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalAnnotationType, member_seq), sizeof (DDS_XTypes_MinimalAnnotationParameter), (4u << 16u) + 7u /* MinimalAnnotationParameter */,
-  DDS_OP_RTS,
-
-  /* MinimalAnnotationHeader */
-  DDS_OP_DLC,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalAnnotationType, member_seq), sizeof (DDS_XTypes_MinimalAnnotationParameter), (4u << 16u) + 5u /* MinimalAnnotationParameter */,
   DDS_OP_RTS,
 
   /* MinimalAnnotationParameter */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAnnotationParameter, common), (3u << 16u) + 65195u /* CommonAnnotationParameter */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAnnotationParameter, common), (3u << 16u) + 65207u /* CommonAnnotationParameter */,
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_1BY, offsetof (DDS_XTypes_MinimalAnnotationParameter, name_hash), 4u,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAnnotationParameter, default_value), (3u << 16u) + 65080u /* AnnotationParameterValue */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalAnnotationParameter, default_value), (3u << 16u) + 65094u /* AnnotationParameterValue */,
   DDS_OP_RTS,
 
   /* MinimalStructType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalStructType, struct_flags),
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructType, header), (3u << 16u) + 8u /* MinimalStructHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalStructType, member_seq), sizeof (DDS_XTypes_MinimalStructMember), (4u << 16u) + 14u /* MinimalStructMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalStructType, member_seq), sizeof (DDS_XTypes_MinimalStructMember), (4u << 16u) + 10u /* MinimalStructMember */,
   DDS_OP_RTS,
 
   /* MinimalStructHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructHeader, base_type), (3u << 16u) + 64897u /* TypeIdentifier */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructHeader, detail), (3u << 16u) + 4u /* MinimalTypeDetail */,
-  DDS_OP_RTS,
-
-  /* MinimalTypeDetail */
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructHeader, base_type), (3u << 16u) + 64913u /* TypeIdentifier */,
   DDS_OP_RTS,
 
   /* MinimalStructMember */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructMember, common), (3u << 16u) + 65197u /* CommonStructMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructMember, common), (3u << 16u) + 65213u /* CommonStructMember */,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalStructMember, detail), (3u << 16u) + 4u /* MinimalMemberDetail */,
   DDS_OP_RTS,
 
@@ -1133,40 +1087,34 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
   /* MinimalUnionType */
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalUnionType, union_flags),
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionType, header), (3u << 16u) + 11u /* MinimalUnionHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionType, discriminator), (3u << 16u) + 13u /* MinimalDiscriminatorMember */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalUnionType, member_seq), sizeof (DDS_XTypes_MinimalUnionMember), (4u << 16u) + 15u /* MinimalUnionMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionType, discriminator), (3u << 16u) + 10u /* MinimalDiscriminatorMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalUnionType, member_seq), sizeof (DDS_XTypes_MinimalUnionMember), (4u << 16u) + 12u /* MinimalUnionMember */,
   DDS_OP_RTS,
 
   /* MinimalUnionHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionHeader, detail), (3u << 16u) + 65509u /* MinimalTypeDetail */,
   DDS_OP_RTS,
 
   /* MinimalDiscriminatorMember */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalDiscriminatorMember, common), (3u << 16u) + 65216u /* CommonDiscriminatorMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalDiscriminatorMember, common), (3u << 16u) + 65235u /* CommonDiscriminatorMember */,
   DDS_OP_RTS,
 
   /* MinimalUnionMember */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionMember, common), (3u << 16u) + 65225u /* CommonUnionMember */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionMember, detail), (3u << 16u) + 65505u /* MinimalMemberDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionMember, common), (3u << 16u) + 65244u /* CommonUnionMember */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalUnionMember, detail), (3u << 16u) + 65508u /* MinimalMemberDetail */,
   DDS_OP_RTS,
 
   /* MinimalBitsetType */
   DDS_OP_DLC,
   DDS_OP_ADR | DDS_OP_TYPE_2BY, offsetof (DDS_XTypes_MinimalBitsetType, bitset_flags),
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitsetType, header), (3u << 16u) + 8u /* MinimalBitsetHeader */,
-  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalBitsetType, field_seq), sizeof (DDS_XTypes_MinimalBitfield), (4u << 16u) + 7u /* MinimalBitfield */,
-  DDS_OP_RTS,
-
-  /* MinimalBitsetHeader */
-  DDS_OP_DLC,
+  DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_XTypes_MinimalBitsetType, field_seq), sizeof (DDS_XTypes_MinimalBitfield), (4u << 16u) + 5u /* MinimalBitfield */,
   DDS_OP_RTS,
 
   /* MinimalBitfield */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitfield, common), (3u << 16u) + 65238u /* CommonBitfield */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitfield, common), (3u << 16u) + 65262u /* CommonBitfield */,
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_1BY, offsetof (DDS_XTypes_MinimalBitfield, name_hash), 4u,
   DDS_OP_RTS,
 
@@ -1178,12 +1126,12 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
 
   /* MinimalCollectionHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalCollectionHeader, common), (3u << 16u) + 65247u /* CommonCollectionHeader */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalCollectionHeader, common), (3u << 16u) + 65271u /* CommonCollectionHeader */,
   DDS_OP_RTS,
 
   /* MinimalCollectionElement */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalCollectionElement, common), (3u << 16u) + 65253u /* CommonCollectionElement */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalCollectionElement, common), (3u << 16u) + 65277u /* CommonCollectionElement */,
   DDS_OP_RTS,
 
   /* MinimalArrayType */
@@ -1194,7 +1142,7 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
 
   /* MinimalArrayHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalArrayHeader, common), (3u << 16u) + 65271u /* CommonArrayHeader */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalArrayHeader, common), (3u << 16u) + 65295u /* CommonArrayHeader */,
   DDS_OP_RTS,
 
   /* MinimalMapType */
@@ -1212,13 +1160,13 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
 
   /* MinimalEnumeratedHeader */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalEnumeratedHeader, common), (3u << 16u) + 65277u /* CommonEnumeratedHeader */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalEnumeratedHeader, common), (3u << 16u) + 65301u /* CommonEnumeratedHeader */,
   DDS_OP_RTS,
 
   /* MinimalEnumeratedLiteral */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalEnumeratedLiteral, common), (3u << 16u) + 65283u /* CommonEnumeratedLiteral */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalEnumeratedLiteral, detail), (3u << 16u) + 65416u /* MinimalMemberDetail */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalEnumeratedLiteral, common), (3u << 16u) + 65307u /* CommonEnumeratedLiteral */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalEnumeratedLiteral, detail), (3u << 16u) + 65424u /* MinimalMemberDetail */,
   DDS_OP_RTS,
 
   /* MinimalBitmaskType */
@@ -1230,17 +1178,13 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
 
   /* MinimalBitflag */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitflag, common), (3u << 16u) + 65289u /* CommonBitflag */,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitflag, detail), (3u << 16u) + 65397u /* MinimalMemberDetail */,
-  DDS_OP_RTS,
-
-  /* MinimalExtendedType */
-  DDS_OP_PLC,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitflag, common), (3u << 16u) + 65313u /* CommonBitflag */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_MinimalBitflag, detail), (3u << 16u) + 65405u /* MinimalMemberDetail */,
   DDS_OP_RTS,
 
   /* TypeIdentifierWithSize */
   DDS_OP_DLC,
-  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithSize, type_id), (3u << 16u) + 64721u /* TypeIdentifier */,
+  DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeIdentifierWithSize, type_id), (3u << 16u) + 64751u /* TypeIdentifier */,
   DDS_OP_ADR | DDS_OP_TYPE_4BY, offsetof (DDS_XTypes_TypeIdentifierWithSize, typeobject_serialized_size),
   DDS_OP_RTS,
 
@@ -1260,7 +1204,7 @@ const dds_topic_descriptor_t DDS_XTypes_TypeObject_desc =
   0u,
   "DDS::XTypes::TypeObject",
   NULL,
-  391,
+  383,
   DDS_XTypes_TypeObject_ops,
   "",
   { .data = NULL, .sz = 0u },
@@ -1292,7 +1236,7 @@ static const uint32_t DDS_XTypes_TypeInformation_ops [] =
   DDS_OP_RTS,
 
   /* TypeIdentifier */
-  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_TypeIdentifier, _d), 14u, (50u << 16u) + 4u,
+  DDS_OP_ADR | DDS_OP_TYPE_UNI | DDS_OP_SUBTYPE_1BY | DDS_OP_FLAG_DEF, offsetof (DDS_XTypes_TypeIdentifier, _d), 13u, (50u << 16u) + 4u,
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 47 /* StringSTypeDefn */, 112, offsetof (DDS_XTypes_TypeIdentifier, _u.string_sdefn),
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 44 /* StringSTypeDefn */, 114, offsetof (DDS_XTypes_TypeIdentifier, _u.string_sdefn),
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 44 /* StringLTypeDefn */, 113, offsetof (DDS_XTypes_TypeIdentifier, _u.string_ldefn),
@@ -1306,7 +1250,9 @@ static const uint32_t DDS_XTypes_TypeInformation_ops [] =
   DDS_OP_JEQ | DDS_OP_TYPE_STU | 100 /* StronglyConnectedComponentId */, 176, offsetof (DDS_XTypes_TypeIdentifier, _u.sc_component_id),
   DDS_OP_JEQ | DDS_OP_TYPE_ARR | 9, 242, offsetof (DDS_XTypes_TypeIdentifier, _u.equivalence_hash),
   DDS_OP_JEQ | DDS_OP_TYPE_ARR | 6, 241, offsetof (DDS_XTypes_TypeIdentifier, _u.equivalence_hash),
-  DDS_OP_JEQ | DDS_OP_TYPE_STU | 115 /* ExtendedTypeDefn */, 0, offsetof (DDS_XTypes_TypeIdentifier, _u.extended_defn),
+  DDS_OP_RTS,
+  DDS_OP_RTS,
+  DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_1BY, 0u, 14u,
   DDS_OP_RTS,
   DDS_OP_RTS,
@@ -1377,10 +1323,6 @@ static const uint32_t DDS_XTypes_TypeInformation_ops [] =
   DDS_OP_JEQ | DDS_OP_TYPE_ARR | 3, 241, offsetof (DDS_XTypes_TypeObjectHashId, _u.hash),
   DDS_OP_ADR | DDS_OP_TYPE_ARR | DDS_OP_SUBTYPE_1BY, 0u, 14u,
   DDS_OP_RTS,
-  DDS_OP_RTS,
-
-  /* ExtendedTypeDefn */
-  DDS_OP_PLC,
   DDS_OP_RTS
 };
 
@@ -1392,7 +1334,7 @@ const dds_topic_descriptor_t DDS_XTypes_TypeInformation_desc =
   0u,
   "DDS::XTypes::TypeInformation",
   NULL,
-  69,
+  70,
   DDS_XTypes_TypeInformation_ops,
   "",
   { .data = NULL, .sz = 0u },

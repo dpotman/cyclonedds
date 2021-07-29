@@ -828,6 +828,20 @@ emit_case(
 
     type_spec = idl_unalias(idl_type_spec(node), 0u);
 
+    if ((idl_is_struct(type_spec) && !((const idl_struct_t *)type_spec)->members)
+        || (idl_is_union(type_spec) && !((const idl_union_t *)type_spec)->cases))
+    {
+      for (label = _case->labels; label; label = idl_next(label)) {
+        off = stype->offset + 2 + (stype->label * 3);
+        /* emit 3 RTS ops so that offset to type ops for non-simple inline cases is correct */
+        if ((ret = stash_opcode(descriptor, &ctype->instructions, off++, DDS_OP_RTS, 0u))
+            || (ret = stash_opcode(descriptor, &ctype->instructions, off++, DDS_OP_RTS, 0u))
+            || (ret = stash_opcode(descriptor, &ctype->instructions, off, DDS_OP_RTS, 0u)))
+          return ret;
+      }
+      return IDL_RETCODE_OK;
+    }
+
     /* simple elements are embedded, complex elements are not */
     if (idl_is_array(_case->declarator)) {
       opcode |= DDS_OP_TYPE_ARR;
@@ -849,6 +863,9 @@ emit_case(
     if ((ret = push_field(descriptor, _case->declarator, NULL)))
       return ret;
 
+    /* for labels that are omitted because of empty target struct/union type, dummy ops
+        will be stashed, so that we can safely assume that offset of type instructions is
+        after last label */
     cnt = ctype->instructions.count + (stype->labels - stype->label) * 3;
     for (label = _case->labels; label; label = idl_next(label)) {
       off = stype->offset + 2 + (stype->label * 3);
@@ -941,9 +958,9 @@ emit_union(
   if (revisit) {
     uint32_t cnt;
     ctype = stype->ctype;
-    assert(stype->label == stype->labels);
+    assert(stype->label <= stype->labels);
     cnt = (ctype->instructions.count - stype->offset) + 2;
-    if ((ret = stash_single(&ctype->instructions, stype->offset + 2, stype->labels)))
+    if ((ret = stash_single(&ctype->instructions, stype->offset + 2, stype->label)))  // not stype->labels, as labels with empty declarator type will be left out
       return ret;
     if ((ret = stash_couple(&ctype->instructions, stype->offset + 3, (uint16_t)cnt, 4u)))
       return ret;
@@ -1298,6 +1315,10 @@ emit_declarator(
   /* delegate array type specifiers or declarators */
   if (idl_is_array(node) || idl_is_array(type_spec))
     return emit_array(pstate, revisit, path, node, user_data);
+
+  if ((idl_is_struct(type_spec) && !((const idl_struct_t *)type_spec)->members)
+      || (idl_is_union(type_spec) && !((const idl_union_t *)type_spec)->cases))
+    return IDL_RETCODE_OK;
 
   if (revisit) {
     if (!idl_is_alias(node))
