@@ -125,7 +125,7 @@ emit_field(
 {
   struct generator *gen = user_data;
   char *type, dims[32] = "";
-  const char *fmt, *indent, *name, *star = "", *ext = "";
+  const char *fmt, *indent, *name, *star = "", *ext = "", *fwd = "";
   const void *root;
   idl_literal_t *literal;
   idl_type_spec_t *type_spec;
@@ -148,9 +148,11 @@ emit_field(
   } else if (idl_is_string(type_spec)) {
     star = "* ";
   }
+  if (idl_is_forward (type_spec))
+    fwd = "struct ";
 
-  fmt = "%s%s %s%s%s%s";
-  if (idl_fprintf(gen->header.handle, fmt, indent, type, ext, star, name, dims) < 0)
+  fmt = "%s%s%s %s%s%s%s";
+  if (idl_fprintf(gen->header.handle, fmt, indent, fwd, type, ext, star, name, dims) < 0)
     return IDL_RETCODE_NO_MEMORY;
   fmt = "[%" PRIu32 "]";
   literal = ((const idl_declarator_t *)node)->const_expr;
@@ -294,7 +296,7 @@ emit_forward(
   if (IDL_PRINTA(&name, print_type, node) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  fmt = "typedef struct %1$s %1$s;\n";
+  fmt = "struct %1$s;\n";
   if (idl_fprintf(gen->header.handle, fmt, name) < 0)
     return IDL_RETCODE_NO_MEMORY;
   return IDL_RETCODE_OK;

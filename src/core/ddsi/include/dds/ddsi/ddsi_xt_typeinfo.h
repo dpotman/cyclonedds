@@ -245,7 +245,7 @@ typedef DDS_XTypes_TypeFlag DDS_XTypes_BitsetTypeFlag;
 ((DDS_XTypes_BitsetTypeFlag*) dds_alloc (sizeof (DDS_XTypes_BitsetTypeFlag)));
 
 #define DDS_XTypes_TypeFlagMinimalMask 7
-typedef struct DDS_XTypes_TypeIdentifier DDS_XTypes_TypeIdentifier;
+struct DDS_XTypes_TypeIdentifier;
 typedef struct DDS_XTypes_StringSTypeDefn
 {
   DDS_XTypes_SBound bound;
@@ -266,46 +266,46 @@ typedef struct DDS_XTypes_PlainSequenceSElemDefn
 {
   DDS_XTypes_PlainCollectionHeader header;
   DDS_XTypes_SBound bound;
-  DDS_XTypes_TypeIdentifier * element_identifier;
+  struct DDS_XTypes_TypeIdentifier * element_identifier;
 } DDS_XTypes_PlainSequenceSElemDefn;
 
 typedef struct DDS_XTypes_PlainSequenceLElemDefn
 {
   DDS_XTypes_PlainCollectionHeader header;
   DDS_XTypes_LBound bound;
-  DDS_XTypes_TypeIdentifier * element_identifier;
+  struct DDS_XTypes_TypeIdentifier * element_identifier;
 } DDS_XTypes_PlainSequenceLElemDefn;
 
 typedef struct DDS_XTypes_PlainArraySElemDefn
 {
   DDS_XTypes_PlainCollectionHeader header;
   DDS_XTypes_SBoundSeq array_bound_seq;
-  DDS_XTypes_TypeIdentifier * element_identifier;
+  struct DDS_XTypes_TypeIdentifier * element_identifier;
 } DDS_XTypes_PlainArraySElemDefn;
 
 typedef struct DDS_XTypes_PlainArrayLElemDefn
 {
   DDS_XTypes_PlainCollectionHeader header;
   DDS_XTypes_LBoundSeq array_bound_seq;
-  DDS_XTypes_TypeIdentifier * element_identifier;
+  struct DDS_XTypes_TypeIdentifier * element_identifier;
 } DDS_XTypes_PlainArrayLElemDefn;
 
 typedef struct DDS_XTypes_PlainMapSTypeDefn
 {
   DDS_XTypes_PlainCollectionHeader header;
   DDS_XTypes_SBound bound;
-  DDS_XTypes_TypeIdentifier * element_identifier;
+  struct DDS_XTypes_TypeIdentifier * element_identifier;
   DDS_XTypes_CollectionElementFlag key_flags;
-  DDS_XTypes_TypeIdentifier * key_identifier;
+  struct DDS_XTypes_TypeIdentifier * key_identifier;
 } DDS_XTypes_PlainMapSTypeDefn;
 
 typedef struct DDS_XTypes_PlainMapLTypeDefn
 {
   DDS_XTypes_PlainCollectionHeader header;
   DDS_XTypes_LBound bound;
-  DDS_XTypes_TypeIdentifier * element_identifier;
+  struct DDS_XTypes_TypeIdentifier * element_identifier;
   DDS_XTypes_CollectionElementFlag key_flags;
-  DDS_XTypes_TypeIdentifier * key_identifier;
+  struct DDS_XTypes_TypeIdentifier * key_identifier;
 } DDS_XTypes_PlainMapLTypeDefn;
 
 typedef struct DDS_XTypes_StronglyConnectedComponentId
