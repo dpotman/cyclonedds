@@ -441,7 +441,7 @@ static struct ddsi_serdata* serdata_default_from_iox(const struct ddsi_sertype* 
 
   const struct ddsi_sertype_default* tp = (const struct ddsi_sertype_default*)tpcmn;
 
-  struct ddsi_serdata_default* d = serdata_default_new_size(tp, kind, ice_hdr->data_size);
+  struct ddsi_serdata_default* d = serdata_default_new_size(tp, kind, ice_hdr->data_size, CDR_ENC_VERSION_UNDEF);
 
   //ICEORYX_TODO: we do no copy here but store the pointer to the chunk
   //              the pointer was gotten in some concurrent thread of the shm_monitor
