@@ -937,6 +937,21 @@ bool idl_is_struct(const void *ptr)
   return true;
 }
 
+bool idl_is_empty_struct(const void *node)
+{
+  if (!idl_is_struct(node))
+    return false;
+  const idl_struct_t *s = (const idl_struct_t *)node;
+  if (!s->members)
+    return true;
+  bool empty = true;
+  for (idl_member_t *m = s->members; empty && m; m = idl_next(m)) {
+    if (!idl_is_empty_struct(m->type_spec))
+      empty = false;
+  }
+  return empty;
+}
+
 static void delete_struct(void *ptr)
 {
   idl_struct_t *node = ptr;

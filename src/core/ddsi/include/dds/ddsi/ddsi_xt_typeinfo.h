@@ -315,11 +315,12 @@ typedef struct DDS_XTypes_StronglyConnectedComponentId
   int32_t scc_index;
 } DDS_XTypes_StronglyConnectedComponentId;
 
-/* no members
+#if 0 /* empty struct */
 typedef struct DDS_XTypes_ExtendedTypeDefn
 {
 } DDS_XTypes_ExtendedTypeDefn;
-*/
+#endif /* empty struct */
+
 typedef struct DDS_XTypes_TypeIdentifier
 {
   uint8_t _d;
@@ -367,11 +368,12 @@ typedef uint32_t DDS_XTypes_MemberId;
 
 #define DDS_XTypes_ANNOTATION_STR_VALUE_MAX_LEN 128
 #define DDS_XTypes_ANNOTATION_OCTETSEC_VALUE_MAX_LEN 128
-/* no members
+#if 0 /* empty struct */
 typedef struct DDS_XTypes_ExtendedAnnotationParameterValue
 {
 } DDS_XTypes_ExtendedAnnotationParameterValue;
-*/
+#endif /* empty struct */
+
 typedef struct DDS_XTypes_AnnotationParameterValue
 {
   uint8_t _d;
@@ -509,11 +511,12 @@ typedef struct DDS_XTypes_AppliedBuiltinTypeAnnotations
   DDS_XTypes_AppliedVerbatimAnnotation verbatim;
 } DDS_XTypes_AppliedBuiltinTypeAnnotations;
 
-/* no members
+#if 0 /* empty struct */
 typedef struct DDS_XTypes_MinimalTypeDetail
 {
 } DDS_XTypes_MinimalTypeDetail;
-*/
+#endif /* empty struct */
+
 typedef struct DDS_XTypes_CompleteTypeDetail
 {
   DDS_XTypes_AppliedBuiltinTypeAnnotations ann_builtin;
@@ -629,10 +632,12 @@ typedef struct DDS_XTypes_CompleteUnionHeader
   DDS_XTypes_CompleteTypeDetail detail;
 } DDS_XTypes_CompleteUnionHeader;
 
+#if 0 /* empty struct */
 typedef struct DDS_XTypes_MinimalUnionHeader
 {
   /* DDS_XTypes_MinimalTypeDetail detail */ /* no members */
 } DDS_XTypes_MinimalUnionHeader;
+#endif /* empty struct */
 
 typedef struct DDS_XTypes_CompleteUnionType
 {
@@ -645,7 +650,7 @@ typedef struct DDS_XTypes_CompleteUnionType
 typedef struct DDS_XTypes_MinimalUnionType
 {
   DDS_XTypes_UnionTypeFlag union_flags;
-  DDS_XTypes_MinimalUnionHeader header;
+  /* DDS_XTypes_MinimalUnionHeader header */ /* no members */
   DDS_XTypes_MinimalDiscriminatorMember discriminator;
   DDS_XTypes_MinimalUnionMemberSeq member_seq;
 } DDS_XTypes_MinimalUnionType;
@@ -701,11 +706,12 @@ typedef struct DDS_XTypes_CompleteAnnotationHeader
   DDS_XTypes_QualifiedTypeName annotation_name;
 } DDS_XTypes_CompleteAnnotationHeader;
 
-/* no members
+#if 0 /* empty struct */
 typedef struct DDS_XTypes_MinimalAnnotationHeader
 {
 } DDS_XTypes_MinimalAnnotationHeader;
-*/
+#endif /* empty struct */
+
 typedef struct DDS_XTypes_CompleteAnnotationType
 {
   DDS_XTypes_AnnotationTypeFlag annotation_flag;
@@ -743,11 +749,12 @@ typedef struct DDS_XTypes_CompleteAliasHeader
   DDS_XTypes_CompleteTypeDetail detail;
 } DDS_XTypes_CompleteAliasHeader;
 
-/* no members
+#if 0 /* empty struct */
 typedef struct DDS_XTypes_MinimalAliasHeader
 {
 } DDS_XTypes_MinimalAliasHeader;
-*/
+#endif /* empty struct */
+
 typedef struct DDS_XTypes_CompleteAliasType
 {
   DDS_XTypes_AliasTypeFlag alias_flags;
@@ -1064,11 +1071,12 @@ typedef struct DDS_XTypes_CompleteBitsetHeader
   DDS_XTypes_CompleteTypeDetail detail;
 } DDS_XTypes_CompleteBitsetHeader;
 
-/* no members
+#if 0 /* empty struct */
 typedef struct DDS_XTypes_MinimalBitsetHeader
 {
 } DDS_XTypes_MinimalBitsetHeader;
-*/
+#endif /* empty struct */
+
 typedef struct DDS_XTypes_CompleteBitsetType
 {
   DDS_XTypes_BitsetTypeFlag bitset_flags;
@@ -1083,11 +1091,12 @@ typedef struct DDS_XTypes_MinimalBitsetType
   DDS_XTypes_MinimalBitfieldSeq field_seq;
 } DDS_XTypes_MinimalBitsetType;
 
-/* no members
+#if 0 /* empty struct */
 typedef struct DDS_XTypes_CompleteExtendedType
 {
 } DDS_XTypes_CompleteExtendedType;
-*/
+#endif /* empty struct */
+
 typedef struct DDS_XTypes_CompleteTypeObject
 {
   uint8_t _d;
@@ -1107,11 +1116,12 @@ typedef struct DDS_XTypes_CompleteTypeObject
   } _u;
 } DDS_XTypes_CompleteTypeObject;
 
-/* no members
+#if 0 /* empty struct */
 typedef struct DDS_XTypes_MinimalExtendedType
 {
 } DDS_XTypes_MinimalExtendedType;
-*/
+#endif /* empty struct */
+
 typedef struct DDS_XTypes_MinimalTypeObject
 {
   uint8_t _d;

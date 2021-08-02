@@ -125,7 +125,7 @@ emit_field(
 {
   struct generator *gen = user_data;
   char *type, dims[32] = "";
-  const char *fmt, *indent, *name, *star = "", *ext = "", *fwd = "";
+  const char *fmt, *indent, *name, *star = "", *ext = "", *fwd_decl_type = "";
   const void *root;
   idl_literal_t *literal;
   idl_type_spec_t *type_spec;
@@ -149,11 +149,11 @@ emit_field(
     star = "* ";
   }
   if (idl_is_forward (type_spec))
-    fwd = "struct ";
+    fwd_decl_type = "struct ";
 
-  bool type_has_no_members = idl_is_struct(type_spec) && !((const idl_struct_t *)type_spec)->members;
-  fmt = type_has_no_members ? "%s/* %s%s %s%s%s%s */ /* no members */" : "%s%s%s %s%s%s%s";
-  if (idl_fprintf(gen->header.handle, fmt, indent, fwd, type, ext, star, name, dims) < 0)
+  bool empty = idl_is_empty_struct(type_spec);
+  fmt = empty ? "%s/* %s%s %s%s%s%s */ /* no members */" : "%s%s%s %s%s%s%s";
+  if (idl_fprintf(gen->header.handle, fmt, indent, fwd_decl_type, type, ext, star, name, dims) < 0)
     return IDL_RETCODE_NO_MEMORY;
   fmt = "[%" PRIu32 "]";
   literal = ((const idl_declarator_t *)node)->const_expr;
@@ -162,7 +162,7 @@ emit_field(
     if (idl_fprintf(gen->header.handle, fmt, literal->value.uint32) < 0)
       return IDL_RETCODE_NO_MEMORY;
   }
-  fmt = type_has_no_members ? "\n" : ";\n";
+  fmt = empty ? "\n" : ";\n";
   if (fputs(fmt, gen->header.handle) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
@@ -183,43 +183,41 @@ emit_struct(
   struct generator *gen = user_data;
   char *name = NULL;
   const char *fmt;
+  bool empty = idl_is_empty_struct(node);
 
   if (IDL_PRINTA(&name, print_type, node) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
-  const idl_member_t *members = ((const idl_struct_t *)node)->members;
   if (revisit) {
     fmt = "} %1$s;\n";
     if (idl_fprintf(gen->header.handle, fmt, name) < 0)
       return IDL_RETCODE_NO_MEMORY;
-    if (!members)
-    {
-      if (idl_fprintf(gen->header.handle, "*/\n") < 0)
+    if (!empty && idl_fprintf(gen->header.handle, "\n") < 0)
+      return IDL_RETCODE_NO_MEMORY;
+    if (!empty && idl_is_topic(node, (pstate->flags & IDL_FLAG_KEYLIST) != 0)) {
+      fmt = "extern const dds_topic_descriptor_t %1$s_desc;\n"
+            "\n"
+            "#define %1$s__alloc() \\\n"
+            "((%1$s*) dds_alloc (sizeof (%1$s)));\n"
+            "\n"
+            "#define %1$s_free(d,o) \\\n"
+            "dds_sample_free ((d), &%1$s_desc, (o))\n"
+            "\n";
+      if (idl_fprintf(gen->header.handle, fmt, name) < 0)
         return IDL_RETCODE_NO_MEMORY;
-    } else {
-      if (idl_fprintf(gen->header.handle, "\n") < 0)
-        return IDL_RETCODE_NO_MEMORY;
-      if (idl_is_topic(node, (pstate->flags & IDL_FLAG_KEYLIST) != 0)) {
-        fmt = "extern const dds_topic_descriptor_t %1$s_desc;\n"
-              "\n"
-              "#define %1$s__alloc() \\\n"
-              "((%1$s*) dds_alloc (sizeof (%1$s)));\n"
-              "\n"
-              "#define %1$s_free(d,o) \\\n"
-              "dds_sample_free ((d), &%1$s_desc, (o))\n"
-              "\n";
-        if (idl_fprintf(gen->header.handle, fmt, name) < 0)
-          return IDL_RETCODE_NO_MEMORY;
-        if ((ret = generate_descriptor(pstate, gen, node)))
-          return ret;
-      }
+      if ((ret = generate_descriptor(pstate, gen, node)))
+        return ret;
     }
+    if (empty)
+      if (idl_fprintf(gen->header.handle, "#endif /* empty struct */\n\n") < 0)
+        return IDL_RETCODE_NO_MEMORY;
   } else {
+    const idl_member_t *members = ((const idl_struct_t *)node)->members;
     /* ensure typedefs for unnamed sequences exist beforehand */
     if (members && (ret = generate_implicit_sequences(pstate, revisit, path, members, user_data)))
       return ret;
-    if (!members) {
-      if (idl_fprintf(gen->header.handle, "/* no members\n") < 0)
+    if (empty) {
+      if (idl_fprintf(gen->header.handle, "#if 0 /* empty struct */\n") < 0)
         return IDL_RETCODE_NO_MEMORY;
     }
     fmt = "typedef struct %1$s\n"
