@@ -685,17 +685,15 @@ static const uint32_t DDS_Builtin_TypeLookup_Request_ops [] =
 
 const dds_topic_descriptor_t DDS_Builtin_TypeLookup_Request_desc =
 {
-  sizeof (DDS_Builtin_TypeLookup_Request),
-  8u,
-  DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
-  0u,
-  "DDS::Builtin::TypeLookup_Request",
-  NULL,
-  420,
-  DDS_Builtin_TypeLookup_Request_ops,
-  "",
-  { .data = NULL, .sz = 0u },
-  { .data = NULL, .sz = 0u },
+  .m_size = sizeof (DDS_Builtin_TypeLookup_Request),
+  .m_align = 8u,
+  .m_flagset = DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
+  .m_nkeys = 0u,
+  .m_typename = "DDS::Builtin::TypeLookup_Request",
+  .m_keys = NULL,
+  .m_nops = 420,
+  .m_ops = DDS_Builtin_TypeLookup_Request_ops,
+  .m_meta = "",
 };
 static const uint32_t DDS_Builtin_TypeLookup_Reply_ops [] =
 {
@@ -1350,15 +1348,13 @@ static const uint32_t DDS_Builtin_TypeLookup_Reply_ops [] =
 
 const dds_topic_descriptor_t DDS_Builtin_TypeLookup_Reply_desc =
 {
-  sizeof (DDS_Builtin_TypeLookup_Reply),
-  8u,
-  DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
-  0u,
-  "DDS::Builtin::TypeLookup_Reply",
-  NULL,
-  405,
-  DDS_Builtin_TypeLookup_Reply_ops,
-  "",
-  { .data = NULL, .sz = 0u },
-  { .data = NULL, .sz = 0u },
+  .m_size = sizeof (DDS_Builtin_TypeLookup_Reply),
+  .m_align = 8u,
+  .m_flagset = DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
+  .m_nkeys = 0u,
+  .m_typename = "DDS::Builtin::TypeLookup_Reply",
+  .m_keys = NULL,
+  .m_nops = 405,
+  .m_ops = DDS_Builtin_TypeLookup_Reply_ops,
+  .m_meta = "",
 };

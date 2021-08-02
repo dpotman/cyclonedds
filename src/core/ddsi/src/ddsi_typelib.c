@@ -10,6 +10,10 @@
  * SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause
  */
 
+#include "dds/features.h"
+
+#ifdef DDS_HAS_TYPE_DISCOVERY
+
 #include <string.h>
 #include <stdlib.h>
 #include "dds/ddsrt/heap.h"
@@ -818,3 +822,5 @@ uint32_t ddsi_type_get_gpe_matches (struct ddsi_domaingv *gv, const struct ddsi_
   ddsi_type_register_with_proxy_endpoints_locked (gv, type);
   return n;
 }
+
+#endif /* DDS_HAS_TYPE_DISCOVERY */

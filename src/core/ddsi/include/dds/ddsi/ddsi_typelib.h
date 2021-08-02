@@ -14,8 +14,6 @@
 
 #include "dds/features.h"
 
-#ifdef DDS_HAS_TYPE_DISCOVERY
-
 #include <stdbool.h>
 #include <stdint.h>
 #include "dds/ddsrt/avl.h"
@@ -23,11 +21,12 @@
 #include "dds/ddsi/ddsi_list_tmpl.h"
 #include "dds/ddsi/ddsi_xt_typeinfo.h"
 #include "dds/ddsi/ddsi_xt_typemap.h"
-#include "dds/ddsc/dds_opcodes.h"
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
+
+#ifdef DDS_HAS_TYPE_DISCOVERY
 
 #define PTYPEIDFMT "[%s %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]"
 #define PHASH(x, n) ((x)._d == DDS_XTypes_EK_MINIMAL || (x)._d == DDS_XTypes_EK_COMPLETE ? (x)._u.equivalence_hash[(n)] : 0)
@@ -291,10 +290,10 @@ struct ddsi_type {
   struct ddsi_type_dep *deps;                   /* dependent type records */
 };
 
-struct ddsi_type_pair {
+typedef struct ddsi_type_pair {
   struct ddsi_type *minimal;
   struct ddsi_type *complete;
-};
+} ddsi_type_pair_t;
 
 DDS_EXPORT void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src);
 DDS_EXPORT ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src);
@@ -404,9 +403,18 @@ bool ddsi_xt_is_assignable_from (struct ddsi_domaingv *gv, const struct xt_type 
 bool ddsi_xt_has_complete_typeid (const struct xt_type *xt);
 void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to);
 
+#else /* DDS_HAS_TYPE_DISCOVERY */
+
+typedef void ddsi_typeid_t;
+typedef int ddsi_typeid_kind_t;
+typedef void ddsi_typemap_t;
+typedef void ddsi_typeinfo_t;
+typedef void ddsi_type_pair_t;
+
+#endif /* DDS_HAS_TYPE_DISCOVERY */
 
 #if defined (__cplusplus)
 }
 #endif
-#endif /* DDS_HAS_TYPE_DISCOVERY */
+
 #endif /* DDSI_TYPELIB_H */

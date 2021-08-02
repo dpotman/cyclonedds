@@ -12,6 +12,7 @@
 #include <string.h>
 #include <assert.h>
 
+#include "dds/features.h"
 #include "dds/ddsi/ddsi_xqos.h"
 #include "dds/ddsi/ddsi_typelib.h"
 #include "dds/ddsi/ddsi_typelookup.h"
@@ -68,10 +69,10 @@ static int partitions_match_p (const dds_qos_t *a, const dds_qos_t *b)
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
 
-static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, const struct ddsi_type_pair *type_pair, bool *req_lookup, const char *entity)
+static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, const ddsi_type_pair_t *type_pair, bool *req_lookup, const char *entity)
   ddsrt_nonnull((1, 2, 3));
 
-static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, const struct ddsi_type_pair *type_pair, bool *req_lookup, const char *entity)
+static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, const ddsi_type_pair_t *type_pair, bool *req_lookup, const char *entity)
 {
   assert (type_pair);
   ddsrt_mutex_lock (&gv->typelib_lock);
@@ -127,10 +128,12 @@ static int data_representation_match_p (const dds_qos_t *a, const dds_qos_t *b)
   }
 }
 
-static bool type_pair_has_id (const struct ddsi_type_pair *pair)
+#ifdef DDS_HAS_TYPE_DISCOVERY
+static bool type_pair_has_id (const ddsi_type_pair_t *pair)
 {
   return pair && (pair->minimal || pair->complete);
 }
+#endif
 
 bool qos_match_mask_p (
     struct ddsi_domaingv *gv,
@@ -139,8 +142,8 @@ bool qos_match_mask_p (
     uint64_t mask,
     dds_qos_policy_id_t *reason
 #ifdef DDS_HAS_TYPE_DISCOVERY
-    , const struct ddsi_type_pair *rd_type_pair
-    , const struct ddsi_type_pair *wr_type_pair
+    , const ddsi_type_pair_t *rd_type_pair
+    , const ddsi_type_pair_t *wr_type_pair
     , bool *rd_typeid_req_lookup
     , bool *wr_typeid_req_lookup
 #endif
@@ -261,8 +264,8 @@ bool qos_match_p (
     const dds_qos_t *wr_qos,
     dds_qos_policy_id_t *reason
 #ifdef DDS_HAS_TYPE_DISCOVERY
-    , const struct ddsi_type_pair *rd_type_pair
-    , const struct ddsi_type_pair *wr_type_pair
+    , const ddsi_type_pair_t *rd_type_pair
+    , const ddsi_type_pair_t *wr_type_pair
     , bool *rd_typeid_req_lookup
     , bool *wr_typeid_req_lookup
 #endif

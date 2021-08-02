@@ -13,6 +13,7 @@
 #define DDSI_TYPELOOKUP_H
 
 #include "dds/features.h"
+
 #ifdef DDS_HAS_TYPE_DISCOVERY
 
 #include <stdint.h>

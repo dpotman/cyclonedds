@@ -24,6 +24,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "dds/export.h"
+#include "dds/features.h"
 #include "dds/ddsc/dds_public_alloc.h"
 #include "dds/ddsc/dds_opcodes.h"
 
@@ -70,8 +71,10 @@ typedef struct dds_topic_descriptor
   const uint32_t m_nops;               /* Number of ops in m_ops */
   const uint32_t * m_ops;              /* Marshalling meta data */
   const char * m_meta;                 /* XML topic description meta data */
+#ifdef DDS_HAS_TYPE_DISCOVERY
   struct dds_type_meta_ser type_information;  /* XCDR2 serialized TypeInformation */
   struct dds_type_meta_ser type_mapping;      /* XCDR2 serialized TypeMapping: maps type-id to type object and minimal to complete type id */
+#endif
 }
 dds_topic_descriptor_t;
 

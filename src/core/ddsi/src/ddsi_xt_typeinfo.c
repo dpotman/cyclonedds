@@ -592,17 +592,15 @@ static const uint32_t DDS_XTypes_TypeIdentifier_ops [] =
 
 const dds_topic_descriptor_t DDS_XTypes_TypeIdentifier_desc =
 {
-  sizeof (DDS_XTypes_TypeIdentifier),
-  8u,
-  DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
-  0u,
-  "DDS::XTypes::TypeIdentifier",
-  NULL,
-  397,
-  DDS_XTypes_TypeIdentifier_ops,
-  "",
-  { .data = NULL, .sz = 0u },
-  { .data = NULL, .sz = 0u },
+  .m_size = sizeof (DDS_XTypes_TypeIdentifier),
+  .m_align = 8u,
+  .m_flagset = DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
+  .m_nkeys = 0u,
+  .m_typename = "DDS::XTypes::TypeIdentifier",
+  .m_keys = NULL,
+  .m_nops = 397,
+  .m_ops = DDS_XTypes_TypeIdentifier_ops,
+  .m_meta = "",
 };
 static const uint32_t DDS_XTypes_TypeObject_ops [] =
 {
@@ -1188,17 +1186,15 @@ static const uint32_t DDS_XTypes_TypeObject_ops [] =
 
 const dds_topic_descriptor_t DDS_XTypes_TypeObject_desc =
 {
-  sizeof (DDS_XTypes_TypeObject),
-  8u,
-  DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
-  0u,
-  "DDS::XTypes::TypeObject",
-  NULL,
-  380,
-  DDS_XTypes_TypeObject_ops,
-  "",
-  { .data = NULL, .sz = 0u },
-  { .data = NULL, .sz = 0u },
+  .m_size = sizeof (DDS_XTypes_TypeObject),
+  .m_align = 8u,
+  .m_flagset = DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
+  .m_nkeys = 0u,
+  .m_typename = "DDS::XTypes::TypeObject",
+  .m_keys = NULL,
+  .m_nops = 380,
+  .m_ops = DDS_XTypes_TypeObject_ops,
+  .m_meta = "",
 };
 static const uint32_t DDS_XTypes_TypeInformation_ops [] =
 {
@@ -1318,15 +1314,13 @@ static const uint32_t DDS_XTypes_TypeInformation_ops [] =
 
 const dds_topic_descriptor_t DDS_XTypes_TypeInformation_desc =
 {
-  sizeof (DDS_XTypes_TypeInformation),
-  sizeof (char *),
-  DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
-  0u,
-  "DDS::XTypes::TypeInformation",
-  NULL,
-  70,
-  DDS_XTypes_TypeInformation_ops,
-  "",
-  { .data = NULL, .sz = 0u },
-  { .data = NULL, .sz = 0u },
+  .m_size = sizeof (DDS_XTypes_TypeInformation),
+  .m_align = sizeof (char *),
+  .m_flagset = DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
+  .m_nkeys = 0u,
+  .m_typename = "DDS::XTypes::TypeInformation",
+  .m_keys = NULL,
+  .m_nops = 70,
+  .m_ops = DDS_XTypes_TypeInformation_ops,
+  .m_meta = "",
 };

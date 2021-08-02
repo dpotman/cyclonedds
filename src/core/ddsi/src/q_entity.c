@@ -2710,6 +2710,8 @@ static void reader_qos_mismatch (struct reader * rd, dds_qos_policy_id_t reason)
   }
 }
 
+#ifdef DDS_HAS_TYPE_DISCOVERY
+
 static uint32_t get_dependent_typeids (const ddsi_typeinfo_t *type_info, const ddsi_typeid_t *** dep_ids, ddsi_typeid_kind_t kind)
 {
   assert (dep_ids);
@@ -2734,6 +2736,8 @@ static uint32_t get_dependent_typeids (const ddsi_typeinfo_t *type_info, const d
   return (uint32_t) cnt;
 }
 
+#endif
+
 static bool topickind_qos_match_p_lock (
     struct ddsi_domaingv *gv,
     struct entity_common *rd,
@@ -2742,8 +2746,8 @@ static bool topickind_qos_match_p_lock (
     const dds_qos_t *wrqos,
     dds_qos_policy_id_t *reason
 #ifdef DDS_HAS_TYPE_DISCOVERY
-    , const struct ddsi_type_pair *rd_type_pair
-    , const struct ddsi_type_pair *wr_type_pair
+    , const ddsi_type_pair_t *rd_type_pair
+    , const ddsi_type_pair_t *wr_type_pair
 #endif
 )
 {
@@ -3397,8 +3401,6 @@ static void endpoint_common_init (struct entity_common *e, struct endpoint_commo
   c->type_pair = ddsrt_malloc (sizeof (*c->type_pair));
   c->type_pair->minimal = ddsi_type_ref_local (pp->e.gv, sertype, DDSI_TYPEID_KIND_MINIMAL);
   c->type_pair->complete = ddsi_type_ref_local (pp->e.gv, sertype, DDSI_TYPEID_KIND_COMPLETE);
-#else
-  c->type_pair = NULL;
 #endif
 }
 
@@ -6326,12 +6328,14 @@ static void gc_delete_proxy_writer (struct gcreq *gcreq)
   ELOGDISC (pwr, "gc_delete_proxy_writer(%p, "PGUIDFMT")\n", (void *) gcreq, PGUID (pwr->e.guid));
   gcreq_free (gcreq);
 
+#ifdef DDS_HAS_TYPE_DISCOVERY
   if (pwr->c.type_pair != NULL)
   {
     ddsi_type_unref (pwr->e.gv, pwr->c.type_pair->minimal);
     ddsi_type_unref (pwr->e.gv, pwr->c.type_pair->complete);
     ddsrt_free (pwr->c.type_pair);
   }
+#endif
 
   while (!ddsrt_avl_is_empty (&pwr->readers))
   {
@@ -6590,12 +6594,14 @@ static void gc_delete_proxy_reader (struct gcreq *gcreq)
   ELOGDISC (prd, "gc_delete_proxy_reader(%p, "PGUIDFMT")\n", (void *) gcreq, PGUID (prd->e.guid));
   gcreq_free (gcreq);
 
+#ifdef DDS_HAS_TYPE_DISCOVERY
   if (prd->c.type_pair != NULL)
   {
     ddsi_type_unref (prd->e.gv, prd->c.type_pair->minimal);
     ddsi_type_unref (prd->e.gv, prd->c.type_pair->complete);
     ddsrt_free (prd->c.type_pair);
   }
+#endif
 
   while (!ddsrt_avl_is_empty (&prd->writers))
   {

@@ -11,6 +11,7 @@
  */
 #include <string.h>
 #include <stdlib.h>
+#include "dds/features.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsrt/mh3.h"
 #include "dds/ddsrt/string.h"

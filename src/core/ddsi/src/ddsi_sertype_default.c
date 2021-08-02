@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <string.h>
 
+#include "dds/features.h"
 #include "dds/ddsrt/md5.h"
 #include "dds/ddsrt/mh3.h"
 #include "dds/ddsrt/heap.h"
@@ -62,6 +63,7 @@ static bool sertype_default_equal (const struct ddsi_sertype *acmn, const struct
 
 static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn, ddsi_typeid_kind_t kind)
 {
+#ifdef DDS_HAS_TYPE_DISCOVERY
   assert (tpcmn);
   assert (kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDSI_TYPEID_KIND_COMPLETE);
   const struct ddsi_sertype_default *type = (struct ddsi_sertype_default *) tpcmn;
@@ -83,10 +85,16 @@ static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn,
   ddsi_typeinfo_fini (type_info);
   ddsrt_free (type_info);
   return type_id;
+#else
+  DDSRT_UNUSED_ARG (tpcmn);
+  DDSRT_UNUSED_ARG (kind);
+  return NULL;
+#endif
 }
 
 static ddsi_typemap_t * sertype_default_typemap (const struct ddsi_sertype *tpcmn)
 {
+#ifdef DDS_HAS_TYPE_DISCOVERY
   assert (tpcmn);
   const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
   if (tp->type.typemap_ser.sz == 0 || tp->type.typemap_ser.data == NULL)
@@ -94,10 +102,15 @@ static ddsi_typemap_t * sertype_default_typemap (const struct ddsi_sertype *tpcm
   ddsi_typemap_t *tmap = NULL;
   ddsi_typemap_deser (tp->type.typemap_ser.data, tp->type.typemap_ser.sz, &tmap);
   return tmap;
+#else
+  DDSRT_UNUSED_ARG (tpcmn);
+  return NULL;
+#endif
 }
 
 static ddsi_typeinfo_t *sertype_default_typeinfo (const struct ddsi_sertype *tpcmn)
 {
+#ifdef DDS_HAS_TYPE_DISCOVERY
   assert (tpcmn);
   const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
   if (tp->type.typeinfo_ser.sz == 0 || tp->type.typeinfo_ser.data == NULL)
@@ -105,6 +118,10 @@ static ddsi_typeinfo_t *sertype_default_typeinfo (const struct ddsi_sertype *tpc
   ddsi_typeinfo_t *type_info = NULL;
   ddsi_typeinfo_deser (tp->type.typeinfo_ser.data, tp->type.typeinfo_ser.sz, &type_info);
   return type_info;
+#else
+  DDSRT_UNUSED_ARG (tpcmn);
+  return NULL;
+#endif
 }
 
 static uint32_t sertype_default_hash (const struct ddsi_sertype *tpcmn)
@@ -131,9 +148,10 @@ static void sertype_default_free (struct ddsi_sertype *tpcmn)
   struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
   ddsrt_free (tp->type.keys.keys);
   ddsrt_free (tp->type.ops.ops);
+#ifdef DDS_HAS_TYPE_DISCOVERY
   ddsrt_free (tp->type.typeinfo_ser.data);
   ddsrt_free (tp->type.typemap_ser.data);
-
+#endif
   ddsi_sertype_fini (&tp->c);
   ddsrt_free (tp);
 }

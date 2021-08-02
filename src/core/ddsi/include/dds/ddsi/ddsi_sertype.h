@@ -12,12 +12,12 @@
 #ifndef DDSI_SERTYPE_H
 #define DDSI_SERTYPE_H
 
+#include "dds/features.h"
 #include "dds/ddsrt/atomics.h"
 #include "dds/ddsrt/avl.h"
 #include "dds/ddsi/ddsi_xqos.h"
 #include "dds/ddsi/ddsi_typelib.h"
 #include "dds/ddsc/dds_public_alloc.h"
-#include "dds/features.h"
 
 #if defined (__cplusplus)
 extern "C" {
@@ -28,6 +28,7 @@ struct ddsi_serdata_ops;
 struct ddsi_sertype_ops;
 struct ddsi_domaingv;
 struct ddsi_typeid_t;
+struct ddsi_type_pair;
 
 #define DDSI_SERTYPE_REGISTERING 0x40000000u // set prior to setting gv
 #define DDSI_SERTYPE_REGISTERED  0x80000000u // set after setting gv

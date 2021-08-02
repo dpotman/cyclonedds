@@ -33,8 +33,11 @@ else()
     src/options.c
     src/generator.c
     src/descriptor.c
-    src/types.c
-    src/descriptor_type_meta.c)
+    src/types.c)
+  if(ENABLE_TYPE_DISCOVERY)
+    list(APPEND headers src/descriptor_type_meta.h)
+    list(APPEND sources src/descriptor_type_meta.c)
+  endif()
   add_executable(idlc ${sources} ${headers})
 
   if(MSVC)

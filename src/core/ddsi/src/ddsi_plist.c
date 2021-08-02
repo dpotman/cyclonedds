@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include "dds/features.h"
 #include "dds/ddsrt/log.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsrt/string.h"
@@ -583,6 +584,8 @@ static bool print_type_consistency (char * __restrict *buf, size_t * __restrict 
   return prtf (buf, bufsize, "%d:%d%d%d%d%d", (int) x->kind, x->ignore_sequence_bounds, x->ignore_string_bounds, x->ignore_member_names, x->prevent_type_widening, x->force_type_validation);
 }
 
+#ifdef DDS_HAS_TYPE_DISCOVERY
+
 static dds_return_t deser_type_information (void * __restrict dst, struct flagset *flagset, uint64_t flag, const struct dd * __restrict dd, struct ddsi_domaingv const * const gv)
 {
   (void) gv;
@@ -663,6 +666,8 @@ static bool print_type_information (char * __restrict *buf, size_t * __restrict 
   ddsi_typeinfo_t const * const * x = deser_generic_src (src, &srcoff, alignof (ddsi_typeinfo_t *));
   return prtf (buf, bufsize, PTYPEIDFMT "/" PTYPEIDFMT, PTYPEID((*x)->minimal.typeid_with_size.type_id), PTYPEID((*x)->complete.typeid_with_size.type_id));
 }
+
+#endif /* DDS_HAS_TYPE_DISCOVERY */
 
 static size_t ser_generic_srcsize (const enum pserop * __restrict desc)
 {

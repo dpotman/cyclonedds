@@ -17,6 +17,7 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "dds/features.h"
 #include "idl/print.h"
 #include "idl/processor.h"
 #include "idl/stream.h"
@@ -1949,7 +1950,13 @@ static int print_flags(FILE *fp, struct descriptor *descriptor)
   return fputs(",\n", fp) < 0 ? -1 : 0;
 }
 
-static int print_descriptor(FILE *fp, struct descriptor *descriptor, bool type_info)
+static int print_descriptor(
+    FILE *fp,
+    struct descriptor *descriptor
+#ifdef DDS_HAS_TYPE_DISCOVERY
+    , bool type_info
+#endif
+)
 {
   char *name, *type;
   const char *fmt;
@@ -1959,40 +1966,40 @@ static int print_descriptor(FILE *fp, struct descriptor *descriptor, bool type_i
   if (IDL_PRINTA(&type, print_type, descriptor->topic) < 0)
     return -1;
   fmt = "const dds_topic_descriptor_t %1$s_desc =\n{\n"
-        "  sizeof (%1$s),\n" /* size of type */
-        "  %2$s,\n  "; /* alignment */
+        "  .m_size = sizeof (%1$s),\n" /* size of type */
+        "  .m_align = %2$s,\n" /* alignment */
+        "  .m_flagset = ";
   if (idl_fprintf(fp, fmt, type, descriptor->alignment->rendering) < 0)
     return -1;
   if (print_flags(fp, descriptor) < 0)
     return -1;
-  fmt = "  %1$"PRIu32"u,\n" /* number of keys */
-        "  \"%2$s\",\n"; /* fully qualified name in IDL */
+  fmt = "  .m_nkeys = %1$"PRIu32"u,\n" /* number of keys */
+        "  .m_typename = \"%2$s\",\n"; /* fully qualified name in IDL */
   if (idl_fprintf(fp, fmt, descriptor->n_keys, name) < 0)
     return -1;
 
   /* key array */
   if (descriptor->n_keys)
-    fmt = "  %1$s_keys,\n";
+    fmt = "  .m_keys = %1$s_keys,\n";
   else
-    fmt = "  NULL,\n";
+    fmt = "  .m_keys = NULL,\n";
   if (idl_fprintf(fp, fmt, type) < 0)
     return -1;
 
-  fmt = "  %1$"PRIu32",\n" /* number of ops */
-        "  %2$s_ops,\n" /* ops array */
-        "  \"\",\n"; /* OpenSplice metadata */
+  fmt = "  .m_nops = %1$"PRIu32",\n" /* number of ops */
+        "  .m_ops = %2$s_ops,\n" /* ops array */
+        "  .m_meta = \"\",\n"; /* OpenSplice metadata */
   if (idl_fprintf(fp, fmt, descriptor->n_opcodes, type) < 0)
     return -1;
 
+#ifdef DDS_HAS_TYPE_DISCOVERY
   if (type_info) {
-    fmt = "  { .data = TYPE_INFO_CDR_%1$s, .sz = TYPE_INFO_CDR_SZ_%1$s },\n" /* TypeInformation */
-          "  { .data = TYPE_MAP_CDR_%1$s, .sz = TYPE_MAP_CDR_SZ_%1$s },\n"; /* TypeMapping */
-  } else {
-    fmt = "  { .data = NULL, .sz = 0u },\n" /* TypeInformation */
-          "  { .data = NULL, .sz = 0u },\n"; /* TypeMapping */
+    fmt = "  .type_information = { .data = TYPE_INFO_CDR_%1$s, .sz = TYPE_INFO_CDR_SZ_%1$s },\n" /* TypeInformation */
+          "  .type_mapping = { .data = TYPE_MAP_CDR_%1$s, .sz = TYPE_MAP_CDR_SZ_%1$s },\n"; /* TypeMapping */
+    if (idl_fprintf(fp, fmt, type) < 0)
+      return -1;
   }
-  if (idl_fprintf(fp, fmt, type) < 0)
-    return -1;
+#endif
 
   if (idl_fprintf(fp, "};\n") < 0)
     return -1;
@@ -2119,7 +2126,7 @@ generate_descriptor(
   const idl_node_t *node)
 {
   idl_retcode_t ret;
-  bool keylist, type_info;
+  bool keylist;
   struct descriptor descriptor;
   idl_visitor_t visitor;
   uint32_t inst_count;
@@ -2155,11 +2162,16 @@ generate_descriptor(
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
   if (print_keys(generator->source.handle, &descriptor, keylist, inst_count) < 0)
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
-  type_info = (pstate->flags & IDL_FLAG_TYPE_INFO) != 0;
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  bool type_info = (pstate->flags & IDL_FLAG_TYPE_INFO) != 0;
   if (type_info && print_type_meta_ser(generator->source.handle, pstate, node) < 0)
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
   if (print_descriptor(generator->source.handle, &descriptor, type_info) < 0)
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+#else
+  if (print_descriptor(generator->source.handle, &descriptor) < 0)
+    { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+#endif
 
 err_print:
 err_emit:

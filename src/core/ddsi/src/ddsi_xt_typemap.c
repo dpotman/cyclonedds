@@ -595,15 +595,13 @@ static const uint32_t DDS_XTypes_TypeMapping_ops [] =
 
 const dds_topic_descriptor_t DDS_XTypes_TypeMapping_desc =
 {
-  sizeof (DDS_XTypes_TypeMapping),
-  8u,
-  DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
-  0u,
-  "DDS::XTypes::TypeMapping",
-  NULL,
-  369,
-  DDS_XTypes_TypeMapping_ops,
-  "",
-  { .data = NULL, .sz = 0u },
-  { .data = NULL, .sz = 0u },
+  .m_size = sizeof (DDS_XTypes_TypeMapping),
+  .m_align = 8u,
+  .m_flagset = DDS_TOPIC_NO_OPTIMIZE | DDS_TOPIC_CONTAINS_UNION,
+  .m_nkeys = 0u,
+  .m_typename = "DDS::XTypes::TypeMapping",
+  .m_keys = NULL,
+  .m_nops = 369,
+  .m_ops = DDS_XTypes_TypeMapping_ops,
+  .m_meta = "",
 };

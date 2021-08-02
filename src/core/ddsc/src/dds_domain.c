@@ -11,6 +11,7 @@
  */
 #include <string.h>
 
+#include "dds/features.h"
 #include "dds/ddsrt/process.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsrt/hopscotch.h"

@@ -855,6 +855,7 @@ static struct ddsi_sertype *make_special_type_plist (const char *typename, nn_pa
   return (struct ddsi_sertype *) st;
 }
 
+#ifdef DDS_HAS_TYPE_DISCOVERY
 static struct ddsi_sertype *make_special_type_cdrstream (const struct ddsi_domaingv *gv, const char *typename, const dds_topic_descriptor_t *desc)
 {
   struct ddsi_sertype_default *st = ddsrt_malloc (sizeof (*st));
@@ -879,6 +880,8 @@ static struct ddsi_sertype *make_special_type_cdrstream (const struct ddsi_domai
   st->type.ops.ops = ddsrt_memdup (desc->m_ops, st->type.ops.nops * sizeof (*st->type.ops.ops));
   return (struct ddsi_sertype *) st;
 }
+#endif
+
 
 static void free_special_types (struct ddsi_domaingv *gv)
 {

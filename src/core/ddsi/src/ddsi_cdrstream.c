@@ -2506,8 +2506,10 @@ static const uint32_t *dds_stream_extract_key_from_data_skip_array (dds_istream_
 static const uint32_t *dds_stream_extract_key_from_data_skip_sequence (dds_istream_t * __restrict is, const uint32_t * __restrict ops)
 {
   const uint32_t op = *ops;
+#ifndef NDEBUG
   const enum dds_stream_typecode type = DDS_OP_TYPE (op);
   assert (type == DDS_OP_VAL_SEQ);
+#endif
   const uint32_t subtype = DDS_OP_SUBTYPE (op);
   const uint32_t num = dds_is_get4 (is);
   if (num == 0)

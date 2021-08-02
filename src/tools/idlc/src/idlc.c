@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "dds/features.h"
 #include "idl/tree.h"
 #include "idl/string.h"
 #include "idl/processor.h"
@@ -50,7 +51,9 @@ static struct {
   int preprocess;
   int keylist;
   int case_sensitive;
+#ifdef DDS_HAS_TYPE_DISCOVERY
   int no_type_info;
+#endif
   const char *export_macro;
   int help;
   int version;
@@ -263,8 +266,10 @@ static idl_retcode_t idlc_parse(void)
 
   if(config.case_sensitive)
     flags |= IDL_FLAG_CASE_SENSITIVE;
+#ifdef DDS_HAS_TYPE_DISCOVERY
   if(!config.no_type_info)
     flags |= IDL_FLAG_TYPE_INFO;
+#endif
 
   if(config.compile) {
     idl_source_t *source;
@@ -471,9 +476,11 @@ static const idlc_option_t *compopts[] = {
   &(idlc_option_t){
     IDLC_FLAG, { .flag = &config.version }, 'v', "", "",
     "Display version information." },
+#ifdef DDS_HAS_TYPE_DISCOVERY
   &(idlc_option_t){
     IDLC_FLAG, { .flag = &config.no_type_info }, 't', "", "",
     "Don't generate type information in the topic descriptor" },
+#endif
   &(idlc_option_t){
     IDLC_STRING, { .string = &config.export_macro }, 'e', "", "<export macro>",
     "Add export macro before topic descriptors." },
@@ -529,7 +536,9 @@ int main(int argc, char *argv[])
 
   config.compile = 1;
   config.preprocess = 1;
+#ifdef DDS_HAS_TYPE_DISCOVERY
   config.no_type_info = 0;
+#endif
   config.export_macro = NULL;
 
   /* determine which generator to use */
