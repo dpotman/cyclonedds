@@ -120,8 +120,7 @@ static int data_representation_match_p (const dds_qos_t *a, const dds_qos_t *b)
     for (uint32_t i = 0; i < a->data_representation.value.n; i++)
       for (uint32_t j = 0; j < b->data_representation.value.n; j++)
       {
-        if (a->data_representation.value.ids[i] == b->data_representation.value.ids[j] ||
-            b->data_representation.value.ids[j] == a->data_representation.value.ids[i])
+        if (a->data_representation.value.ids[i] == b->data_representation.value.ids[j])
           return 1;
       }
     return 0;

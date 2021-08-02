@@ -4644,9 +4644,9 @@ dds_return_t ddsi_new_topic
   assert (tp_qos->aliased == 0);
 
   /* Set topic name, type name and type information in qos */
-  if ((tp_qos->type_information = ddsi_sertype_typeinfo (sertype)))
-    tp_qos->present |= QP_TYPE_INFORMATION;
-
+  tp_qos->present |= QP_TYPE_INFORMATION;
+  tp_qos->type_information = ddsi_sertype_typeinfo (sertype);
+  assert (tp_qos->type_information);
   set_topic_type_name (tp_qos, topic_name, sertype->type_name);
 
   if (gv->logconfig.c.mask & DDS_LC_DISCOVERY)
