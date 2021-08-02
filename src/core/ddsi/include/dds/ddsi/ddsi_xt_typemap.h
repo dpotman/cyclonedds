@@ -74,7 +74,7 @@ typedef struct DDS_XTypes_TypeMapping
   dds_sequence_DDS_XTypes_TypeIdentifierPair identifier_complete_minimal;
 } DDS_XTypes_TypeMapping;
 
-extern const dds_topic_descriptor_t DDS_XTypes_TypeMapping_desc;
+DDS_EXPORT extern const dds_topic_descriptor_t DDS_XTypes_TypeMapping_desc;
 
 #define DDS_XTypes_TypeMapping__alloc() \
 ((DDS_XTypes_TypeMapping*) dds_alloc (sizeof (DDS_XTypes_TypeMapping)));

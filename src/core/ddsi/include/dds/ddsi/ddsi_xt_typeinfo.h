@@ -340,7 +340,7 @@ typedef struct DDS_XTypes_TypeIdentifier
   } _u;
 } DDS_XTypes_TypeIdentifier;
 
-extern const dds_topic_descriptor_t DDS_XTypes_TypeIdentifier_desc;
+DDS_EXPORT extern const dds_topic_descriptor_t DDS_XTypes_TypeIdentifier_desc;
 
 #define DDS_XTypes_TypeIdentifier__alloc() \
 ((DDS_XTypes_TypeIdentifier*) dds_alloc (sizeof (DDS_XTypes_TypeIdentifier)));
@@ -1151,7 +1151,7 @@ typedef struct DDS_XTypes_TypeObject
   } _u;
 } DDS_XTypes_TypeObject;
 
-extern const dds_topic_descriptor_t DDS_XTypes_TypeObject_desc;
+DDS_EXPORT extern const dds_topic_descriptor_t DDS_XTypes_TypeObject_desc;
 
 #define DDS_XTypes_TypeObject__alloc() \
 ((DDS_XTypes_TypeObject*) dds_alloc (sizeof (DDS_XTypes_TypeObject)));
@@ -1277,7 +1277,7 @@ typedef struct DDS_XTypes_TypeInformation
   DDS_XTypes_TypeIdentifierWithDependencies complete;
 } DDS_XTypes_TypeInformation;
 
-extern const dds_topic_descriptor_t DDS_XTypes_TypeInformation_desc;
+DDS_EXPORT extern const dds_topic_descriptor_t DDS_XTypes_TypeInformation_desc;
 
 #define DDS_XTypes_TypeInformation__alloc() \
 ((DDS_XTypes_TypeInformation*) dds_alloc (sizeof (DDS_XTypes_TypeInformation)));
