@@ -2017,6 +2017,37 @@ bool idl_is_case_label(const void *ptr)
   return true;
 }
 
+int32_t idl_case_label_intvalue(const void *ptr)
+{
+  const idl_case_label_t *node = ptr;
+  if (!(idl_mask(node) & IDL_CASE_LABEL))
+    return -1;
+  idl_type_t type = idl_type(node->const_expr);
+  if (type & IDL_INTEGER_TYPE) {
+    idl_intval_t val = idl_intval(node->const_expr);
+    if (val.type & IDL_UNSIGNED)
+      assert(val.value.ullng <= INT32_MAX);
+    assert(val.value.llng <= INT32_MAX);
+    assert(val.value.llng >= INT32_MIN);
+    return (int32_t)val.value.llng;
+  } else if (type == IDL_CHAR) {
+    // FIXME
+    assert(false);
+  } else if (type == IDL_BOOL) {
+    // FIXME
+    assert(false);
+  } else if (type == IDL_OCTET) {
+    // FIXME
+    assert(false);
+  } else if (type == IDL_ENUM) {
+    // FIXME
+    assert(false);
+  } else {
+    assert(false);
+  }
+  return 0;
+}
+
 static void delete_case_label(void *ptr)
 {
   idl_case_label_t *node = ptr;

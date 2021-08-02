@@ -529,6 +529,7 @@ IDL_EXPORT const idl_name_t *idl_name(const void *node);
 IDL_EXPORT uint32_t idl_array_size(const void *node);
 IDL_EXPORT uint32_t idl_bound(const void *node);
 IDL_EXPORT uint16_t idl_bit_bound(const void *node);
+IDL_EXPORT int32_t idl_case_label_intvalue(const void *node);
 
 /* navigation */
 IDL_EXPORT void *idl_ancestor(const void *node, size_t levels);

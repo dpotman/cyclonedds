@@ -281,13 +281,13 @@ void ddsi_xt_type_init (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi
 
 static void get_type_detail (DDS_XTypes_CompleteTypeDetail *dst, const struct xt_type_detail *src)
 {
-  strcpy (dst->type_name, src->type_name);
+  ddsrt_strlcpy (dst->type_name, src->type_name, sizeof (dst->type_name));
   // FIXME: annotations
 }
 
 static void get_member_detail (DDS_XTypes_CompleteMemberDetail *dst, const struct xt_member_detail *src)
 {
-  strcpy (dst->name, src->name);
+  ddsrt_strlcpy (dst->name, src->name, sizeof (dst->name));
   // FIXME: annotations
 }
 
@@ -606,8 +606,8 @@ static void DDS_XTypes_AppliedVerbatimAnnotation_copy (struct DDS_XTypes_Applied
 {
   if (src)
   {
-    strcpy (dst->placement, src->placement);
-    strcpy (dst->language, src->language);
+    ddsrt_strlcpy (dst->placement, src->placement, sizeof (dst->placement));
+    ddsrt_strlcpy (dst->language, src->language, sizeof (dst->language));
     dst->text = ddsrt_strdup (src->text);
   }
 }
@@ -689,7 +689,7 @@ static void xt_annotation_parameter_copy (struct ddsi_domaingv *gv, struct xt_an
   if (src)
   {
     dst->member_type = ddsi_type_ref_locked (gv, src->member_type);
-    strcpy (dst->name, src->name);
+    ddsrt_strlcpy (dst->name, src->name, sizeof (dst->name));
     memcpy (dst->name_hash, src->name_hash, sizeof (dst->name_hash));
     dst->default_value = src->default_value;
   }
@@ -710,7 +710,7 @@ static void xt_type_detail_copy (struct xt_type_detail *dst, const struct xt_typ
 {
   if (src)
   {
-    strcpy (dst->type_name, src->type_name);
+    ddsrt_strlcpy (dst->type_name, src->type_name, sizeof (dst->type_name));
     xt_applied_type_annotations_copy (&dst->annotations, &src->annotations);
   }
 }
@@ -745,7 +745,7 @@ static void xt_member_detail_copy (struct xt_member_detail *dst, const struct xt
 {
   if (src)
   {
-    strcpy (dst->name, src->name);
+    ddsrt_strlcpy (dst->name, src->name, sizeof (dst->name));
     memcpy (dst->name_hash, src->name_hash, sizeof (dst->name_hash));
     xt_applied_member_annotations_copy (&dst->annotations, &src->annotations);
   }
@@ -895,7 +895,7 @@ static struct xt_type * xt_dup (struct ddsi_domaingv *gv, const struct xt_type *
       xt_type_detail_copy (&dst->_u.alias.detail, &src->_u.alias.detail);
       break;
     case DDS_XTypes_TK_ANNOTATION:
-      strcpy (dst->_u.annotation.annotation_name, src->_u.annotation.annotation_name);
+      ddsrt_strlcpy (dst->_u.annotation.annotation_name, src->_u.annotation.annotation_name, sizeof (dst->_u.annotation.annotation_name));
       xt_annotation_parameter_seq_copy (gv, dst->_u.annotation.members, src->_u.annotation.members);
       break;
     case DDS_XTypes_TK_STRUCTURE:

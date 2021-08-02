@@ -51,6 +51,7 @@ static struct {
   int keylist;
   int case_sensitive;
   int no_type_info;
+  const char *export_macro;
   int help;
   int version;
   /* (emulated) command line options for mcpp */
@@ -270,6 +271,7 @@ static idl_retcode_t idlc_parse(void)
     if ((ret = idl_create_pstate(flags, NULL, &pstate))) {
       return ret;
     }
+    pstate->export_macro = config.export_macro ? idl_strdup (config.export_macro) : NULL;
     assert(config.file);
     if (strcmp(config.file, "-") != 0 && (ret = figure_file(&pstate->paths)) != 0) {
       idl_delete_pstate(pstate);
@@ -472,6 +474,9 @@ static const idlc_option_t *compopts[] = {
   &(idlc_option_t){
     IDLC_FLAG, { .flag = &config.no_type_info }, 't', "", "",
     "Don't generate type information in the topic descriptor" },
+  &(idlc_option_t){
+    IDLC_STRING, { .string = &config.export_macro }, 'e', "", "<export macro>",
+    "Add export macro before topic descriptors." },
   NULL
 };
 
@@ -525,6 +530,7 @@ int main(int argc, char *argv[])
   config.compile = 1;
   config.preprocess = 1;
   config.no_type_info = 0;
+  config.export_macro = NULL;
 
   /* determine which generator to use */
   lang = figure_language(argc, argv);

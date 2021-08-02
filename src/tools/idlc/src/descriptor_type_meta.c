@@ -27,7 +27,6 @@
 #include "idl/processor.h"
 #include "idl/stream.h"
 #include "idl/string.h"
-#include "expression.h"
 #include "generator.h"
 #include "descriptor_type_meta.h"
 
@@ -421,7 +420,7 @@ get_complete_type_detail(
   char *type;
   if (IDL_PRINTA(&type, print_type, node) < 0)
     return IDL_RETCODE_NO_MEMORY;
-  strcpy (detail->type_name, type);
+  idl_strlcpy (detail->type_name, type, sizeof (detail->type_name));
 
   memset (&detail->ann_builtin, 0, sizeof (detail->ann_builtin));
   memset (&detail->ann_custom, 0, sizeof (detail->ann_custom));
@@ -436,7 +435,7 @@ get_complete_member_detail(
   const idl_node_t *node,
   DDS_XTypes_CompleteMemberDetail *detail)
 {
-  strcpy (detail->name, idl_identifier (node));
+  idl_strlcpy (detail->name, idl_identifier (node), sizeof (detail->name));
   get_builtin_member_ann (idl_parent (node), &detail->ann_builtin);
 
   /* FIXME */
@@ -506,10 +505,8 @@ add_union_case(struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minim
     cnt++;
   m.common.label_seq._buffer = calloc (cnt, sizeof (*m.common.label_seq._buffer));
   m.common.label_seq._length = cnt;
-  for (cl = case_node->labels, n = 0; cl; cl = idl_next (cl)) {
-    idl_intval_t val = idl_intval (cl->const_expr);
-    m.common.label_seq._buffer[n++] = (int32_t) val.value.llng;
-  }
+  for (cl = case_node->labels, n = 0; cl; cl = idl_next (cl))
+    m.common.label_seq._buffer[n++] = idl_case_label_intvalue (cl);
 
   add_to_seq ((dds_sequence_t *) &to_minimal->_u.minimal._u.union_type.member_seq, &m, sizeof (m));
   add_to_seq ((dds_sequence_t *) &to_complete->_u.complete._u.union_type.member_seq, &c, sizeof (c));
