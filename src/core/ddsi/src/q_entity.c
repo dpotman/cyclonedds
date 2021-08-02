@@ -2761,7 +2761,7 @@ static bool topickind_qos_match_p_lock (
 #ifdef DDS_HAS_TYPE_DISCOVERY
   bool rd_type_lookup, wr_type_lookup;
   ddsi_typeid_t *req_type_id = NULL;
-  ddsi_typeid_t ** req_dep_ids = NULL;
+  const ddsi_typeid_t ** req_dep_ids = NULL;
   uint32_t req_ndep_ids = 0;
   bool ret = qos_match_p (gv, rdqos, wrqos, reason, rd_type_pair, wr_type_pair, &rd_type_lookup, &wr_type_lookup);
   if (!ret)
@@ -2793,7 +2793,8 @@ static bool topickind_qos_match_p_lock (
   if (req_type_id)
   {
     (void) ddsi_tl_request_type (gv, req_type_id, req_dep_ids, req_ndep_ids);
-    ddsrt_free (req_dep_ids);
+    if (req_dep_ids)
+      ddsrt_free ((void *) req_dep_ids);
     return false;
   }
 #endif
