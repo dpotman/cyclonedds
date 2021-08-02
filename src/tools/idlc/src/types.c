@@ -151,10 +151,8 @@ emit_field(
   if (idl_is_forward (type_spec))
     fwd = "struct ";
 
-  if (idl_is_struct(type_spec) && !((const idl_struct_t *)type_spec)->members)
-    fmt = "%s/* %s%s %s%s%s%s */ /* no members */";
-  else
-    fmt = "%s%s%s %s%s%s%s";
+  bool type_has_no_members = idl_is_struct(type_spec) && !((const idl_struct_t *)type_spec)->members;
+  fmt = type_has_no_members ? "%s/* %s%s %s%s%s%s */ /* no members */" : "%s%s%s %s%s%s%s";
   if (idl_fprintf(gen->header.handle, fmt, indent, fwd, type, ext, star, name, dims) < 0)
     return IDL_RETCODE_NO_MEMORY;
   fmt = "[%" PRIu32 "]";
@@ -164,7 +162,8 @@ emit_field(
     if (idl_fprintf(gen->header.handle, fmt, literal->value.uint32) < 0)
       return IDL_RETCODE_NO_MEMORY;
   }
-  if (fputs(";\n", gen->header.handle) < 0)
+  fmt = type_has_no_members ? "\n" : ";\n";
+  if (fputs(fmt, gen->header.handle) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
   return IDL_RETCODE_OK;
