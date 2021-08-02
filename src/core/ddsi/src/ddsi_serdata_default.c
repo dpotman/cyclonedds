@@ -302,7 +302,7 @@ static struct ddsi_serdata_default *serdata_default_from_ser_iov_common (const s
   for (ddsrt_msg_iovlen_t i = 1; i < niov; i++)
     serdata_default_append_blob (&d, iov[i].iov_len, iov[i].iov_base);
 
-  const bool needs_bswap = CDR_ENC_LE (d->hdr.identifier) != (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN);
+  const bool needs_bswap = !CDR_ENC_IS_NATIVE (d->hdr.identifier);
   d->hdr.identifier = CDR_ENC_TO_NATIVE (d->hdr.identifier);
   const uint32_t pad = ddsrt_fromBE2u (d->hdr.options) & 2;
   const uint32_t xcdr_version = get_xcdr_version (d->hdr.identifier);
@@ -372,11 +372,13 @@ static struct ddsi_serdata *ddsi_serdata_from_keyhash_cdr (const struct ddsi_ser
     if (d == NULL)
       return NULL;
     serdata_default_append_blob (&d, sizeof (keyhash->value), keyhash->value);
+    DDSRT_WARNING_MSVC_OFF(6326)
     if (!dds_stream_normalize (d->data, d->pos, (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN), CDR_ENC_VERSION_2, tp, true))
     {
       ddsi_serdata_unref (&d->c);
       return NULL;
     }
+    DDSRT_WARNING_MSVC_ON(6326)
     memcpy (d->keyhash.m_hash, keyhash->value, sizeof (d->keyhash.m_hash));
     d->keyhash.m_set = 1;
     d->keyhash.m_iskey = 1;

@@ -54,7 +54,13 @@ bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t 
   ddsrt_mutex_lock (&gv->typelib_lock);
   struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
   GVTRACE ("tl-req ");
-  if (type && !dependent_type_id_count && (type->state == DDSI_TYPE_REQUESTED || type->xt.has_obj))
+  if (!type)
+  {
+    GVTRACE ("cannot find "PTYPEIDFMT"\n", PTYPEID (*type_id));
+    ddsrt_mutex_unlock (&gv->typelib_lock);
+    return false;
+  }
+  else if (!dependent_type_id_count && (type->state == DDSI_TYPE_REQUESTED || type->xt.has_obj))
   {
     // type lookup is pending or the type is already resolved, so we'll return true
     // to indicate that the type request is done (or not required)

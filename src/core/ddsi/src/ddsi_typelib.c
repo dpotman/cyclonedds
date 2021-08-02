@@ -272,26 +272,6 @@ void ddsi_typeid_ser (const ddsi_typeid_t *typeid, unsigned char **buf, uint32_t
   *sz = os.m_index;
 }
 
-// void ddsi_typeid_deser (unsigned char *buf, uint32_t sz, ddsi_typeid_t **typeid)
-// {
-//   unsigned char *data;
-//   uint32_t srcoff = 0;
-//   bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
-//   if (bswap)
-//   {
-//     data = ddsrt_memdup (buf, sz);
-//     dds_stream_normalize1 ((char *) data, &srcoff, sz, bswap, CDR_ENC_VERSION_2, DDS_XTypes_TypeIdentifier_desc.m_ops);
-//   }
-//   else
-//     data = buf;
-
-//   dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
-//   *typeid = ddsrt_calloc (1, sizeof (**typeid));
-//   dds_stream_read (&is, (void *) *typeid, DDS_XTypes_TypeIdentifier_desc.m_ops);
-//   if (bswap)
-//     dds_free (data);
-// }
-
 void ddsi_typeid_fini (ddsi_typeid_t *typeid)
 {
   dds_stream_free_sample (typeid, DDS_XTypes_TypeIdentifier_desc.m_ops);
@@ -346,35 +326,6 @@ static bool type_id_with_deps_equal (const struct DDS_XTypes_TypeIdentifierWithD
     && type_id_with_sizeseq_equal (&a->dependent_typeids, &b->dependent_typeids);
 }
 
-
-// void ddsi_typeobj_ser (const ddsi_typeobj_t *typeobj, unsigned char **buf, uint32_t *sz)
-// {
-//   dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
-//   dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typeobj, DDS_XTypes_TypeObject_desc.m_ops);
-//   *buf = os.m_buffer;
-//   *sz = os.m_index;
-// }
-
-// void ddsi_typeobj_deser (unsigned char *buf, uint32_t sz, ddsi_typeobj_t **typeobj)
-// {
-//   unsigned char *data;
-//   uint32_t srcoff = 0;
-//   bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
-//   if (bswap)
-//   {
-//     data = ddsrt_memdup (buf, sz);
-//     dds_stream_normalize1 ((char *) data, &srcoff, sz, bswap, CDR_ENC_VERSION_2, DDS_XTypes_TypeObject_desc.m_ops);
-//   }
-//   else
-//     data = buf;
-
-//   dds_istream_t is = { .m_buffer = data, .m_index = 0, .m_size = sz, .m_xcdr_version = CDR_ENC_VERSION_2 };
-//   *typeobj = ddsrt_calloc (1, sizeof (**typeobj));
-//   dds_stream_read (&is, (void *) *typeobj, DDS_XTypes_TypeObject_desc.m_ops);
-//   if (bswap)
-//     dds_free (data);
-// }
-
 bool ddsi_typeobj_is_minimal (const ddsi_typeobj_t *typeobj)
 {
   return typeobj != NULL && typeobj->_d == DDS_XTypes_EK_MINIMAL;
@@ -396,14 +347,6 @@ bool ddsi_typeinfo_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b)
     return a == b;
   return type_id_with_deps_equal (&a->minimal, &b->minimal) && type_id_with_deps_equal (&a->complete, &b->complete);
 }
-
-// void ddsi_typeinfo_ser (const ddsi_typeinfo_t *typeinfo, unsigned char **buf, uint32_t *sz)
-// {
-//   dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
-//   dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
-//   *buf = os.m_buffer;
-//   *sz = os.m_index;
-// }
 
 ddsi_typeinfo_t * ddsi_typeinfo_dup (const ddsi_typeinfo_t *src)
 {
@@ -437,7 +380,9 @@ void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typ
 {
   unsigned char *data;
   uint32_t srcoff = 0;
+  DDSRT_WARNING_MSVC_OFF(6326)
   bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
+  DDSRT_WARNING_MSVC_ON(6326)
   if (bswap)
   {
     data = ddsrt_memdup (buf, sz);
@@ -491,19 +436,13 @@ const ddsi_typeid_t * ddsi_typemap_matching_id (const ddsi_typemap_t *tmap, cons
   return NULL;
 }
 
-// void ddsi_typemap_ser (const ddsi_typemap_t *typemap, unsigned char **buf, uint32_t *sz)
-// {
-//   dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
-//   dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typemap, DDS_XTypes_TypeMapping_desc.m_ops);
-//   *buf = os.m_buffer;
-//   *sz = os.m_index;
-// }
-
 void ddsi_typemap_deser (unsigned char *buf, uint32_t sz, ddsi_typemap_t **typemap)
 {
   unsigned char *data;
   uint32_t srcoff = 0;
+  DDSRT_WARNING_MSVC_OFF(6326)
   bool bswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
+  DDSRT_WARNING_MSVC_ON(6326)
   if (bswap)
   {
     data = ddsrt_memdup (buf, sz);
