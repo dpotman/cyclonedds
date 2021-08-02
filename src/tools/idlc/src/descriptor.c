@@ -1875,6 +1875,7 @@ static int print_keys(FILE *fp, struct descriptor *descriptor, bool keylist, uin
       keys[order].member = inst->data.key_offset.key_name;
       keys[order].inst_offs = i;
     } else {
+      assert(k < descriptor->n_keys);
       keys[k].member = inst->data.key_offset.key_name;
       keys[k].inst_offs = i;
     }
@@ -2003,13 +2004,15 @@ static idl_retcode_t
 resolve_offsets(struct descriptor *descriptor)
 {
   /* set instruction offset for each type in descriptor */
-  uint32_t offs = 0;
-  for (struct constructed_type *ctype = descriptor->constructed_types; ctype; ctype = ctype->next) {
-    /* confirm that type is complete */
-    if (!ctype->node)
-      return IDL_RETCODE_SEMANTIC_ERROR;
-    ctype->offset = offs;
-    offs += ctype->instructions.count;
+  {
+    uint32_t offs = 0;
+    for (struct constructed_type *ctype = descriptor->constructed_types; ctype; ctype = ctype->next) {
+      /* confirm that type is complete */
+      if (!ctype->node)
+        return IDL_RETCODE_SEMANTIC_ERROR;
+      ctype->offset = offs;
+      offs += ctype->instructions.count;
+    }
   }
 
   /* set offset for each ELEM_OFFSET instruction */

@@ -213,6 +213,7 @@ static struct ddsi_serdata_default *serdata_default_new (const struct ddsi_serty
 static inline void assert_valid_xcdr_id (unsigned short cdr_identifier)
 {
   /* PL_CDR_(L|B)E version 1 only supported for discovery data, using ddsi_serdata_plist */
+  (void) cdr_identifier;
   assert (cdr_identifier == CDR_LE || cdr_identifier == CDR_BE
     || cdr_identifier == CDR2_LE || cdr_identifier == CDR2_BE
     || cdr_identifier == D_CDR2_LE || cdr_identifier == D_CDR2_BE
@@ -302,7 +303,7 @@ static struct ddsi_serdata_default *serdata_default_from_ser_iov_common (const s
   for (ddsrt_msg_iovlen_t i = 1; i < niov; i++)
     serdata_default_append_blob (&d, iov[i].iov_len, iov[i].iov_base);
 
-  const bool needs_bswap = CDR_ENC_LE (d->hdr.identifier) != (DDSRT_ENDIAN == DDSRT_LITTLE_ENDIAN);
+  const bool needs_bswap = !CDR_ENC_IS_NATIVE (d->hdr.identifier);
   d->hdr.identifier = CDR_ENC_TO_NATIVE (d->hdr.identifier);
   const uint32_t pad = ddsrt_fromBE2u (d->hdr.options) & 2;
   const uint32_t xcdr_version = get_xcdr_version (d->hdr.identifier);

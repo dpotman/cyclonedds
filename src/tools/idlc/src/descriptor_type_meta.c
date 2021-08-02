@@ -57,11 +57,15 @@ push_type (struct descriptor_type_meta *dtm, const void *node)
     tm = tm->admin_next;
   if (!tm) {
     tm = calloc (1, sizeof (*tm));
+    if (!tm)
+      return IDL_RETCODE_NO_MEMORY;
     tm->node = node;
     tm->ti_minimal = calloc (1, sizeof (*tm->ti_minimal));
     tm->to_minimal = calloc (1, sizeof (*tm->to_minimal));
     tm->ti_complete = calloc (1, sizeof (*tm->ti_complete));
     tm->to_complete = calloc (1, sizeof (*tm->to_complete));
+    if (!tm->ti_minimal || !tm->to_minimal || !tm->ti_complete || !tm->to_complete)
+      return IDL_RETCODE_NO_MEMORY;
 
     if (dtm->admin == NULL)
       dtm->admin = tm;

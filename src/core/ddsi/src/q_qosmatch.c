@@ -77,7 +77,12 @@ static bool check_endpoint_typeid (struct ddsi_domaingv *gv, char *type_name, co
   ddsrt_mutex_lock (&gv->typelib_lock);
   if ((!type_pair->minimal || !type_pair->minimal->xt.has_obj) && (!type_pair->complete || !type_pair->complete->xt.has_obj))
   {
-    GVTRACE ("unresolved %s type %s / " PTYPEIDFMT " / " PTYPEIDFMT"\n", entity, type_name, PTYPEID(type_pair->minimal->xt.id), PTYPEID(type_pair->complete->xt.id));
+    GVTRACE ("unresolved %s type %s ", entity, type_name);
+    if (type_pair->minimal)
+      GVTRACE ("min " PTYPEIDFMT, PTYPEID(type_pair->minimal->xt.id));
+    if (type_pair->complete)
+      GVTRACE ("compl " PTYPEIDFMT, PTYPEID(type_pair->complete->xt.id));
+    GVTRACE ("\n");
     /* defer requesting unresolved type until after the endpoint qos lock
        has been released, so just set a bool value indicating that a type
        lookup is required */
