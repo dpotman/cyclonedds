@@ -1927,7 +1927,7 @@ struct piddesc_index {
 
    FIXME: should compute them at build-time */
 #define DEFAULT_PROC_ARRAY_SIZE                20
-#ifdef DDS_HAS_TOPIC_DISCOVERY
+#ifdef DDS_HAS_TYPE_DISCOVERY
 #define DEFAULT_OMG_PIDS_ARRAY_SIZE            (PID_TYPE_INFORMATION + 1)
 #else
 #define DEFAULT_OMG_PIDS_ARRAY_SIZE            (PID_TYPE_CONSISTENCY_ENFORCEMENT + 1)

@@ -260,7 +260,7 @@ int is_builtin_topic (ddsi_entityid_t id, nn_vendorid_t vendorid)
   return is_builtin_entityid (id, vendorid) && is_topic_entityid (id);
 }
 
-#if defined(DDS_HAS_SECURITY) || defined(DDS_HAS_TYPE_DISCOVERY) || !defined(NDEBUG)
+#if defined(DDS_HAS_SECURITY) || !defined(NDEBUG)
 static int is_builtin_volatile_endpoint (ddsi_entityid_t id)
 {
   switch (id.u) {
@@ -3307,7 +3307,7 @@ static void update_proxy_participant_endpoint_matching (struct proxy_participant
   ddsrt_free(endpoint_ids);
 }
 
-#endif
+#endif /* DDS_HAS_SECURITY */
 
 void update_proxy_endpoint_matching (const struct ddsi_domaingv *gv, struct generic_proxy_endpoint *proxy_ep)
 {
