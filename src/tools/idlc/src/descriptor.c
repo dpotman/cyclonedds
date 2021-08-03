@@ -2055,6 +2055,7 @@ instructions_fini(struct instructions *instructions)
 {
   for (size_t i = 0; i < instructions->count; i++) {
     struct instruction *inst = &instructions->table[i];
+    assert(inst);
     switch (inst->type) {
       case OFFSET:
         if (inst->data.offset.member)

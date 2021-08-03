@@ -51,7 +51,7 @@ push_type (struct descriptor_type_meta *dtm, const void *node)
 {
   struct type_meta *tm, *tmp;
 
-  // Check if node exist in admin
+  // Check if node exist in admin, if not create new node and add
   tm = dtm->admin;
   while (tm && tm->node != node)
     tm = tm->admin_next;
@@ -60,12 +60,12 @@ push_type (struct descriptor_type_meta *dtm, const void *node)
     if (!tm)
       return IDL_RETCODE_NO_MEMORY;
     tm->node = node;
-    tm->ti_minimal = calloc (1, sizeof (*tm->ti_minimal));
-    tm->to_minimal = calloc (1, sizeof (*tm->to_minimal));
-    tm->ti_complete = calloc (1, sizeof (*tm->ti_complete));
-    tm->to_complete = calloc (1, sizeof (*tm->to_complete));
-    if (!tm->ti_minimal || !tm->to_minimal || !tm->ti_complete || !tm->to_complete)
+    if (!(tm->ti_minimal = calloc (1, sizeof (*tm->ti_minimal))) ||
+        !(tm->to_minimal = calloc (1, sizeof (*tm->to_minimal))) ||
+        !(tm->ti_complete = calloc (1, sizeof (*tm->ti_complete))) ||
+        !(tm->to_complete = calloc (1, sizeof (*tm->to_complete)))) {
       return IDL_RETCODE_NO_MEMORY;
+    }
 
     if (dtm->admin == NULL)
       dtm->admin = tm;
@@ -77,7 +77,7 @@ push_type (struct descriptor_type_meta *dtm, const void *node)
     }
   }
 
-  // Add to stack
+  // Add node to stack
   tmp = dtm->stack;
   dtm->stack = tm;
   tm->stack_prev = tmp;
@@ -90,6 +90,7 @@ pop_type (struct descriptor_type_meta *dtm, const void *node)
 {
   assert (dtm->stack);
   assert (dtm->stack->node == node);
+  (void) node;
   dtm->stack = dtm->stack->stack_prev;
   return IDL_RETCODE_OK;
 }

@@ -505,8 +505,10 @@ emit_bitmask(
     base_type_str = "uint16_t";
   else if (bitmask->bit_bound <= 32)
     base_type_str = "uint32_t";
-  else if (bitmask->bit_bound <= 64)
+  else {
+    assert(bitmask->bit_bound <= 64);
     base_type_str = "uint64_t";
+  }
   if (idl_fprintf(gen->header.handle, "typedef %s %s;\n", base_type_str, type) < 0)
     return IDL_RETCODE_NO_MEMORY;
 
