@@ -628,6 +628,8 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
   struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
   if (!type)
     type = ddsi_type_new (gv, type_id, type_obj);
+  else
+    ddsi_xt_type_add_typeobj (gv, &type->xt, type_obj);
   type->refc++;
   GVTRACE (" refc %"PRIu32"\n", type->refc);
 

@@ -1219,7 +1219,7 @@ static bool sample_equal_mutable1 (void *s_wr, void *s_rd)
     && msg_wr->msg_field7 == msg_rd->msg_field7
     && msg_rd->msg_field9.submsg_field1 == 0 && msg_rd->msg_field9.submsg_field2[0] == 0 && msg_rd->msg_field9.submsg_field2[1] == 0 && msg_rd->msg_field9.submsg_field2[2] == 0
     && msg_wr->msg_field10._length == msg_rd->msg_field10._length
-    && !sample_equal_mutable_TestIdl_SubMsgMutable_seq (&msg_wr->msg_field10, &msg_rd->msg_field10)
+    && sample_equal_mutable_TestIdl_SubMsgMutable_seq (&msg_wr->msg_field10, &msg_rd->msg_field10)
     && msg_wr->msg_field11 == msg_rd->msg_field11
     && msg_rd->msg_field12._length == 0
   ;
@@ -1238,7 +1238,7 @@ static bool sample_equal_mutable2 (void *s_wr, void *s_rd)
     && msg_wr->msg_field7 == msg_rd->msg_field7
     && msg_rd->msg_field8.submsg_field1 == 0 && msg_rd->msg_field8.submsg_field2[0] == 0 && msg_rd->msg_field8.submsg_field2[1] == 0 && msg_rd->msg_field8.submsg_field2[2] == 0
     && msg_wr->msg_field10._length == msg_rd->msg_field10._length
-    && !sample_equal_mutable_TestIdl_SubMsgMutable_seq (&msg_rd->msg_field10, &msg_wr->msg_field10)
+    && sample_equal_mutable_TestIdl_SubMsgMutable_seq (&msg_rd->msg_field10, &msg_wr->msg_field10)
     && msg_wr->msg_field11 == msg_rd->msg_field11
   ;
 }
