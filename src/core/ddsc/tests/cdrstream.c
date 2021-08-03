@@ -1295,6 +1295,7 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc, sample_empty 
     dds_instance_handle_t ih = dds_lookup_instance (wr, msg);
     CU_ASSERT_PTR_NOT_NULL_FATAL (ih);
     ret = dds_instance_get_key(wr, ih, key_data);
+    CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
     bool eq = keys_equal_fn (msg, key_data);
     CU_ASSERT_FATAL (eq);
     sample_free_fn (key_data);
