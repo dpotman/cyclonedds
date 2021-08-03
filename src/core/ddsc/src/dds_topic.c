@@ -725,7 +725,6 @@ static dds_entity_t find_local_topic_pp (dds_participant *pp, const char *name, 
   // at our leisure.
   struct dds_topic *tp = NULL;
   ddsrt_avl_iter_t it;
-  struct ddsi_domaingv * const gv = &pp_topic->m_entity.m_domain->gv;
 
   ddsrt_mutex_lock (&pp->m_entity.m_mutex);
   for (dds_entity *e_pp_child = ddsrt_avl_iter_first (&dds_entity_children_td, &pp->m_entity.m_children, &it); e_pp_child != NULL; e_pp_child = ddsrt_avl_iter_next (&it))
@@ -783,6 +782,7 @@ static dds_entity_t find_local_topic_pp (dds_participant *pp, const char *name, 
     // get here and so it would no longer necessarily be accounted for in the refcount of
     // the sertype.
     {
+      struct ddsi_domaingv * const gv = &pp_topic->m_entity.m_domain->gv;
       ddsrt_mutex_lock (&gv->sertypes_lock);
       assert (ddsrt_hh_lookup (gv->sertypes, sertype) == sertype);
       ddsrt_mutex_unlock (&gv->sertypes_lock);

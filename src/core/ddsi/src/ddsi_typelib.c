@@ -572,8 +572,11 @@ static void type_add_deps (struct ddsi_domaingv *gv, struct ddsi_type *type, con
   if ((kind == DDSI_TYPEID_KIND_MINIMAL && type_info->minimal.dependent_typeid_count > 0)
     || (kind == DDSI_TYPEID_KIND_COMPLETE && type_info->complete.dependent_typeid_count > 0))
   {
-    const dds_sequence_DDS_XTypes_TypeIdentifierWithSize *dep_ids = (kind == DDSI_TYPEID_KIND_COMPLETE) ?
-      dep_ids = &type_info->complete.dependent_typeids : &type_info->minimal.dependent_typeids;
+    const dds_sequence_DDS_XTypes_TypeIdentifierWithSize *dep_ids;
+    if (kind == DDSI_TYPEID_KIND_COMPLETE)
+      dep_ids = &type_info->complete.dependent_typeids;
+    else
+      dep_ids = &type_info->minimal.dependent_typeids;
 
     for (uint32_t n = 0; dep_ids && n < dep_ids->_length; n++)
     {

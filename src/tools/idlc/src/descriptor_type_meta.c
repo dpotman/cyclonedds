@@ -124,9 +124,12 @@ xcdr2_ser (
 static idl_retcode_t
 add_to_seq (dds_sequence_t *seq, const void *obj, size_t sz)
 {
-  seq->_buffer = realloc (seq->_buffer, (seq->_length + 1) * sz);
-  if (seq->_buffer == NULL)
-    return -1;
+  uint8_t *buf = realloc (seq->_buffer, (seq->_length + 1) * sz);
+  if (buf == NULL) {
+    free (seq->_buffer);
+    return IDL_RETCODE_NO_MEMORY;
+  }
+  seq->_buffer = buf;
   seq->_length++;
   seq->_maximum++;
   seq->_release = true;
