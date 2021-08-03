@@ -87,7 +87,12 @@ static void * sample_init_nested (void)
 
 static bool sample_equal_nested (void *s1, void *s2)
 {
-  return !memcmp (s1, s2, sizeof (TestIdl_MsgNested));
+  TestIdl_MsgNested *msg1 = s1, *msg2 = s2;
+  return msg1->msg_field1.submsg_field1 == msg2->msg_field1.submsg_field1
+    && msg1->msg_field2.submsg_field1 == msg2->msg_field2.submsg_field1
+    && msg1->msg_field2.submsg_field2 == msg2->msg_field2.submsg_field2
+    && msg1->msg_field2.submsg_field3.submsg_field1 == msg2->msg_field2.submsg_field3.submsg_field1
+    && msg1->msg_field3.submsg_field1 == msg2->msg_field3.submsg_field1;
 }
 
 static void sample_free_nested (void *s)
@@ -235,7 +240,11 @@ static void * sample_init_union (void)
 
 static bool sample_equal_union (void *s1, void *s2)
 {
-  return !memcmp (s1, s2, sizeof (TestIdl_MsgUnion));
+  TestIdl_MsgUnion *msg1 = s1, *msg2 = s2;
+  return msg1->msg_field1 == msg2->msg_field1
+    && msg1->msg_field2 == msg2->msg_field2
+    && msg1->msg_field3._d == msg2->msg_field3._d
+    && msg1->msg_field3._u.field2 == msg2->msg_field3._u.field2;
 }
 
 static void sample_free_union (void *s)
@@ -298,20 +307,31 @@ static void * sample_init_recursive (void)
   return ddsrt_memdup (&msg, sizeof (TestIdl_MsgRecursive));
 }
 
+static bool sample_equal_recursive_field2 (TestIdl_SubMsgRecursive *s1, TestIdl_SubMsgRecursive *s2)
+{
+  if (s1->submsg_field1 != s2->submsg_field1
+    || s1->submsg_field2._length != s2->submsg_field2._length
+    || s1->submsg_field3 != s2->submsg_field3)
+    return false;
+
+  for (uint32_t n = 0; n < s1->submsg_field2._length; n++)
+    if (!sample_equal_recursive_field2 (&s1->submsg_field2._buffer[n], &s2->submsg_field2._buffer[n]))
+      return false;
+
+  return true;
+}
+
 static bool sample_equal_recursive (void *s1, void *s2)
 {
-  TestIdl_MsgRecursive *msg1 = (TestIdl_MsgRecursive *) s1, *msg2 = (TestIdl_MsgRecursive *) s2;
+  TestIdl_MsgRecursive *msg1 = s1, *msg2 = s2;
   return (msg1->msg_field1 == msg2->msg_field1
-    && msg1->msg_field2.submsg_field1 == msg2->msg_field2.submsg_field1
-    && msg1->msg_field2.submsg_field3 == msg2->msg_field2.submsg_field3
-    && msg1->msg_field2.submsg_field2._length == msg2->msg_field2.submsg_field2._length
-    && !memcmp (msg1->msg_field2.submsg_field2._buffer, msg2->msg_field2.submsg_field2._buffer, msg1->msg_field2.submsg_field2._length * sizeof (TestIdl_SubMsgRecursive))
+    && sample_equal_recursive_field2 (&msg1->msg_field2, &msg2->msg_field2)
     && msg1->msg_field3 == msg2->msg_field3);
 }
 
 static void sample_free_recursive (void *s)
 {
-  TestIdl_MsgRecursive *msg = (TestIdl_MsgRecursive *) s;
+  TestIdl_MsgRecursive *msg = s;
   dds_free (msg->msg_field2.submsg_field2._buffer);
   dds_free (s);
 }
@@ -420,18 +440,44 @@ static void * sample_init_appendable (void)
   return ddsrt_memdup (&msg, sizeof (TestIdl_AppendableMsg));
 }
 
+static bool sample_equal_appendable_TestIdl_AppendableSubMsg2_seq (TestIdl_AppendableMsg_msg_field3_seq *s1, TestIdl_AppendableMsg_msg_field3_seq *s2)
+{
+  if (s1->_length != s2->_length)
+    return false;
+  for (uint32_t n = 0; n < s1->_length; n++)
+  {
+    if (s1->_buffer[n].submsg2_field1 != s2->_buffer[n].submsg2_field1
+      || s1->_buffer[n].submsg2_field2 != s2->_buffer[n].submsg2_field2)
+      return false;
+  }
+  return true;
+}
+
+static bool sample_equal_appendable_TestIdl_AppendableUnion0_seq (TestIdl_AppendableMsg_msg_field5_seq *s1, TestIdl_AppendableMsg_msg_field5_seq *s2)
+{
+  if (s1->_length != s2->_length)
+    return false;
+  for (uint32_t n = 0; n < s1->_length; n++)
+  {
+    if (s1->_buffer[n]._d != s2->_buffer[n]._d
+      || s1->_buffer[n]._u.field1 != s2->_buffer[n]._u.field1)
+      return false;
+  }
+  return true;
+}
+
 static bool sample_equal_appendable (void *s1, void *s2)
 {
   TestIdl_AppendableMsg *msg1 = (TestIdl_AppendableMsg *) s1, *msg2 = (TestIdl_AppendableMsg *) s2;
   return (
     msg1->msg_field1.submsg1_field1 == msg2->msg_field1.submsg1_field1
     && !strcmp (msg1->msg_field1.submsg1_field2, msg2->msg_field1.submsg1_field2)
-    && !memcmp (&msg1->msg_field2, &msg2->msg_field2, sizeof (msg2->msg_field2))
-    && msg1->msg_field3._length == msg2->msg_field3._length
-    && !memcmp (msg1->msg_field3._buffer, msg2->msg_field3._buffer, msg1->msg_field3._length * sizeof (TestIdl_AppendableSubMsg2))
-    && !memcmp (&msg1->msg_field4, &msg2->msg_field4, sizeof (msg2->msg_field4))
-    && msg1->msg_field5._length == msg2->msg_field5._length
-    && !memcmp (msg1->msg_field5._buffer, msg2->msg_field5._buffer, msg1->msg_field5._length * sizeof (TestIdl_AppendableUnion0))
+    && msg1->msg_field2.submsg2_field1 == msg2->msg_field2.submsg2_field1
+    && msg1->msg_field2.submsg2_field2 == msg2->msg_field2.submsg2_field2
+    && sample_equal_appendable_TestIdl_AppendableSubMsg2_seq (&msg1->msg_field3, &msg2->msg_field3)
+    && msg1->msg_field4._d == msg2->msg_field4._d
+    && msg1->msg_field4._u.field2 == msg2->msg_field4._u.field2
+    && sample_equal_appendable_TestIdl_AppendableUnion0_seq (&msg1->msg_field5, &msg2->msg_field5)
   );
 }
 
@@ -543,13 +589,27 @@ static bool keys_equal_keysnested (void *s1, void *s2)
       && msg1->msg_field1.submsg_field4.submsg2_field2 == msg2->msg_field1.submsg_field4.submsg2_field2;
 }
 
+static bool sample_equal_keysnested_TestIdl_SubMsgKeysNested (TestIdl_SubMsgKeysNested *s1, TestIdl_SubMsgKeysNested *s2)
+{
+  return (s1->submsg_field1 == s2->submsg_field1
+    && s1->submsg_field2 == s2->submsg_field2
+    && s1->submsg_field3 == s2->submsg_field3
+    && s1->submsg_field4.submsg2_field1 == s2->submsg_field4.submsg2_field1
+    && s1->submsg_field4.submsg2_field2 == s2->submsg_field4.submsg2_field2);
+}
+
 static bool sample_equal_keysnested (void *s1, void *s2)
 {
   TestIdl_MsgKeysNested *msg1 = (TestIdl_MsgKeysNested *) s1, *msg2 = (TestIdl_MsgKeysNested *) s2;
-  return
-      !memcmp (&msg1->msg_field1, &msg2->msg_field1, sizeof (TestIdl_SubMsgKeysNested))
-      && msg1->msg_field2._length == msg2->msg_field2._length
-      && !memcmp (msg1->msg_field2._buffer, msg2->msg_field2._buffer, msg1->msg_field2._length * sizeof (TestIdl_SubMsgKeysNested));
+  if (!sample_equal_keysnested_TestIdl_SubMsgKeysNested (&msg1->msg_field1, &msg2->msg_field1)
+    || msg1->msg_field2._length != msg2->msg_field2._length)
+    return false;
+  for (uint32_t n = 0; n < msg1->msg_field2._length; n++)
+  {
+    if (!sample_equal_keysnested_TestIdl_SubMsgKeysNested (&msg1->msg_field2._buffer[n], &msg2->msg_field2._buffer[n]))
+      return false;
+  }
+  return true;
 }
 
 static void sample_free_keysnested (void *s)
@@ -620,7 +680,17 @@ static void * sample_init_arr (void)
 static bool sample_equal_arr (void *s1, void *s2)
 {
   TestIdl_MsgArr *msg1 = s1, *msg2 = s2;
-  return !memcmp (msg1, msg2, sizeof (TestIdl_MsgArr));
+  return (msg1->msg_field1[0] == msg2->msg_field1[0]
+    && msg1->msg_field1[1] == msg2->msg_field1[1]
+    && msg1->msg_field2[0].field1 == msg2->msg_field2[0].field1
+    && msg1->msg_field2[0].field2 == msg2->msg_field2[0].field2
+    && msg1->msg_field2[1].field1 == msg2->msg_field2[1].field1
+    && msg1->msg_field2[1].field2 == msg2->msg_field2[1].field2
+    && msg1->msg_field3[0]._d == msg2->msg_field3[0]._d
+    && msg1->msg_field3[0]._u.union_field1 == msg2->msg_field3[0]._u.union_field1
+    && msg1->msg_field3[1]._d == msg2->msg_field3[1]._d
+    && msg1->msg_field3[1]._u.union_field2 == msg2->msg_field3[1]._u.union_field2
+  );
 }
 
 static void sample_free_arr (void *s)
@@ -1115,20 +1185,41 @@ static void * sample_init_mutable2 (void)
   return ddsrt_memdup (&msg, sizeof (TestIdl_MsgMutable2));
 }
 
+static bool sample_equal_mutable1_intseq (uint32_t *seq1, uint32_t *seq2, uint32_t len)
+{
+  for (uint32_t n = 0; n < len; n++)
+    if (seq1[n] != seq2[n])
+      return false;
+  return true;
+}
+
+static bool sample_equal_mutable_TestIdl_SubMsgMutable_seq (TestIdl_SubMsgMutable1_seq *s1, TestIdl_SubMsgMutable2_seq *s2)
+{
+  if (s1->_length != s2->_length)
+    return false;
+  for (uint32_t n = 0; n < s1->_length; n++)
+  {
+    if (s1->_buffer[n].submsg_field1 != s2->_buffer[n].submsg_field1
+      || !sample_equal_mutable1_intseq (s1->_buffer[n].submsg_field2, s2->_buffer[n].submsg_field2, 3))
+      return false;
+  }
+  return true;
+}
+
 static bool sample_equal_mutable1 (void *s_wr, void *s_rd)
 {
   TestIdl_MsgMutable1 *msg_wr = s_wr;
   TestIdl_MsgMutable2 *msg_rd = s_rd;
   return msg_wr->msg_field1 == msg_rd->msg_field1
     && msg_wr->msg_field2 == msg_rd->msg_field2
-    && msg_wr->msg_field3.submsg_field1 == msg_rd->msg_field3.submsg_field1 && !memcmp (&msg_wr->msg_field3.submsg_field2, &msg_rd->msg_field3.submsg_field2, 3 * sizeof (uint32_t))
-    && msg_wr->msg_field4[0].submsg_field1 == msg_rd->msg_field4[0].submsg_field1 && !memcmp (&msg_wr->msg_field4[0].submsg_field2, &msg_rd->msg_field4[0].submsg_field2, 3 * sizeof (uint32_t))
-      && msg_wr->msg_field4[1].submsg_field1 == msg_rd->msg_field4[1].submsg_field1 && !memcmp (&msg_wr->msg_field4[1].submsg_field2, &msg_rd->msg_field4[1].submsg_field2, 3 * sizeof (uint32_t))
+    && msg_wr->msg_field3.submsg_field1 == msg_rd->msg_field3.submsg_field1 && sample_equal_mutable1_intseq (msg_wr->msg_field3.submsg_field2, msg_rd->msg_field3.submsg_field2, 3)
+    && msg_wr->msg_field4[0].submsg_field1 == msg_rd->msg_field4[0].submsg_field1 && sample_equal_mutable1_intseq (msg_wr->msg_field4[0].submsg_field2, msg_rd->msg_field4[0].submsg_field2, 3)
+      && msg_wr->msg_field4[1].submsg_field1 == msg_rd->msg_field4[1].submsg_field1 && sample_equal_mutable1_intseq (msg_wr->msg_field4[1].submsg_field2, msg_rd->msg_field4[1].submsg_field2, 3)
     && msg_rd->msg_field6 == 0
     && msg_wr->msg_field7 == msg_rd->msg_field7
     && msg_rd->msg_field9.submsg_field1 == 0 && msg_rd->msg_field9.submsg_field2[0] == 0 && msg_rd->msg_field9.submsg_field2[1] == 0 && msg_rd->msg_field9.submsg_field2[2] == 0
     && msg_wr->msg_field10._length == msg_rd->msg_field10._length
-    && !memcmp (msg_wr->msg_field10._buffer, msg_rd->msg_field10._buffer, msg_wr->msg_field10._length * sizeof (TestIdl_SubMsgMutable1))
+    && !sample_equal_mutable_TestIdl_SubMsgMutable_seq (&msg_wr->msg_field10, &msg_rd->msg_field10)
     && msg_wr->msg_field11 == msg_rd->msg_field11
     && msg_rd->msg_field12._length == 0
   ;
@@ -1140,14 +1231,14 @@ static bool sample_equal_mutable2 (void *s_wr, void *s_rd)
   TestIdl_MsgMutable1 *msg_rd = s_rd;
   return msg_wr->msg_field1 == msg_rd->msg_field1
     && msg_wr->msg_field2 == msg_rd->msg_field2
-    && msg_wr->msg_field3.submsg_field1 == msg_rd->msg_field3.submsg_field1 && !memcmp (&msg_wr->msg_field3.submsg_field2, &msg_rd->msg_field3.submsg_field2, 3 * sizeof (uint32_t))
-    && msg_wr->msg_field4[0].submsg_field1 == msg_rd->msg_field4[0].submsg_field1 && !memcmp (&msg_wr->msg_field4[0].submsg_field2, &msg_rd->msg_field4[0].submsg_field2, 3 * sizeof (uint32_t))
-      && msg_wr->msg_field4[1].submsg_field1 == msg_rd->msg_field4[1].submsg_field1 && !memcmp (&msg_wr->msg_field4[1].submsg_field2, &msg_rd->msg_field4[1].submsg_field2, 3 * sizeof (uint32_t))
+    && msg_wr->msg_field3.submsg_field1 == msg_rd->msg_field3.submsg_field1 && sample_equal_mutable1_intseq (msg_wr->msg_field3.submsg_field2, msg_rd->msg_field3.submsg_field2, 3)
+    && msg_wr->msg_field4[0].submsg_field1 == msg_rd->msg_field4[0].submsg_field1 && sample_equal_mutable1_intseq (msg_wr->msg_field4[0].submsg_field2, msg_rd->msg_field4[0].submsg_field2, 3)
+      && msg_wr->msg_field4[1].submsg_field1 == msg_rd->msg_field4[1].submsg_field1 && sample_equal_mutable1_intseq (msg_wr->msg_field4[1].submsg_field2, msg_rd->msg_field4[1].submsg_field2, 3)
     && msg_rd->msg_field5 == 0
     && msg_wr->msg_field7 == msg_rd->msg_field7
     && msg_rd->msg_field8.submsg_field1 == 0 && msg_rd->msg_field8.submsg_field2[0] == 0 && msg_rd->msg_field8.submsg_field2[1] == 0 && msg_rd->msg_field8.submsg_field2[2] == 0
     && msg_wr->msg_field10._length == msg_rd->msg_field10._length
-    && !memcmp (msg_wr->msg_field10._buffer, msg_rd->msg_field10._buffer, msg_wr->msg_field10._length * sizeof (TestIdl_SubMsgMutable2))
+    && !sample_equal_mutable_TestIdl_SubMsgMutable_seq (&msg_rd->msg_field10, &msg_wr->msg_field10)
     && msg_wr->msg_field11 == msg_rd->msg_field11
   ;
 }
