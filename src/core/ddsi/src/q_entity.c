@@ -2715,6 +2715,7 @@ static void reader_qos_mismatch (struct reader * rd, dds_qos_policy_id_t reason)
 static uint32_t get_dependent_typeids (const ddsi_typeinfo_t *type_info, const ddsi_typeid_t *** dep_ids, ddsi_typeid_kind_t kind)
 {
   assert (dep_ids);
+  assert (kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDSI_TYPEID_KIND_COMPLETE);
   int32_t cnt = (kind == DDSI_TYPEID_KIND_MINIMAL) ? type_info->minimal.dependent_typeid_count : type_info->complete.dependent_typeid_count;
   if (cnt <= 0)
   {

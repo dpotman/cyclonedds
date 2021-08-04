@@ -33,323 +33,14 @@
 DDSI_LIST_DECLS_TMPL(static, ddsi_type_proxy_guid_list, ddsi_guid_t, ddsrt_attribute_unused)
 DDSI_LIST_CODE_TMPL(static, ddsi_type_proxy_guid_list, ddsi_guid_t, nullguid, ddsrt_malloc, ddsrt_free)
 
-void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src)
-{
-  assert (src);
-  assert (dst);
-  dst->_d = src->_d;
-  if (src->_d <= DDS_XTypes_TK_CHAR16)
-    return;
-  switch (src->_d)
-  {
-    case DDS_XTypes_TI_STRING8_SMALL:
-    case DDS_XTypes_TI_STRING16_SMALL:
-      dst->_u.string_sdefn.bound = src->_u.string_sdefn.bound;
-      break;
-    case DDS_XTypes_TI_STRING8_LARGE:
-    case DDS_XTypes_TI_STRING16_LARGE:
-      dst->_u.string_ldefn.bound = src->_u.string_ldefn.bound;
-      break;
-    case DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL:
-      dst->_u.seq_sdefn.header = src->_u.seq_sdefn.header;
-      dst->_u.seq_sdefn.bound = src->_u.seq_sdefn.bound;
-      dst->_u.seq_sdefn.element_identifier = ddsi_typeid_dup (src->_u.seq_sdefn.element_identifier);
-      break;
-    case DDS_XTypes_TI_PLAIN_SEQUENCE_LARGE:
-      dst->_u.seq_ldefn.header = src->_u.seq_ldefn.header;
-      dst->_u.seq_ldefn.bound = src->_u.seq_ldefn.bound;
-      dst->_u.seq_ldefn.element_identifier = ddsi_typeid_dup (src->_u.seq_ldefn.element_identifier);
-      break;
-    case DDS_XTypes_TI_PLAIN_ARRAY_SMALL:
-      dst->_u.array_sdefn.header = src->_u.array_sdefn.header;
-      dst->_u.array_sdefn.array_bound_seq._length = dst->_u.array_sdefn.array_bound_seq._maximum = src->_u.array_sdefn.array_bound_seq._length;
-      if (src->_u.array_sdefn.array_bound_seq._length > 0)
-      {
-        dst->_u.array_sdefn.array_bound_seq._buffer = ddsrt_memdup (src->_u.array_sdefn.array_bound_seq._buffer, src->_u.array_sdefn.array_bound_seq._length * sizeof (*src->_u.array_sdefn.array_bound_seq._buffer));
-        dst->_u.array_sdefn.array_bound_seq._release = true;
-      }
-      else
-        dst->_u.array_sdefn.array_bound_seq._release = false;
-      dst->_u.array_sdefn.element_identifier = ddsi_typeid_dup (src->_u.array_sdefn.element_identifier);
-      break;
-    case DDS_XTypes_TI_PLAIN_ARRAY_LARGE:
-      dst->_u.array_ldefn.header = src->_u.array_ldefn.header;
-      dst->_u.array_ldefn.array_bound_seq._length = dst->_u.array_ldefn.array_bound_seq._maximum = src->_u.array_ldefn.array_bound_seq._length;
-      if (src->_u.array_ldefn.array_bound_seq._length > 0)
-      {
-        dst->_u.array_ldefn.array_bound_seq._buffer = ddsrt_memdup (src->_u.array_ldefn.array_bound_seq._buffer, src->_u.array_ldefn.array_bound_seq._length * sizeof (*src->_u.array_ldefn.array_bound_seq._buffer));
-        dst->_u.array_ldefn.array_bound_seq._release = true;
-      }
-      else
-        dst->_u.array_ldefn.array_bound_seq._release = false;
-      dst->_u.array_ldefn.element_identifier = ddsi_typeid_dup (src->_u.array_ldefn.element_identifier);
-      break;
-    case DDS_XTypes_TI_PLAIN_MAP_SMALL:
-      dst->_u.map_sdefn.header = src->_u.map_sdefn.header;
-      dst->_u.map_sdefn.bound = src->_u.map_sdefn.bound;
-      dst->_u.map_sdefn.element_identifier = ddsi_typeid_dup (src->_u.map_sdefn.element_identifier);
-      dst->_u.map_sdefn.key_flags = src->_u.map_sdefn.key_flags;
-      dst->_u.map_sdefn.key_identifier = ddsi_typeid_dup (src->_u.map_sdefn.key_identifier);
-      break;
-    case DDS_XTypes_TI_PLAIN_MAP_LARGE:
-      dst->_u.map_ldefn.header = src->_u.map_ldefn.header;
-      dst->_u.map_ldefn.bound = src->_u.map_ldefn.bound;
-      dst->_u.map_ldefn.element_identifier = ddsi_typeid_dup (src->_u.map_ldefn.element_identifier);
-      dst->_u.map_ldefn.key_flags = src->_u.map_ldefn.key_flags;
-      dst->_u.map_ldefn.key_identifier = ddsi_typeid_dup (src->_u.map_ldefn.key_identifier);
-      break;
-    case DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT:
-      dst->_u.sc_component_id.sc_component_id = src->_u.sc_component_id.sc_component_id;
-      dst->_u.sc_component_id.scc_length = src->_u.sc_component_id.scc_length;
-      dst->_u.sc_component_id.scc_index = src->_u.sc_component_id.scc_index;
-      break;
-    case DDS_XTypes_EK_COMPLETE:
-    case DDS_XTypes_EK_MINIMAL:
-      memcpy (dst->_u.equivalence_hash, src->_u.equivalence_hash, sizeof (dst->_u.equivalence_hash));
-      break;
-    default:
-      dst->_d = DDS_XTypes_TK_NONE;
-      break;
-  }
-}
-
-ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src)
-{
-  if (ddsi_typeid_is_none (src))
-    return NULL;
-  ddsi_typeid_t *tid = ddsrt_malloc (sizeof (*tid));
-  ddsi_typeid_copy (tid, src);
-  return tid;
-}
-
-const char * ddsi_typeid_disc_descr (unsigned char disc)
-{
-  switch (disc)
-  {
-    case DDS_XTypes_EK_MINIMAL: return "EK_MINIMAL";
-    case DDS_XTypes_EK_COMPLETE: return "EK_COMPLETE";
-    case DDS_XTypes_TK_NONE: return "NONE";
-    case DDS_XTypes_TK_BOOLEAN: return "BOOLEAN";
-    case DDS_XTypes_TK_BYTE: return "BYTE";
-    case DDS_XTypes_TK_INT16: return "INT16";
-    case DDS_XTypes_TK_INT32: return "INT32";
-    case DDS_XTypes_TK_INT64: return "INT64";
-    case DDS_XTypes_TK_UINT16: return "UINT16";
-    case DDS_XTypes_TK_UINT32: return "UINT32";
-    case DDS_XTypes_TK_UINT64: return "UINT64";
-    case DDS_XTypes_TK_FLOAT32: return "FLOAT32";
-    case DDS_XTypes_TK_FLOAT64: return "FLOAT64";
-    case DDS_XTypes_TK_FLOAT128: return "FLOAT128";
-    case DDS_XTypes_TK_CHAR8: return "TK_CHAR";
-    case DDS_XTypes_TK_CHAR16: return "TK_CHAR16";
-    case DDS_XTypes_TK_STRING8: return "TK_STRING8";
-    case DDS_XTypes_TK_STRING16: return "TK_STRING16";
-    case DDS_XTypes_TK_ALIAS: return "TK_ALIAS";
-    case DDS_XTypes_TK_ENUM: return "TK_ENUM";
-    case DDS_XTypes_TK_BITMASK: return "TK_BITMASK";
-    case DDS_XTypes_TK_ANNOTATION: return "TK_ANNOTATION";
-    case DDS_XTypes_TK_STRUCTURE: return "TK_STRUCTURE";
-    case DDS_XTypes_TK_UNION: return "TK_UNION";
-    case DDS_XTypes_TK_BITSET: return "TK_BITSET";
-    case DDS_XTypes_TK_SEQUENCE: return "TK_SEQUENCE";
-    case DDS_XTypes_TK_ARRAY: return "TK_ARRAY";
-    case DDS_XTypes_TK_MAP: return "TK_MAP";
-    default: return "INVALID";
-  }
-}
-
-static int plain_collection_header_compare (struct DDS_XTypes_PlainCollectionHeader a, struct DDS_XTypes_PlainCollectionHeader b)
-{
-  if (a.equiv_kind != b.equiv_kind)
-    return a.equiv_kind > b.equiv_kind ? 1 : -1;
-  return a.element_flags > b.element_flags ? 1 : -1;
-}
-
-static int equivalence_hash_compare (const DDS_XTypes_EquivalenceHash a, const DDS_XTypes_EquivalenceHash b)
-{
-  return memcmp (a, b, sizeof (DDS_XTypes_EquivalenceHash));
-}
-
-static int type_object_hashid_compare (struct DDS_XTypes_TypeObjectHashId a, struct DDS_XTypes_TypeObjectHashId b)
-{
-  if (a._d != b._d)
-    return a._d > b._d ? 1 : -1;
-  return equivalence_hash_compare (a._u.hash, b._u.hash);
-}
-
-static int strong_connected_component_id_compare (struct DDS_XTypes_StronglyConnectedComponentId a, struct DDS_XTypes_StronglyConnectedComponentId b)
-{
-  if (a.scc_length != b.scc_length)
-    return a.scc_length > b.scc_length ? 1 : -1;
-  if (a.scc_index != b.scc_index)
-    return a.scc_index > b.scc_index ? 1 : -1;
-  return type_object_hashid_compare (a.sc_component_id, b.sc_component_id);
-}
-
-int ddsi_typeid_compare (const ddsi_typeid_t *a, const ddsi_typeid_t *b)
-{
-  int r;
-  if (a == NULL && b == NULL)
-    return 0;
-  if (a == NULL || b == NULL)
-    return a > b ? 1 : -1;
-  if (a->_d != b->_d)
-    return a->_d > b->_d ? 1 : -1;
-  if (a->_d <= DDS_XTypes_TK_CHAR16)
-    return 0;
-  switch (a->_d)
-  {
-    case DDS_XTypes_TI_STRING8_SMALL:
-    case DDS_XTypes_TI_STRING16_SMALL:
-      return a->_u.string_sdefn.bound > b->_u.string_sdefn.bound ? 1 : -1;
-    case DDS_XTypes_TI_STRING8_LARGE:
-    case DDS_XTypes_TI_STRING16_LARGE:
-      return a->_u.string_ldefn.bound > b->_u.string_ldefn.bound ? 1 : -1;
-    case DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL:
-      if ((r = plain_collection_header_compare (a->_u.seq_sdefn.header, b->_u.seq_sdefn.header)) != 0)
-        return r;
-      if ((r = ddsi_typeid_compare (a->_u.seq_sdefn.element_identifier, b->_u.seq_sdefn.element_identifier)) != 0)
-        return r;
-      return a->_u.seq_sdefn.bound > b->_u.seq_sdefn.bound ? 1 : -1;
-    case DDS_XTypes_TI_PLAIN_SEQUENCE_LARGE:
-      if ((r = plain_collection_header_compare (a->_u.seq_ldefn.header, b->_u.seq_ldefn.header)) != 0)
-        return r;
-      if ((r = ddsi_typeid_compare (a->_u.seq_ldefn.element_identifier, b->_u.seq_ldefn.element_identifier)) != 0)
-        return r;
-      return a->_u.seq_ldefn.bound > b->_u.seq_ldefn.bound ? 1 : -1;
-    case DDS_XTypes_TI_PLAIN_ARRAY_SMALL:
-      if ((r = plain_collection_header_compare (a->_u.array_sdefn.header, b->_u.array_sdefn.header)) != 0)
-        return r;
-      if (a->_u.array_sdefn.array_bound_seq._length != b->_u.array_sdefn.array_bound_seq._length)
-        return a->_u.array_sdefn.array_bound_seq._length > b->_u.array_sdefn.array_bound_seq._length ? 1 : -1;
-      if (a->_u.array_sdefn.array_bound_seq._length > 0)
-        if ((r = memcmp (a->_u.array_sdefn.array_bound_seq._buffer, b->_u.array_sdefn.array_bound_seq._buffer,
-                          a->_u.array_sdefn.array_bound_seq._length * sizeof (*a->_u.array_sdefn.array_bound_seq._buffer))) != 0)
-          return r;
-      return ddsi_typeid_compare (a->_u.array_sdefn.element_identifier, b->_u.array_sdefn.element_identifier);
-    case DDS_XTypes_TI_PLAIN_ARRAY_LARGE:
-      if ((r = plain_collection_header_compare (a->_u.array_ldefn.header, b->_u.array_ldefn.header)) != 0)
-        return r;
-      if (a->_u.array_ldefn.array_bound_seq._length != b->_u.array_ldefn.array_bound_seq._length)
-        return a->_u.array_ldefn.array_bound_seq._length > b->_u.array_ldefn.array_bound_seq._length ? 1 : -1;
-      if (a->_u.array_ldefn.array_bound_seq._length > 0)
-        if ((r = memcmp (a->_u.array_ldefn.array_bound_seq._buffer, b->_u.array_ldefn.array_bound_seq._buffer,
-                          a->_u.array_ldefn.array_bound_seq._length * sizeof (*a->_u.array_ldefn.array_bound_seq._buffer))) != 0)
-          return r;
-      return ddsi_typeid_compare (a->_u.array_ldefn.element_identifier, b->_u.array_ldefn.element_identifier);
-    case DDS_XTypes_TI_PLAIN_MAP_SMALL:
-      if ((r = plain_collection_header_compare (a->_u.map_sdefn.header, b->_u.map_sdefn.header)) != 0)
-        return r;
-      if (a->_u.map_sdefn.bound != b->_u.map_sdefn.bound)
-        return a->_u.map_sdefn.bound > b->_u.map_sdefn.bound ? 1 : -1;
-      if ((r = ddsi_typeid_compare (a->_u.map_sdefn.element_identifier, b->_u.map_sdefn.element_identifier)) != 0)
-        return r;
-      if (a->_u.map_sdefn.key_flags != b->_u.map_sdefn.key_flags)
-        return a->_u.map_sdefn.key_flags != b->_u.map_sdefn.key_flags ? 1 : -1;
-      return ddsi_typeid_compare (a->_u.map_sdefn.key_identifier, b->_u.map_sdefn.key_identifier);
-    case DDS_XTypes_TI_PLAIN_MAP_LARGE:
-      if ((r = plain_collection_header_compare (a->_u.map_ldefn.header, b->_u.map_ldefn.header)) != 0)
-        return r;
-      if (a->_u.map_ldefn.bound != b->_u.map_ldefn.bound)
-        return a->_u.map_ldefn.bound > b->_u.map_ldefn.bound ? 1 : -1;
-      if ((r = ddsi_typeid_compare (a->_u.map_ldefn.element_identifier, b->_u.map_ldefn.element_identifier)) != 0)
-        return r;
-      if (a->_u.map_ldefn.key_flags != b->_u.map_ldefn.key_flags)
-        return a->_u.map_ldefn.key_flags > b->_u.map_ldefn.key_flags ? 1 : -1;
-      return ddsi_typeid_compare (a->_u.map_ldefn.key_identifier, b->_u.map_ldefn.key_identifier);
-    case DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT:
-      return strong_connected_component_id_compare (a->_u.sc_component_id, b->_u.sc_component_id);
-    case DDS_XTypes_EK_COMPLETE:
-    case DDS_XTypes_EK_MINIMAL:
-      return equivalence_hash_compare (a->_u.equivalence_hash, b->_u.equivalence_hash);
-    default:
-      assert (false);
-      return 1;
-  }
-}
-
-void ddsi_typeid_ser (const ddsi_typeid_t *typeid, unsigned char **buf, uint32_t *sz)
-{
-  dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
-  dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) typeid, DDS_XTypes_TypeIdentifier_desc.m_ops);
-  *buf = os.m_buffer;
-  *sz = os.m_index;
-}
-
-void ddsi_typeid_fini (ddsi_typeid_t *typeid)
-{
-  dds_stream_free_sample (typeid, DDS_XTypes_TypeIdentifier_desc.m_ops);
-}
-
-bool ddsi_typeid_is_none (const ddsi_typeid_t *typeid)
-{
-  return typeid == NULL || typeid->_d == DDS_XTypes_TK_NONE;
-}
-
-bool ddsi_typeid_is_hash (const ddsi_typeid_t *typeid)
-{
-  return ddsi_typeid_is_minimal (typeid) || ddsi_typeid_is_complete (typeid);
-}
-
-bool ddsi_typeid_is_minimal (const ddsi_typeid_t *typeid)
-{
-  return typeid != NULL && typeid->_d == DDS_XTypes_EK_MINIMAL;
-}
-
-bool ddsi_typeid_is_complete (const ddsi_typeid_t *typeid)
-{
-  return typeid != NULL && typeid->_d == DDS_XTypes_EK_COMPLETE;
-}
-
-ddsi_typeid_kind_t ddsi_typeid_kind (const ddsi_typeid_t *type_id)
-{
-  if (!ddsi_typeid_is_hash (type_id))
-    return 0;
-  return ddsi_typeid_is_minimal (type_id) ? DDSI_TYPEID_KIND_MINIMAL : DDSI_TYPEID_KIND_COMPLETE;
-}
-
-static bool type_id_with_size_equal (const struct DDS_XTypes_TypeIdentifierWithSize *a, const struct DDS_XTypes_TypeIdentifierWithSize *b)
-{
-  return !ddsi_typeid_compare (&a->type_id, &b->type_id) && a->typeobject_serialized_size == b->typeobject_serialized_size;
-}
-
-static bool type_id_with_sizeseq_equal (const struct dds_sequence_DDS_XTypes_TypeIdentifierWithSize *a, const struct dds_sequence_DDS_XTypes_TypeIdentifierWithSize *b)
-{
-    if (a->_length != b->_length)
-      return false;
-    for (uint32_t n = 0; n < a->_length; n++)
-      if (!type_id_with_size_equal (&a->_buffer[n], &b->_buffer[n]))
-        return false;
-    return true;
-}
-
-static bool type_id_with_deps_equal (const struct DDS_XTypes_TypeIdentifierWithDependencies *a, const struct DDS_XTypes_TypeIdentifierWithDependencies *b)
-{
-  return type_id_with_size_equal (&a->typeid_with_size, &b->typeid_with_size)
-    && a->dependent_typeid_count == b->dependent_typeid_count
-    && type_id_with_sizeseq_equal (&a->dependent_typeids, &b->dependent_typeids);
-}
-
-bool ddsi_typeobj_is_minimal (const ddsi_typeobj_t *typeobj)
-{
-  return typeobj != NULL && typeobj->_d == DDS_XTypes_EK_MINIMAL;
-}
-
-bool ddsi_typeobj_is_complete (const ddsi_typeobj_t *typeobj)
-{
-  return typeobj != NULL && typeobj->_d == DDS_XTypes_EK_COMPLETE;
-}
-
-void ddsi_typeobj_fini (ddsi_typeobj_t *typeobj)
-{
-  dds_stream_free_sample (typeobj, DDS_XTypes_TypeObject_desc.m_ops);
-}
+static int ddsi_type_compare_wrap (const void *type_a, const void *type_b);
+const ddsrt_avl_treedef_t ddsi_typelib_treedef = DDSRT_AVL_TREEDEF_INITIALIZER (offsetof (struct ddsi_type, avl_node), 0, ddsi_type_compare_wrap, 0);
 
 bool ddsi_typeinfo_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b)
 {
   if (a == NULL || b == NULL)
     return a == b;
-  return type_id_with_deps_equal (&a->minimal, &b->minimal) && type_id_with_deps_equal (&a->complete, &b->complete);
+  return ddsi_type_id_with_deps_equal (&a->minimal, &b->minimal) && ddsi_type_id_with_deps_equal (&a->complete, &b->complete);
 }
 
 ddsi_typeinfo_t * ddsi_typeinfo_dup (const ddsi_typeinfo_t *src)
@@ -407,7 +98,7 @@ void ddsi_typeinfo_fini (ddsi_typeinfo_t *typeinfo)
   dds_stream_free_sample (typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
 }
 
-const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const ddsi_typeid_t *type_id)
+static const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const ddsi_typeid_t *type_id)
 {
   assert (type_id);
   assert (tmap);
@@ -420,22 +111,6 @@ const ddsi_typeobj_t * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const d
     DDS_XTypes_TypeIdentifierTypeObjectPair *pair = &list->_buffer[i];
     if (!ddsi_typeid_compare (type_id, &pair->type_identifier))
       return &pair->type_object;
-  }
-  return NULL;
-}
-
-const ddsi_typeid_t * ddsi_typemap_matching_id (const ddsi_typemap_t *tmap, const ddsi_typeid_t *type_id)
-{
-  assert (tmap);
-  assert (type_id);
-  if (!ddsi_typeid_is_hash (type_id))
-    return NULL;
-  ddsi_typeid_kind_t return_kind = ddsi_typeid_is_complete (type_id) ? DDSI_TYPEID_KIND_MINIMAL : DDSI_TYPEID_KIND_COMPLETE;
-  for (uint32_t i = 0; i < tmap->identifier_complete_minimal._length; i++)
-  {
-    DDS_XTypes_TypeIdentifierPair *pair = &tmap->identifier_complete_minimal._buffer[i];
-    if (!ddsi_typeid_compare (type_id, return_kind == DDSI_TYPEID_KIND_MINIMAL ? &pair->type_identifier1 : &pair->type_identifier2))
-      return return_kind == DDSI_TYPEID_KIND_MINIMAL ? &pair->type_identifier2 : &pair->type_identifier1;
   }
   return NULL;
 }
@@ -492,8 +167,6 @@ static int ddsi_type_compare_wrap (const void *type_a, const void *type_b)
 {
   return ddsi_type_compare (type_a, type_b);
 }
-
-const ddsrt_avl_treedef_t ddsi_typelib_treedef = DDSRT_AVL_TREEDEF_INITIALIZER (offsetof (struct ddsi_type, avl_node), 0, ddsi_type_compare_wrap, 0);
 
 static void ddsi_type_fini (struct ddsi_domaingv *gv, struct ddsi_type *type)
 {
@@ -569,6 +242,7 @@ static void type_add_dep (struct ddsi_domaingv *gv, struct ddsi_type *type, cons
 static void type_add_deps (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_typeinfo_t *type_info, const ddsi_typemap_t *type_map, ddsi_typeid_kind_t kind, uint32_t *n_match_upd, struct generic_proxy_endpoint ***gpe_match_upd)
 {
   assert (type_info);
+  assert (kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDSI_TYPEID_KIND_COMPLETE);
   if ((kind == DDSI_TYPEID_KIND_MINIMAL && type_info->minimal.dependent_typeid_count > 0)
     || (kind == DDSI_TYPEID_KIND_COMPLETE && type_info->complete.dependent_typeid_count > 0))
   {
@@ -613,6 +287,7 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
   uint32_t n_match_upd = 0;
 
   assert (sertype != NULL);
+  assert (kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDSI_TYPEID_KIND_COMPLETE);
   ddsi_typeinfo_t *type_info = ddsi_sertype_typeinfo (sertype);
   if (!type_info)
     return NULL;
@@ -667,6 +342,7 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
 struct ddsi_type * ddsi_type_ref_proxy (struct ddsi_domaingv *gv, const ddsi_typeinfo_t *type_info, ddsi_typeid_kind_t kind, const ddsi_guid_t *proxy_guid)
 {
   assert (type_info);
+  assert (kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDSI_TYPEID_KIND_COMPLETE);
   const ddsi_typeid_t *type_id = (kind == DDSI_TYPEID_KIND_MINIMAL) ? &type_info->minimal.typeid_with_size.type_id : &type_info->complete.typeid_with_size.type_id;
 
   ddsrt_mutex_lock (&gv->typelib_lock);

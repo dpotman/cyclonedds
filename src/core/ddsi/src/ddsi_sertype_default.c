@@ -73,15 +73,9 @@ static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn,
   ddsi_typeid_t *type_id = NULL;
   ddsi_typeinfo_deser (type->type.typeinfo_ser.data, type->type.typeinfo_ser.sz, &type_info);
   if (kind == DDSI_TYPEID_KIND_MINIMAL && !ddsi_typeid_is_none (&type_info->minimal.typeid_with_size.type_id))
-  {
-    type_id = ddsrt_malloc (sizeof (*type_id));
-    ddsi_typeid_copy (type_id, &type_info->minimal.typeid_with_size.type_id);
-  }
+    type_id = ddsi_typeid_dup (&type_info->minimal.typeid_with_size.type_id);
   else if (!ddsi_typeid_is_none (&type_info->complete.typeid_with_size.type_id))
-  {
-    type_id = ddsrt_malloc (sizeof (*type_id));
-    ddsi_typeid_copy (type_id, &type_info->complete.typeid_with_size.type_id);
-  }
+    type_id = ddsi_typeid_dup (&type_info->complete.typeid_with_size.type_id);
   ddsi_typeinfo_fini (type_info);
   ddsrt_free (type_info);
   return type_id;
