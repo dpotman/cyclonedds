@@ -360,7 +360,7 @@ static void add_minimal_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, c
       else
         xt->_u.structure.base_type = NULL;
       xt->_u.structure.members.length = mto->_u.struct_type.member_seq._length;
-      xt->_u.structure.members.seq = ddsrt_malloc (xt->_u.structure.members.length * sizeof (*xt->_u.structure.members.seq));
+      xt->_u.structure.members.seq = ddsrt_calloc (xt->_u.structure.members.length, sizeof (*xt->_u.structure.members.seq));
       for (uint32_t n = 0; n < xt->_u.structure.members.length; n++)
       {
         xt->_u.structure.members.seq[n].id = mto->_u.struct_type.member_seq._buffer[n].common.member_id;
@@ -375,7 +375,7 @@ static void add_minimal_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, c
       xt->_u.union_type.disc_type = ddsi_type_ref_id_locked (gv, &mto->_u.union_type.discriminator.common.type_id);
       xt->_u.union_type.disc_flags = mto->_u.union_type.discriminator.common.member_flags;
       xt->_u.union_type.members.length = mto->_u.union_type.member_seq._length;
-      xt->_u.union_type.members.seq = ddsrt_malloc (xt->_u.union_type.members.length * sizeof (*xt->_u.union_type.members.seq));
+      xt->_u.union_type.members.seq = ddsrt_calloc (xt->_u.union_type.members.length, sizeof (*xt->_u.union_type.members.seq));
       for (uint32_t n = 0; n < xt->_u.union_type.members.length; n++)
       {
         xt->_u.union_type.members.seq[n].id = mto->_u.union_type.member_seq._buffer[n].common.member_id;
@@ -390,7 +390,7 @@ static void add_minimal_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, c
       break;
     case DDS_XTypes_TK_BITSET:
       xt->_u.bitset.fields.length = mto->_u.bitset_type.field_seq._length;
-      xt->_u.bitset.fields.seq = ddsrt_malloc (xt->_u.bitset.fields.length * sizeof (*xt->_u.bitset.fields.seq));
+      xt->_u.bitset.fields.seq = ddsrt_calloc (xt->_u.bitset.fields.length, sizeof (*xt->_u.bitset.fields.seq));
       for (uint32_t n = 0; n < xt->_u.bitset.fields.length; n++)
       {
         xt->_u.bitset.fields.seq[n].position = mto->_u.bitset_type.field_seq._buffer[n].common.position;
@@ -420,7 +420,7 @@ static void add_minimal_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, c
       xt->_u.enum_type.flags = mto->_u.enumerated_type.enum_flags;
       xt->_u.enum_type.bit_bound = mto->_u.enumerated_type.header.common.bit_bound;
       xt->_u.enum_type.literals.length = mto->_u.enumerated_type.literal_seq._length;
-      xt->_u.enum_type.literals.seq = ddsrt_malloc (xt->_u.enum_type.literals.length * sizeof (*xt->_u.enum_type.literals.seq));
+      xt->_u.enum_type.literals.seq = ddsrt_calloc (xt->_u.enum_type.literals.length, sizeof (*xt->_u.enum_type.literals.seq));
       for (uint32_t n = 0; n < xt->_u.enum_type.literals.length; n++)
       {
         xt->_u.enum_type.literals.seq[n].value = mto->_u.enumerated_type.literal_seq._buffer[n].common.value;
@@ -433,7 +433,7 @@ static void add_minimal_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, c
       xt->_u.bitmask.flags = mto->_u.bitmask_type.bitmask_flags;
       xt->_u.bitmask.bit_bound = mto->_u.bitmask_type.header.common.bit_bound;
       xt->_u.bitmask.bitflags.length = mto->_u.bitmask_type.flag_seq._length;
-      xt->_u.bitmask.bitflags.seq = ddsrt_malloc (xt->_u.bitmask.bitflags.length * sizeof (*xt->_u.bitmask.bitflags.seq));
+      xt->_u.bitmask.bitflags.seq = ddsrt_calloc (xt->_u.bitmask.bitflags.length, sizeof (*xt->_u.bitmask.bitflags.seq));
       for (uint32_t n = 0; n < xt->_u.bitmask.bitflags.length; n++)
       {
         xt->_u.bitmask.bitflags.seq[n].position = mto->_u.bitmask_type.flag_seq._buffer[n].common.position;

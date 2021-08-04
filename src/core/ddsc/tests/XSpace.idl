@@ -23,11 +23,44 @@ module XSpace {
 	    @id(2) long long_2;
         @id(3) my_bitmask bm_3;
     };
-
     @mutable
-    struct XType2 {
+    struct XType1a {
     	@id(1) long long_1;
 	    @id(2) long long_2;
         @id(3) unsigned short bm_3;
     };
+
+    @appendable
+    struct XType2 {
+	    @id(1) long long_1;
+	    @id(2) long long_2;
+    };
+    @appendable
+    struct XType2a {
+	    @id(1) long long_1;
+	    @id(2) long long_2;
+	    @id(3) long long_3;
+    };
+
+    @appendable
+    struct XType3_1 {
+        @id(1) long long_4;
+        @id(2) long long_5;
+    };
+    @appendable
+    struct XType3_1a {
+        @id(1) long long_4;
+    };
+    @mutable
+    struct XType3 {
+	    @id(2) long long_2;
+	    @id(3) XType3_1 struct_3;
+    };
+    @mutable
+    struct XType3a {
+	    @id(1) long long_1;
+	    @id(2) long long_2;
+	    @id(3) XType3_1a struct_3;
+    };
+
 };

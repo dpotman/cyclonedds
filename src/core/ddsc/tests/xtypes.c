@@ -45,6 +45,9 @@ static dds_entity_t g_domain2 = 0;
 static dds_entity_t g_participant2 = 0;
 static dds_entity_t g_subscriber2 = 0;
 
+typedef void (*sample_init) (void *s);
+typedef void (*sample_check) (void *s1, void *s2);
+
 static void xtypes_init (void)
 {
   /* Domains for pub and sub use a different domain id, but the portgain setting
@@ -88,45 +91,175 @@ static bool reader_wait_for_data (dds_entity_t pp, dds_entity_t rd, dds_duration
   return ret > 0;
 }
 
-CU_Test(ddsc_xtypes, basic, .init = xtypes_init, .fini = xtypes_fini)
+static void sample_init_XType1 (void *ptr)
 {
-  char topic_name[100];
-  XSpace_XType1 wr_sample = { 1, 2 };
-  XSpace_XType2 rd_sample;
-  void * rd_samples[1];
-  rd_samples[0] = &rd_sample;
-  dds_sample_info_t info;
-  dds_return_t ret;
-
-  create_unique_topic_name ("ddsc_xtypes", topic_name, sizeof (topic_name));
-  dds_entity_t topic_wr = dds_create_topic (g_participant1, &XSpace_XType1_desc, topic_name, NULL, NULL);
-  CU_ASSERT_FATAL (topic_wr > 0);
-  dds_entity_t topic_rd = dds_create_topic (g_participant2, &XSpace_XType2_desc, topic_name, NULL, NULL);
-  CU_ASSERT_FATAL (topic_rd > 0);
-
-  dds_qos_t *qos = dds_create_qos ();
-  dds_qset_reliability (qos, DDS_RELIABILITY_RELIABLE, DDS_SECS (10));
-  dds_qset_history (qos, DDS_HISTORY_KEEP_ALL, 0);
-  dds_qset_data_representation (qos, 1, (dds_data_representation_id_t[]) { XCDR2_DATA_REPRESENTATION });
-  CU_ASSERT_FATAL (qos != NULL);
-
-  dds_entity_t writer = dds_create_writer (g_participant1, topic_wr, qos, NULL);
-  CU_ASSERT_FATAL (writer > 0);
-  dds_entity_t reader = dds_create_reader (g_participant2, topic_rd, qos, NULL);
-  CU_ASSERT_FATAL (reader > 0);
-
-  sync_reader_writer (g_participant2, reader, g_participant1, writer);
-  ret = dds_set_status_mask (reader, DDS_DATA_AVAILABLE_STATUS);
-  CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
-
-  ret = dds_write (writer, &wr_sample);
-  CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
-
-  reader_wait_for_data (g_participant2, reader, DDS_SECS (1));
-  ret = dds_take (reader, rd_samples, &info, 1, 1);
-  CU_ASSERT_EQUAL_FATAL (ret, 1);
-  CU_ASSERT_EQUAL_FATAL (rd_sample.long_1, wr_sample.long_1);
-  CU_ASSERT_EQUAL_FATAL (rd_sample.long_2, wr_sample.long_2);
-
-  dds_delete_qos (qos);
+  XSpace_XType1 *sample = (XSpace_XType1 *) ptr;
+  sample->long_1 = 1;
+  sample->long_2 = 2;
+  sample->bm_3 = XSpace_flag0 | XSpace_flag1;
 }
+static void sample_init_XType1a (void *ptr)
+{
+  XSpace_XType1a *sample = (XSpace_XType1a *) ptr;
+  sample->long_1 = 1;
+  sample->long_2 = 2;
+  sample->bm_3 = 3;
+}
+static void sample_check_XType1_1a (void *ptr1, void *ptr2)
+{
+  XSpace_XType1 *s_wr = (XSpace_XType1 *) ptr1;
+  XSpace_XType1a *s_rd = (XSpace_XType1a *) ptr2;
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_1, s_wr->long_1);
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_2, s_wr->long_2);
+  CU_ASSERT_EQUAL_FATAL (s_rd->bm_3, s_wr->bm_3);
+}
+static void sample_check_XType1a_1 (void *ptr1, void *ptr2)
+{
+  XSpace_XType1a *s_wr = (XSpace_XType1a *) ptr1;
+  XSpace_XType1 *s_rd = (XSpace_XType1 *) ptr2;
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_1, s_wr->long_1);
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_2, s_wr->long_2);
+  CU_ASSERT_EQUAL_FATAL (s_rd->bm_3, s_wr->bm_3);
+}
+
+static void sample_init_XType2 (void *ptr)
+{
+  XSpace_XType2 *sample = (XSpace_XType2 *) ptr;
+  sample->long_1 = 1;
+  sample->long_2 = 2;
+}
+static void sample_init_XType2a (void *ptr)
+{
+  XSpace_XType2a *sample = (XSpace_XType2a *) ptr;
+  sample->long_1 = 1;
+  sample->long_2 = 2;
+  sample->long_2 = 3;
+}
+static void sample_check_XType2_2a (void *ptr1, void *ptr2)
+{
+  XSpace_XType2 *s_wr = (XSpace_XType2 *) ptr1;
+  XSpace_XType2a *s_rd = (XSpace_XType2a *) ptr2;
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_1, s_wr->long_1);
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_2, s_wr->long_2);
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_3, 0);
+}
+static void sample_check_XType2a_2 (void *ptr1, void *ptr2)
+{
+  XSpace_XType2a *s_wr = (XSpace_XType2a *) ptr1;
+  XSpace_XType2 *s_rd = (XSpace_XType2 *) ptr2;
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_1, s_wr->long_1);
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_2, s_wr->long_2);
+}
+
+static void sample_init_XType3 (void *ptr)
+{
+  XSpace_XType3 *sample = (XSpace_XType3 *) ptr;
+  sample->long_2 = 2;
+  sample->struct_3.long_4 = 4;
+  sample->struct_3.long_5 = 5;
+}
+static void sample_init_XType3a (void *ptr)
+{
+  XSpace_XType3a *sample = (XSpace_XType3a *) ptr;
+  sample->long_1 = 1;
+  sample->long_2 = 2;
+  sample->struct_3.long_4 = 4;
+}
+static void sample_check_XType3_3a (void *ptr1, void *ptr2)
+{
+  XSpace_XType3 *s_wr = (XSpace_XType3 *) ptr1;
+  XSpace_XType3a *s_rd = (XSpace_XType3a *) ptr2;
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_1, 0);
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_2, s_wr->long_2);
+  CU_ASSERT_EQUAL_FATAL (s_rd->struct_3.long_4, s_wr->struct_3.long_4);
+}
+static void sample_check_XType3a_3 (void *ptr1, void *ptr2)
+{
+  XSpace_XType3a *s_wr = (XSpace_XType3a *) ptr1;
+  XSpace_XType3 *s_rd = (XSpace_XType3 *) ptr2;
+  CU_ASSERT_EQUAL_FATAL (s_rd->long_2, s_wr->long_2);
+  CU_ASSERT_EQUAL_FATAL (s_rd->struct_3.long_4, s_wr->struct_3.long_4);
+  CU_ASSERT_EQUAL_FATAL (s_rd->struct_3.long_5, 0);
+}
+
+#define D(n) XSpace_ ## n ## _desc
+#define I(n) sample_init_ ## n
+#define C(n) sample_check_ ## n
+
+CU_TheoryDataPoints (ddsc_xtypes, basic) = {
+  CU_DataPoints (const char *,                   "mutable_bitmask",
+  /*                                             |                      */"appendable_field",
+  /*                                             |                       |                       */"appendable_nested"),
+  CU_DataPoints (const dds_topic_descriptor_t *, &D(XType1),             &D(XType2),              &D(XType3),             ),
+  CU_DataPoints (const dds_topic_descriptor_t *, &D(XType1a),            &D(XType2a),             &D(XType3a),            ),
+  CU_DataPoints (size_t,                         sizeof(XSpace_XType1),  sizeof(XSpace_XType2),   sizeof(XSpace_XType3),  ),
+  CU_DataPoints (size_t,                         sizeof(XSpace_XType1a), sizeof(XSpace_XType2a),  sizeof(XSpace_XType3a), ),
+  CU_DataPoints (sample_init,                    I(XType1),              I(XType2),               I(XType3),              ),
+  CU_DataPoints (sample_init,                    I(XType1a),             I(XType2a),              I(XType3a),             ),
+  CU_DataPoints (sample_check,                   C(XType1_1a),           C(XType2_2a),            C(XType3_3a),           ),
+  CU_DataPoints (sample_check,                   C(XType1a_1),           C(XType2a_2),            C(XType3a_3),           ),
+};
+
+CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_topic_descriptor_t *desc2, size_t size1, size_t size2, sample_init fn_init1, sample_init fn_init2, sample_check fn_cmp1, sample_check fn_cmp2),
+    ddsc_xtypes, basic, .init = xtypes_init, .fini = xtypes_fini)
+{
+  for (int t = 0; t <= 1; t++)
+  {
+    printf ("Running test xtypes_basic: %s (run %d/2)\n", descr, t + 1);
+
+    const dds_topic_descriptor_t *wr_desc = t ? desc2 : desc1,
+                                 *rd_desc = t ? desc1 : desc2;
+    size_t wr_size = t ? size2 : size1,
+           rd_size = t ? size1 : size2;
+    sample_init fn_wr_init = t ? fn_init2 : fn_init1;
+
+    char topic_name[100];
+    dds_return_t ret;
+
+    create_unique_topic_name ("ddsc_xtypes", topic_name, sizeof (topic_name));
+    dds_entity_t topic_wr = dds_create_topic (g_participant1, wr_desc, topic_name, NULL, NULL);
+    CU_ASSERT_FATAL (topic_wr > 0);
+    dds_entity_t topic_rd = dds_create_topic (g_participant2, rd_desc, topic_name, NULL, NULL);
+    CU_ASSERT_FATAL (topic_rd > 0);
+
+    dds_qos_t *qos = dds_create_qos ();
+    dds_qset_reliability (qos, DDS_RELIABILITY_RELIABLE, DDS_SECS (10));
+    dds_qset_history (qos, DDS_HISTORY_KEEP_ALL, 0);
+    dds_qset_data_representation (qos, 1, (dds_data_representation_id_t[]) { XCDR2_DATA_REPRESENTATION });
+    CU_ASSERT_FATAL (qos != NULL);
+
+    dds_entity_t writer = dds_create_writer (g_participant1, topic_wr, qos, NULL);
+    CU_ASSERT_FATAL (writer > 0);
+    dds_entity_t reader = dds_create_reader (g_participant2, topic_rd, qos, NULL);
+    CU_ASSERT_FATAL (reader > 0);
+    dds_delete_qos (qos);
+
+    sync_reader_writer (g_participant2, reader, g_participant1, writer);
+    ret = dds_set_status_mask (reader, DDS_DATA_AVAILABLE_STATUS);
+    CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
+
+    void * wr_sample = dds_alloc (wr_size);
+    fn_wr_init (wr_sample);
+    ret = dds_write (writer, wr_sample);
+    CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
+
+    void * rd_sample = dds_alloc (rd_size);
+    void * rd_samples[1];
+    rd_samples[0] = rd_sample;
+    dds_sample_info_t info;
+    reader_wait_for_data (g_participant2, reader, DDS_SECS (1));
+    ret = dds_take (reader, rd_samples, &info, 1, 1);
+    CU_ASSERT_EQUAL_FATAL (ret, 1);
+    if (t == 0)
+      fn_cmp1 (wr_sample, rd_sample);
+    else
+      fn_cmp2 (wr_sample, rd_sample);
+
+    dds_sample_free (wr_sample, wr_desc, DDS_FREE_ALL);
+    dds_sample_free (rd_sample, rd_desc, DDS_FREE_ALL);
+  }
+}
+
+#undef D
+#undef I
+#undef C
