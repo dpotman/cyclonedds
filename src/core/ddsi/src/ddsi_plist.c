@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <ctype.h>
 
+#include "dds/features.h"
 #include "dds/ddsrt/log.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsrt/string.h"
@@ -41,6 +42,8 @@
 
 #include "dds/ddsi/ddsi_plist_generic.h"
 #include "dds/ddsi/ddsi_security_omg.h"
+#include "dds/ddsi/ddsi_typelib.h"
+#include "dds/ddsi/ddsi_cdrstream.h"
 
 /* I am tempted to change LENGTH_UNLIMITED to 0 in the API (with -1
    supported for backwards compatibility) ... on the wire however
@@ -580,6 +583,91 @@ static bool print_type_consistency (char * __restrict *buf, size_t * __restrict 
   dds_type_consistency_enforcement_qospolicy_t const * const x = deser_generic_src (src, &srcoff, alignof (dds_type_consistency_enforcement_qospolicy_t));
   return prtf (buf, bufsize, "%d:%d%d%d%d%d", (int) x->kind, x->ignore_sequence_bounds, x->ignore_string_bounds, x->ignore_member_names, x->prevent_type_widening, x->force_type_validation);
 }
+
+#ifdef DDS_HAS_TYPE_DISCOVERY
+
+static dds_return_t deser_type_information (void * __restrict dst, struct flagset *flagset, uint64_t flag, const struct dd * __restrict dd, struct ddsi_domaingv const * const gv)
+{
+  (void) gv;
+  size_t dstoff = 0;
+  uint32_t srcoff = 0;
+  unsigned char *buf;
+  ddsi_typeinfo_t const ** x = deser_generic_dst (dst, &dstoff, alignof (ddsi_typeinfo_t *));
+  *x = ddsrt_calloc (1, sizeof (**x));
+  if (dd->bswap)
+  {
+    buf = ddsrt_memdup (dd->buf, dd->bufsz);
+    dds_stream_normalize1 ((char *) buf, &srcoff, (uint32_t) dd->bufsz, dd->bswap, /* FIXME */ CDR_ENC_VERSION_2, DDS_XTypes_TypeInformation_desc.m_ops);
+  }
+  else
+    buf = (unsigned char *) dd->buf;
+
+  dds_istream_t is = { .m_buffer = buf, .m_index = 0, .m_size = (uint32_t) dd->bufsz, .m_xcdr_version = CDR_ENC_VERSION_2 };
+  dds_stream_read (&is, (void *) *x, DDS_XTypes_TypeInformation_desc.m_ops);
+  *flagset->present |= flag;
+  if (dd->bswap)
+    ddsrt_free (buf);
+  return 0;
+}
+
+static dds_return_t ser_type_information (struct nn_xmsg *xmsg, nn_parameterid_t pid, const void *src, size_t srcoff, enum ddsrt_byte_order_selector bo)
+{
+  ddsi_typeinfo_t const * const * x = deser_generic_src (src, &srcoff, alignof (ddsi_typeinfo_t *));
+
+  dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = /* FIXME */ CDR_ENC_VERSION_2 };
+  if (bo == DDSRT_BOSEL_LE)
+    dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) *x, DDS_XTypes_TypeInformation_desc.m_ops);
+  else if (bo == DDSRT_BOSEL_BE)
+    dds_stream_writeBE ((dds_ostreamBE_t *) &os, (const void *) *x, DDS_XTypes_TypeInformation_desc.m_ops);
+  else
+    dds_stream_write (&os, (const void *) *x, DDS_XTypes_TypeInformation_desc.m_ops);
+  char * const p = nn_xmsg_addpar_bo (xmsg, pid, os.m_index, bo);
+  memcpy (p, os.m_buffer, os.m_index);
+  dds_ostream_fini (&os);
+  return 0;
+}
+
+static dds_return_t valid_type_information (const void *src, size_t srcoff)
+{
+  ddsi_typeinfo_t const * const * x = deser_generic_src (src, &srcoff, alignof (ddsi_typeinfo_t *));
+  /* FIXME: add more checks, e.g. if both min and complete type id are present */
+  return *x != NULL && (*x)->minimal.typeid_with_size.type_id._d != DDS_XTypes_TK_NONE;
+}
+
+static bool equal_type_information (const void *srcx, const void *srcy, size_t srcoff)
+{
+  ddsi_typeinfo_t const * const * x = deser_generic_src (srcx, &srcoff, alignof (ddsi_typeinfo_t *));
+  ddsi_typeinfo_t const * const * y = deser_generic_src (srcy, &srcoff, alignof (ddsi_typeinfo_t *));
+  return ddsi_typeinfo_equal (*x, *y);
+}
+
+static dds_return_t unalias_type_information (void * __restrict dst, size_t * __restrict dstoff)
+{
+  ddsi_typeinfo_t const * * x = deser_generic_dst (dst, dstoff, alignof (ddsi_typeinfo_t *));
+  ddsi_typeinfo_t * new_type_info = ddsi_typeinfo_dup (*x);
+  *x = new_type_info;
+  *dstoff += sizeof (*x);
+  return 0;
+}
+
+static dds_return_t fini_type_information (void * __restrict dst, size_t * __restrict dstoff, struct flagset *flagset, uint64_t flag)
+{
+  ddsi_typeinfo_t const * const * x = deser_generic_src (dst, dstoff, alignof (ddsi_typeinfo_t *));
+  if ((*flagset->present & flag) && !(*flagset->aliased & flag))
+  {
+    ddsi_typeinfo_fini ((ddsi_typeinfo_t *) *x);
+    ddsrt_free ((ddsi_typeinfo_t *) *x);
+  }
+  return 0;
+}
+
+static bool print_type_information (char * __restrict *buf, size_t * __restrict bufsize, const void *src, size_t srcoff)
+{
+  ddsi_typeinfo_t const * const * x = deser_generic_src (src, &srcoff, alignof (ddsi_typeinfo_t *));
+  return prtf (buf, bufsize, PTYPEIDFMT "/" PTYPEIDFMT, PTYPEID((*x)->minimal.typeid_with_size.type_id), PTYPEID((*x)->complete.typeid_with_size.type_id));
+}
+
+#endif /* DDS_HAS_TYPE_DISCOVERY */
 
 static size_t ser_generic_srcsize (const enum pserop * __restrict desc)
 {
@@ -1692,6 +1780,11 @@ static const struct piddesc piddesc_omg[] = {
     offsetof (struct ddsi_plist, qos.type_consistency), membersize (struct ddsi_plist, qos.type_consistency),
     { .f = { .deser = deser_type_consistency, .ser = ser_type_consistency, .valid = valid_type_consistency, .equal = equal_type_consistency, .print = print_type_consistency } }, 0 },
   QP  (DATA_REPRESENTATION,                 data_representation, XQ, XE2, XSTOP),
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  { PID_TYPE_INFORMATION, PDF_QOS | PDF_FUNCTION, QP_TYPE_INFORMATION, "TYPE_INFORMATION",
+    offsetof (struct ddsi_plist, qos.type_information), membersize (struct ddsi_plist, qos.type_information),
+    { .f = { .deser = deser_type_information, .ser = ser_type_information, .valid = valid_type_information, .unalias = unalias_type_information, .fini = fini_type_information, .equal = equal_type_information, .print = print_type_information } }, 0 },
+#endif
   PP  (PROTOCOL_VERSION,                    protocol_version, Xox2),
   PP  (VENDORID,                            vendorid, Xox2),
   PP  (EXPECTS_INLINE_QOS,                  expects_inline_qos, Xb),
@@ -1763,10 +1856,7 @@ static const struct piddesc piddesc_eclipse[] = {
   { PID_PAD, PDF_QOS, QP_CYCLONE_IGNORELOCAL, "CYCLONE_IGNORELOCAL",
     offsetof (struct ddsi_plist, qos.ignorelocal), membersize (struct ddsi_plist, qos.ignorelocal),
     { .desc = { XE2, XSTOP } }, 0 },
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  QP  (CYCLONE_TYPE_INFORMATION,         type_information, XO),
-#endif
-    { PID_PAD, PDF_QOS, QP_LOCATOR_MASK, "CYCLONE_LOCATOR_MASK",
+  { PID_PAD, PDF_QOS, QP_LOCATOR_MASK, "CYCLONE_LOCATOR_MASK",
     offsetof(struct ddsi_plist, qos.ignore_locator_type), membersize(struct ddsi_plist, qos.ignore_locator_type),
     {.desc = { Xu, XSTOP } }, 0 },
 #ifdef DDS_HAS_TOPIC_DISCOVERY
@@ -1837,7 +1927,11 @@ struct piddesc_index {
 
    FIXME: should compute them at build-time */
 #define DEFAULT_PROC_ARRAY_SIZE                20
+#ifdef DDS_HAS_TYPE_DISCOVERY
+#define DEFAULT_OMG_PIDS_ARRAY_SIZE            (PID_TYPE_INFORMATION + 1)
+#else
 #define DEFAULT_OMG_PIDS_ARRAY_SIZE            (PID_TYPE_CONSISTENCY_ENFORCEMENT + 1)
+#endif
 #ifdef DDS_HAS_SECURITY
 #define SECURITY_OMG_PIDS_ARRAY_SIZE           (PID_IDENTITY_STATUS_TOKEN - PID_IDENTITY_TOKEN + 1)
 #define SECURITY_PROC_ARRAY_SIZE               4

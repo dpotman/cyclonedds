@@ -84,8 +84,7 @@ CU_Test (ddsc_instance_handle, a, .init = instance_handle_init, .fini = instance
     a.v = i;
     b.k = i;
     b.v = 2 * a.k;
-    const uint32_t a_k_be = ddsrt_toBE4u (a.k);
-    memcpy (c.k, &a_k_be, sizeof (c.k));
+    c.k = i;
     c.v = 3 * a.k;
     rc = dds_write (wr[0], &a);
     CU_ASSERT_FATAL (rc == 0);
@@ -114,13 +113,12 @@ CU_Test (ddsc_instance_handle, a, .init = instance_handle_init, .fini = instance
     CU_ASSERT_FATAL (b.k == a.k && b.v == 2 * a.k);
 
     /* take one sample from C using the instance handle just returned, this should work
-       even though C uses an array of octets as key */
+       for different topic that have the same key type */
     rc = dds_take_instance (rd[2], &rawC, &siC, 1, 1, siA.instance_handle);
     CU_ASSERT_FATAL (rc == 1);
     CU_ASSERT_FATAL (siC.valid_data);
     CU_ASSERT_FATAL (siC.instance_handle == siA.instance_handle);
-    const uint32_t a_k_be = ddsrt_toBE4u (a.k);
-    CU_ASSERT_FATAL (memcmp (c.k, &a_k_be, sizeof (c.k)) == 0 && c.v == 3 * a.k);
+    CU_ASSERT_FATAL (c.k == a.k && c.v == 3 * a.k);
   }
 
   /* there should be no data left */

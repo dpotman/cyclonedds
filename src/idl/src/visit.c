@@ -126,7 +126,7 @@ static const uint32_t recurse[] = {
 };
 
 #if 0
-static idl_visit_iterate_t iterate[] = {
+static const uint32_t iterate[] = {
   IDL_VISIT_ITERATE,
   IDL_VISIT_DONT_ITERATE,
   IDL_VISIT_ITERATE|IDL_VISIT_DONT_ITERATE
@@ -204,7 +204,7 @@ idl_visit(
 #if 0
       if (ret & (idl_retcode_t)iterate[MAYBE]) {
         stack.flags[stack.depth - 1] &= ~iterate[MAYBE];
-        stack.flags[stack.depth - 1] |=  iterate[ (ret & iterate[NO]) != 0 ];
+        stack.flags[stack.depth - 1] |=  iterate[ ((unsigned)ret & iterate[NO]) != 0 ];
       }
 #endif
       if (ret & (idl_retcode_t)revisit[MAYBE]) {
@@ -240,9 +240,6 @@ idl_visit(
         if ((ret = callback(pstate, true, &stack.path, node, user_data)) < 0)
           goto err_revisit;
       }
-#if 0
-      if (stack.flags[stack.depth - 1] & (IDL_VISIT_TYPE_SPEC|IDL_VISIT_DONT_ITERATE)) {
-#endif
       if (stack.flags[stack.depth - 1] & (IDL_VISIT_TYPE_SPEC)) {
         (void)pop(&stack);
       } else {

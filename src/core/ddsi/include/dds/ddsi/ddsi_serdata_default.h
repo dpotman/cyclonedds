@@ -18,6 +18,8 @@
 #include "dds/ddsrt/avl.h"
 #include "dds/ddsi/ddsi_serdata.h"
 #include "dds/ddsi/ddsi_plist_generic.h"
+#include "dds/ddsi/ddsi_typelib.h"
+#include "dds/ddsi/ddsi_typelookup.h"
 
 #include "dds/dds.h"
 
@@ -112,6 +114,10 @@ struct ddsi_sertype_default_desc {
   enum ddsi_sertype_extensibility extensibility;  /* Extensibility of the top-level type */
   ddsi_sertype_default_desc_key_seq_t keys;
   ddsi_sertype_default_desc_op_seq_t ops;
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  ddsi_sertype_cdr_data_t typeinfo_ser;
+  ddsi_sertype_cdr_data_t typemap_ser;
+#endif
 };
 
 struct ddsi_sertype_default {
