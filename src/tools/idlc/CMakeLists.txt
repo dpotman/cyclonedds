@@ -93,3 +93,6 @@ else()
 endif()
 
 include(Generate.cmake)
+
+# add_subdirectory(tests)
+
