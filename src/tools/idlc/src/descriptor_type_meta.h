@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2020 ADLINK Technology Limited and others
+ * Copyright(c) 2021 ADLINK Technology Limited and others
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -9,19 +9,10 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause
  */
-module InstanceHandleTypes {
-  struct A {
-    unsigned long k; //@Key
-    unsigned long v;
-  };
-#pragma keylist A k
-  struct C {
-    unsigned long k; //@Key
-    unsigned long v;
-  };
-#pragma keylist C k
-  struct MD5 {
-    octet k[8*16]; //@Key
-  };
-#pragma keylist MD5 k
-};
+#include "generator.h"
+
+idl_retcode_t
+print_type_meta_ser (
+  FILE *fp,
+  const idl_pstate_t *pstate,
+  const idl_node_t *node);

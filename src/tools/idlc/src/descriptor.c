@@ -26,6 +26,7 @@
 
 #include "generator.h"
 #include "descriptor.h"
+#include "descriptor_type_meta.h"
 #include "dds/ddsc/dds_opcodes.h"
 
 #define TYPE (16)
@@ -1982,6 +1983,9 @@ static int print_flags(FILE *fp, struct descriptor *descriptor)
 static int print_descriptor(
     FILE *fp,
     struct descriptor *descriptor
+#ifdef DDS_HAS_TYPE_DISCOVERY
+    , bool type_info
+#endif
 )
 {
   char *name, *type;
@@ -2017,6 +2021,16 @@ static int print_descriptor(
         "  .m_meta = \"\""; /* OpenSplice metadata */
   if (idl_fprintf(fp, fmt, descriptor->n_opcodes, type) < 0)
     return -1;
+
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  if (type_info) {
+    fmt = ",\n"
+          "  .type_information = { .data = TYPE_INFO_CDR_%1$s, .sz = TYPE_INFO_CDR_SZ_%1$s },\n" /* CDR serialized XTypes TypeInformation object */
+          "  .type_mapping = { .data = TYPE_MAP_CDR_%1$s, .sz = TYPE_MAP_CDR_SZ_%1$s }"; /* CDR serialized type id to type object mapping */
+    if (idl_fprintf(fp, fmt, type) < 0)
+      return -1;
+  }
+#endif
 
   if (idl_fprintf(fp, "\n};\n\n") < 0)
     return -1;
@@ -2191,8 +2205,16 @@ generate_descriptor(
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
   if (print_keys(generator->source.handle, &descriptor, inst_count) < 0)
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  bool type_info = (pstate->flags & IDL_FLAG_TYPE_INFO) != 0;
+  if (type_info && print_type_meta_ser(generator->source.handle, pstate, node) < 0)
+    { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+  if (print_descriptor(generator->source.handle, &descriptor, type_info) < 0)
+    { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+#else
   if (print_descriptor(generator->source.handle, &descriptor) < 0)
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+#endif
 
 err_print:
 err_gen:

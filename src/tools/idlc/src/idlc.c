@@ -262,6 +262,10 @@ static idl_retcode_t idlc_parse(void)
 
   if(config.case_sensitive)
     flags |= IDL_FLAG_CASE_SENSITIVE;
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  if(!config.no_type_info)
+    flags |= IDL_FLAG_TYPE_INFO;
+#endif
 
   if(config.compile) {
     idl_source_t *source;

@@ -578,7 +578,7 @@ static void test_create_delete_writer_stress(bool remote_reader)
   CU_ASSERT_FATAL((wqos = dds_create_qos()) != NULL);
   dds_qset_liveliness(wqos, DDS_LIVELINESS_MANUAL_BY_PARTICIPANT, DDS_MSECS(ldur));
   CU_ASSERT_FATAL((writers[0] = dds_create_writer(g_pub_participant, pub_topic, wqos, NULL)) > 0);
-  CU_ASSERT_EQUAL_FATAL(dds_waitset_wait(waitset, &triggered, 1, DDS_MSECS(1000)), 1);
+  CU_ASSERT_EQUAL_FATAL(dds_waitset_wait(waitset, &triggered, 1, DDS_SECS(1)), 1);
   alive_writers_man++;
 
   /* create writers */
