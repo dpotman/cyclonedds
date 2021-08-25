@@ -1,4 +1,4 @@
-#include "typeinfo.idl"
+#include "ddsi_xt_typeinfo.idl"
 
 @default_nested(TRUE)
 module DDS {

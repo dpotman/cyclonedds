@@ -154,6 +154,8 @@ static size_t pserop_seralign(enum pserop op)
     case XG:
     case XK:
       return 1;
+    case Xs:
+      return 2;
     case XO:
     case XS:
     case XE1: case XE2: case XE3:
@@ -172,6 +174,11 @@ static size_t pserop_seralign(enum pserop op)
 static size_t alignN(const size_t off, const size_t align)
 {
   return (off + align - 1) & ~(align - 1);
+}
+
+static size_t align2(const size_t off)
+{
+  return alignN(off, 2);
 }
 
 static size_t align4(const size_t off)
@@ -205,6 +212,11 @@ static void *ser_generic_aligned (char * __restrict p, size_t * __restrict off, 
   while (pad--)
     *dst++ = 0;
   return dst;
+}
+
+static void *ser_generic_align2(char * __restrict p, size_t * __restrict off)
+{
+  return ser_generic_aligned(p, off, 2);
 }
 
 static void *ser_generic_align4(char * __restrict p, size_t * __restrict off)
@@ -687,6 +699,7 @@ static size_t ser_generic_srcsize (const enum pserop * __restrict desc)
       case XO: SIMPLE (XO, ddsi_octetseq_t); break;
       case XS: SIMPLE (XS, const char *); break;
       case XE1: case XE2: case XE3: SIMPLE (*desc, unsigned); break;
+      case Xs: SIMPLE (Xs, int16_t); break;
       case Xi: case Xix2: case Xix3: case Xix4: SIMPLE (Xi, int32_t); break;
       case Xu: case Xux2: case Xux3: case Xux4: case Xux5: SIMPLE (Xu, uint32_t); break;
       case Xl: SIMPLE (Xl, int64_t); break;
@@ -731,6 +744,7 @@ static bool fini_generic_embeddable (void * __restrict dst, size_t * __restrict 
       case XO: COMPLEX (XO, ddsi_octetseq_t, { ddsrt_free (x->value); freed = true; }, (void) 0); break;
       case XS: COMPLEX (XS, char *, { ddsrt_free (*x); freed = true; }, (void) 0); break;
       case XE1: case XE2: case XE3: COMPLEX (*desc, unsigned, (void) 0, (void) 0); break;
+      case Xs: SIMPLE (Xs, int16_t); break;
       case Xi: case Xix2: case Xix3: case Xix4: SIMPLE (Xi, int32_t); break;
       case Xu: case Xux2: case Xux3: case Xux4: case Xux5: SIMPLE (Xu, uint32_t); break;
       case Xl: SIMPLE (Xl, int64_t); break;
@@ -777,6 +791,7 @@ static size_t pserop_memalign (enum pserop op)
     case Xo: case Xox2: return 1;
     case XbCOND: case XbPROP: return 1;
     case XE1: case XE2: case XE3: return sizeof (uint32_t);
+    case Xs: return sizeof (int16_t);
     case Xi: case Xix2: case Xix3: case Xix4: return sizeof (int32_t);
     case Xu: case Xux2: case Xux3: case Xux4: case Xux5: return sizeof (uint32_t);
     case Xl: return alignof (int64_t);
@@ -830,6 +845,13 @@ static dds_return_t deser_generic_r (void * __restrict dst, size_t * __restrict 
         if (deser_uint32 (&tmp, dd, srcoff) < 0 || tmp > maxval)
           goto fail;
         *x = (unsigned) tmp;
+        *dstoff += sizeof (*x);
+        break;
+      }
+      case Xs: { /* int16_t */
+        uint16_t * const x = deser_generic_dst (dst, dstoff, alignof (uint16_t));
+        if (deser_uint16(x, dd, srcoff) < 0)
+          goto fail;
         *dstoff += sizeof (*x);
         break;
       }
@@ -1013,6 +1035,7 @@ void plist_ser_generic_size_embeddable (size_t *dstoff, const void *src, size_t 
     srcoff += cnt * sizeof (*x);                                        \
   } while (0)
 #define SIMPLE1(basecase_, type_) COMPLEX (basecase_, type_, *dstoff = *dstoff + sizeof (*x))
+#define SIMPLE2(basecase_, type_) COMPLEX (basecase_, type_, *dstoff = align2 (*dstoff) + sizeof (*x))
 #define SIMPLE4(basecase_, type_) COMPLEX (basecase_, type_, *dstoff = align4 (*dstoff) + sizeof (*x))
 #define SIMPLE8(basecase_, type_) COMPLEX (basecase_, type_, *dstoff = align8 (*dstoff) + sizeof (*x))
   while (true)
@@ -1023,6 +1046,7 @@ void plist_ser_generic_size_embeddable (size_t *dstoff, const void *src, size_t 
       case XO: COMPLEX (XO, ddsi_octetseq_t, *dstoff = align4 (*dstoff) + 4 + x->length); break;
       case XS: COMPLEX (XS, const char *, *dstoff = align4 (*dstoff) + 4 + strlen (*x) + 1); break;
       case XE1: case XE2: case XE3: COMPLEX (*desc, unsigned, *dstoff = align4 (*dstoff) + 4); break;
+      case Xs: SIMPLE2 (Xs, int16_t); break;
       case Xi: case Xix2: case Xix3: case Xix4: SIMPLE4 (Xi, int32_t); break;
       case Xu: case Xux2: case Xux3: case Xux4: case Xux5: SIMPLE4 (Xu, uint32_t); break;
       case Xl: SIMPLE8 (Xl, int64_t); break;
@@ -1104,6 +1128,14 @@ dds_return_t plist_ser_generic_embeddable (char * const data, size_t *dstoff, co
         uint32_t * const p = ser_generic_align4 (data, dstoff);
         *p = ddsrt_toBO4u(bo, (uint32_t) *x);
         *dstoff += 4;
+        srcoff += sizeof (*x);
+        break;
+      }
+      case Xs: { /* int16_t */
+        int16_t const * const x = deser_generic_src (src, &srcoff, alignof (int16_t));
+        int16_t * const p = ser_generic_align2 (data, dstoff);
+        *p = ddsrt_toBO2(bo, *x);
+        *dstoff += sizeof (*x);
         srcoff += sizeof (*x);
         break;
       }
@@ -1266,6 +1298,7 @@ static dds_return_t unalias_generic (void * __restrict dst, size_t * __restrict 
       case XO: COMPLEX (XO, ddsi_octetseq_t, if (x->value) { x->value = ddsrt_memdup (x->value, x->length); }); break;
       case XS: COMPLEX (XS, char *, if (*x) { *x = ddsrt_strdup (*x); }); break;
       case XE1: case XE2: case XE3: COMPLEX (*desc, unsigned, (void) 0); break;
+      case Xs: SIMPLE (Xs, int16_t); break;
       case Xi: case Xix2: case Xix3: case Xix4: SIMPLE (Xi, int32_t); break;
       case Xu: case Xux2: case Xux3: case Xux4: case Xux5: SIMPLE (Xu, uint32_t); break;
       case Xl: SIMPLE(Xl, int64_t); break;
@@ -1360,6 +1393,7 @@ static dds_return_t valid_generic (const void *src, size_t srcoff, const enum ps
       case XO: SIMPLE (XO, ddsi_octetseq_t, (x->length == 0) == (x->value == NULL)); break;
       case XS: SIMPLE (XS, const char *, *x != NULL); break;
       case XE1: case XE2: case XE3: SIMPLE (*desc, unsigned, *x <= 1 + (unsigned) *desc - XE1); break;
+      case Xs: TRIVIAL (Xs, int16_t); break;
       case Xi: case Xix2: case Xix3: case Xix4: TRIVIAL (Xi, int32_t); break;
       case Xu: case Xux2: case Xux3: case Xux4: case Xux5: TRIVIAL (Xu, uint32_t); break;
       case Xl: TRIVIAL(Xl, int64_t); break;
@@ -1417,6 +1451,7 @@ static bool equal_generic (const void *srcx, const void *srcy, size_t srcoff, co
         SIMPLE (XS, const char *, strcmp (*x, *y) == 0);
         break;
       case XE1: case XE2: case XE3: TRIVIAL (*desc, unsigned); break;
+      case Xs: TRIVIAL (Xs, int16_t); break;
       case Xi: case Xix2: case Xix3: case Xix4: TRIVIAL (Xi, int32_t); break;
       case Xu: case Xux2: case Xux3: case Xux4: case Xux5: TRIVIAL (Xu, uint32_t); break;
       case Xl: TRIVIAL (Xl, int64_t); break;
@@ -1530,6 +1565,13 @@ static bool print_generic1 (char * __restrict *buf, size_t * __restrict bufsize,
       case XE1: case XE2: case XE3: { /* enum */
         unsigned const * const x = deser_generic_src (src, &srcoff, alignof (unsigned));
         if (!prtf (buf, bufsize, "%s%u", sep, *x))
+          return false;
+        srcoff += sizeof (*x);
+        break;
+      }
+      case Xs: {
+        int16_t const * const x = deser_generic_src (src, &srcoff, alignof (int16_t));
+        if (!prtf (buf, bufsize, "%s%"PRId16, sep, *x))
           return false;
         srcoff += sizeof (*x);
         break;
@@ -1779,7 +1821,10 @@ static const struct piddesc piddesc_omg[] = {
   { PID_TYPE_CONSISTENCY_ENFORCEMENT, PDF_QOS | PDF_FUNCTION, QP_TYPE_CONSISTENCY_ENFORCEMENT, "TYPE_CONSISTENCY_ENFORCEMENT",
     offsetof (struct ddsi_plist, qos.type_consistency), membersize (struct ddsi_plist, qos.type_consistency),
     { .f = { .deser = deser_type_consistency, .ser = ser_type_consistency, .valid = valid_type_consistency, .equal = equal_type_consistency, .print = print_type_consistency } }, 0 },
-  QP  (DATA_REPRESENTATION,                 data_representation, XQ, XE2, XSTOP),
+  QP  (DATA_REPRESENTATION,                 data_representation, XQ, Xs, XSTOP),
+  // { PID_DATA_REPRESENTATION, PDF_QOS | PDF_FUNCTION, QP_DATA_REPRESENTATION, "DATA_REPRESENTATION",
+  //   offsetof (struct ddsi_plist, qos.data_representation), membersize (struct ddsi_plist, qos.data_representation),
+  //   { .f = { .deser = deser_data_representation, .ser = ser_data_representation, .valid = valid_data_representation, .equal = equal_data_representation, .print = print_data_representation } }, 0 },
 #ifdef DDS_HAS_TYPE_DISCOVERY
   { PID_TYPE_INFORMATION, PDF_QOS | PDF_FUNCTION, QP_TYPE_INFORMATION, "TYPE_INFORMATION",
     offsetof (struct ddsi_plist, qos.type_information), membersize (struct ddsi_plist, qos.type_information),

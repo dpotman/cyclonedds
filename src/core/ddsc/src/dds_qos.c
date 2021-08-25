@@ -462,8 +462,14 @@ void dds_qset_data_representation (dds_qos_t * __restrict qos, uint32_t n, dds_d
   if ((qos->present & QP_DATA_REPRESENTATION) && qos->data_representation.value.ids != NULL)
     ddsrt_free (qos->data_representation.value.ids);
   qos->data_representation.value.n = n;
-  qos->data_representation.value.ids = ddsrt_malloc (n * sizeof (*qos->data_representation.value.ids));
-  memcpy (qos->data_representation.value.ids, values, n * sizeof (*values));
+  if (n > 0)
+  {
+    qos->data_representation.value.ids = dds_alloc (n * sizeof (*qos->data_representation.value.ids));
+    assert (qos->data_representation.value.ids);
+    memcpy (qos->data_representation.value.ids, values, n * sizeof (*values));
+  }
+  else
+    qos->data_representation.value.ids = NULL;
   qos->present |= QP_DATA_REPRESENTATION;
 }
 
@@ -785,18 +791,17 @@ bool dds_qget_data_representation (const dds_qos_t * __restrict qos, uint32_t *n
 {
   if (qos == NULL || !(qos->present & QP_DATA_REPRESENTATION))
     return false;
-  if (n == NULL && values != NULL)
+  if (n == NULL)
     return false;
   if (qos->data_representation.value.n > 0)
     assert (qos->data_representation.value.ids != NULL);
-  if (n != NULL)
-    *n = qos->data_representation.value.n;
+  *n = qos->data_representation.value.n;
   if (values != NULL)
   {
     if (qos->data_representation.value.n > 0)
     {
       size_t sz = qos->data_representation.value.n * sizeof (*qos->data_representation.value.ids);
-      *values = ddsrt_malloc (sz);
+      *values = dds_alloc (sz);
       memcpy (*values, qos->data_representation.value.ids, sz);
     }
     else

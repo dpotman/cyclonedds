@@ -600,7 +600,7 @@ const dds_topic_descriptor_t DDS_XTypes_TypeIdentifier_desc =
   .m_keys = NULL,
   .m_nops = 397,
   .m_ops = DDS_XTypes_TypeIdentifier_ops,
-  .m_meta = "",
+  .m_meta = ""
 };
 static const uint32_t DDS_XTypes_TypeObject_ops [] =
 {
@@ -1194,14 +1194,14 @@ const dds_topic_descriptor_t DDS_XTypes_TypeObject_desc =
   .m_keys = NULL,
   .m_nops = 380,
   .m_ops = DDS_XTypes_TypeObject_ops,
-  .m_meta = "",
+  .m_meta = ""
 };
 static const uint32_t DDS_XTypes_TypeInformation_ops [] =
 {
   /* TypeInformation */
   DDS_OP_PLC,
-  DDS_OP_JEQ | 5, 4097u,
-  DDS_OP_JEQ | 7, 4098u,
+  DDS_OP_PLM | 5, 4097u,
+  DDS_OP_PLM | 7, 4098u,
   DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_EXT, offsetof (DDS_XTypes_TypeInformation, minimal), (3u << 16u) + 8u /* TypeIdentifierWithDependencies */,
   DDS_OP_RTS,
@@ -1322,5 +1322,5 @@ const dds_topic_descriptor_t DDS_XTypes_TypeInformation_desc =
   .m_keys = NULL,
   .m_nops = 70,
   .m_ops = DDS_XTypes_TypeInformation_ops,
-  .m_meta = "",
+  .m_meta = ""
 };

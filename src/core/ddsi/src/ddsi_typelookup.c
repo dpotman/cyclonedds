@@ -93,7 +93,7 @@ bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t 
   for (uint32_t n = 0; n < dependent_type_id_count; n++)
     ddsi_typeid_copy (&request.data._u.getTypes.type_ids._buffer[n + 1], dependent_type_ids[n]);
 
-  struct ddsi_serdata *serdata = ddsi_serdata_from_sample_xcdr_version (gv->tl_svc_request_type, SDK_DATA, CDR_ENC_VERSION_2, &request);
+  struct ddsi_serdata *serdata = ddsi_serdata_from_sample_data_representation (gv->tl_svc_request_type, SDK_DATA, XCDR2_DATA_REPRESENTATION, &request);
   ddsrt_free (request.data._u.getTypes.type_ids._buffer);
   serdata->timestamp = ddsrt_time_wallclock ();
   type->state = DDSI_TYPE_REQUESTED;
@@ -125,7 +125,7 @@ static void write_typelookup_reply (struct writer *wr, seqno_t seqno, struct DDS
   reply.return_data._u.getType._d = DDS_RETCODE_OK;
   reply.return_data._u.getType._u.result.types._length = types->_length;
   reply.return_data._u.getType._u.result.types._buffer = types->_buffer;
-  struct ddsi_serdata *serdata = ddsi_serdata_from_sample_xcdr_version (gv->tl_svc_reply_type, SDK_DATA, CDR_ENC_VERSION_2, &reply);
+  struct ddsi_serdata *serdata = ddsi_serdata_from_sample_data_representation (gv->tl_svc_reply_type, SDK_DATA, XCDR2_DATA_REPRESENTATION, &reply);
   serdata->timestamp = ddsrt_time_wallclock ();
 
   GVTRACE ("wr "PGUIDFMT"\n", PGUID (wr->e.guid));

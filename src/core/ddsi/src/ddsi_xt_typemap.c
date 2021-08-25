@@ -603,5 +603,5 @@ const dds_topic_descriptor_t DDS_XTypes_TypeMapping_desc =
   .m_keys = NULL,
   .m_nops = 369,
   .m_ops = DDS_XTypes_TypeMapping_ops,
-  .m_meta = "",
+  .m_meta = ""
 };

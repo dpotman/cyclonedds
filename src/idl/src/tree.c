@@ -85,7 +85,7 @@ idl_type_t idl_type(const void *node)
   else if (idl_mask(node) & IDL_ENUMERATOR)
     return IDL_ENUM;
 
-  mask = idl_mask(node) & ((IDL_BITMASK << 1) - 1);
+  mask = idl_mask(node) & IDL_TYPE_MASK;
   switch (mask) {
     case IDL_TYPEDEF:
     /* constructed types */
@@ -2034,14 +2034,15 @@ int32_t idl_case_label_intvalue(const void *ptr)
     // FIXME
     assert(false);
   } else if (type == IDL_BOOL) {
-    // FIXME
-    assert(false);
+    idl_literal_t *literal = node->const_expr;
+    return literal->value.bln;
   } else if (type == IDL_OCTET) {
-    // FIXME
-    assert(false);
+    idl_literal_t *literal = node->const_expr;
+    return literal->value.uint8;
   } else if (type == IDL_ENUM) {
-    // FIXME
-    assert(false);
+    idl_enumerator_t *enumerator = node->const_expr;
+    assert(enumerator->value <= INT32_MAX);
+    return (int32_t)enumerator->value;
   } else {
     assert(false);
   }

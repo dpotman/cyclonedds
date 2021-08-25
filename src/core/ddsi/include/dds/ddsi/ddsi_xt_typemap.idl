@@ -1,5 +1,5 @@
 
-#include "typeinfo.idl"
+#include "ddsi_xt_typeinfo.idl"
 
 module DDS { module XTypes {
 

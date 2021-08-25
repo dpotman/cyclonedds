@@ -142,6 +142,7 @@ struct ddsi_sertype_ops {
   ddsi_sertype_typemap_t typemap;
   ddsi_sertype_typeinfo_t typeinfo;
   ddsi_sertype_assignable_from_t assignable_from;
+  void (*reserved)(void); /* reserved entry so that the number of function pointers equals previous revision of sertype_ops */
 };
 
 enum ddsi_sertype_extensibility

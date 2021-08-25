@@ -120,6 +120,8 @@ enum idl_type {
   IDL_LDOUBLE = (IDL_BASE_TYPE | IDL_FLOATING_PT_TYPE | 3u)
 };
 
+#define IDL_TYPE_MASK ((IDL_BITMASK << 1) - 1)
+
 typedef struct idl_name idl_name_t;
 struct idl_name {
   idl_symbol_t symbol;

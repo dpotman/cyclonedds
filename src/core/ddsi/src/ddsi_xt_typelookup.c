@@ -49,7 +49,7 @@ static const uint32_t DDS_Builtin_TypeLookup_Request_ops [] =
 
   /* TypeLookup_getTypes_In */
   DDS_OP_PLC,
-  DDS_OP_JEQ | 3, 206790757u,
+  DDS_OP_PLM | 3, 206790757u,
   DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_UNI, offsetof (DDS_Builtin_TypeLookup_getTypes_In, type_ids), sizeof (DDS_XTypes_TypeIdentifier), (4u << 16u) + 5u /* TypeIdentifier */,
   DDS_OP_RTS,
@@ -146,8 +146,8 @@ static const uint32_t DDS_Builtin_TypeLookup_Request_ops [] =
 
   /* TypeLookup_getTypeDependencies_In */
   DDS_OP_PLC,
-  DDS_OP_JEQ | 5, 206790757u,
-  DDS_OP_JEQ | 8, 84468690u,
+  DDS_OP_PLM | 5, 206790757u,
+  DDS_OP_PLM | 8, 84468690u,
   DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_UNI, offsetof (DDS_Builtin_TypeLookup_getTypeDependencies_In, type_ids), sizeof (DDS_XTypes_TypeIdentifier), (4u << 16u) + 65372u /* TypeIdentifier */,
   DDS_OP_RTS,
@@ -167,8 +167,8 @@ static const uint32_t DDS_Builtin_TypeLookup_Request_ops [] =
 
   /* TypeLookup_getTypes_Out */
   DDS_OP_PLC,
-  DDS_OP_JEQ | 5, 41962193u,
-  DDS_OP_JEQ | 8, 193881463u,
+  DDS_OP_PLM | 5, 41962193u,
+  DDS_OP_PLM | 8, 193881463u,
   DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_Builtin_TypeLookup_getTypes_Out, types), sizeof (DDS_XTypes_TypeIdentifierTypeObjectPair), (4u << 16u) + 10u /* TypeIdentifierTypeObjectPair */,
   DDS_OP_RTS,
@@ -668,8 +668,8 @@ static const uint32_t DDS_Builtin_TypeLookup_Request_ops [] =
 
   /* TypeLookup_getTypeDependencies_Out */
   DDS_OP_PLC,
-  DDS_OP_JEQ | 5, 195354569u,
-  DDS_OP_JEQ | 8, 84468690u,
+  DDS_OP_PLM | 5, 195354569u,
+  DDS_OP_PLM | 8, 84468690u,
   DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_Builtin_TypeLookup_getTypeDependencies_Out, dependent_typeids), sizeof (DDS_XTypes_TypeIdentifierWithSize), (4u << 16u) + 8u /* TypeIdentifierWithSize */,
   DDS_OP_RTS,
@@ -693,7 +693,7 @@ const dds_topic_descriptor_t DDS_Builtin_TypeLookup_Request_desc =
   .m_keys = NULL,
   .m_nops = 420,
   .m_ops = DDS_Builtin_TypeLookup_Request_ops,
-  .m_meta = "",
+  .m_meta = ""
 };
 static const uint32_t DDS_Builtin_TypeLookup_Reply_ops [] =
 {
@@ -740,8 +740,8 @@ static const uint32_t DDS_Builtin_TypeLookup_Reply_ops [] =
 
   /* TypeLookup_getTypes_Out */
   DDS_OP_PLC,
-  DDS_OP_JEQ | 5, 41962193u,
-  DDS_OP_JEQ | 8, 193881463u,
+  DDS_OP_PLM | 5, 41962193u,
+  DDS_OP_PLM | 8, 193881463u,
   DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_Builtin_TypeLookup_getTypes_Out, types), sizeof (DDS_XTypes_TypeIdentifierTypeObjectPair), (4u << 16u) + 10u /* TypeIdentifierTypeObjectPair */,
   DDS_OP_RTS,
@@ -1331,8 +1331,8 @@ static const uint32_t DDS_Builtin_TypeLookup_Reply_ops [] =
 
   /* TypeLookup_getTypeDependencies_Out */
   DDS_OP_PLC,
-  DDS_OP_JEQ | 5, 195354569u,
-  DDS_OP_JEQ | 8, 84468690u,
+  DDS_OP_PLM | 5, 195354569u,
+  DDS_OP_PLM | 8, 84468690u,
   DDS_OP_RTS,
   DDS_OP_ADR | DDS_OP_TYPE_SEQ | DDS_OP_SUBTYPE_STU, offsetof (DDS_Builtin_TypeLookup_getTypeDependencies_Out, dependent_typeids), sizeof (DDS_XTypes_TypeIdentifierWithSize), (4u << 16u) + 8u /* TypeIdentifierWithSize */,
   DDS_OP_RTS,
@@ -1356,5 +1356,5 @@ const dds_topic_descriptor_t DDS_Builtin_TypeLookup_Reply_desc =
   .m_keys = NULL,
   .m_nops = 405,
   .m_ops = DDS_Builtin_TypeLookup_Reply_ops,
-  .m_meta = "",
+  .m_meta = ""
 };
