@@ -3530,8 +3530,10 @@ search:
                                     /* Convert to absolute path     */
     if (! fullname)                 /* Non-existent or directory    */
         return  FALSE;
-    if (standard && included( fullname))        /* Once included    */
+    if (standard && included( fullname)) {       /* Once included    */
+        free( fullname);
         goto  true;
+    }
 
     if ((fp = fopen( fullname, "r")) == NULL) {
         if (errno == EMFILE) {
@@ -3609,15 +3611,17 @@ void    add_file(
  */
 {
     FILEINFO *      file;
+    const char *    filename1;
+    const char *    fullname1;
     const char *    too_many_include_nest =
             "More than %.0s%ld nesting of #include";    /* _F_ _W4_ */
 
-    filename = set_fname( filename);    /* Search or append to fnamelist[]  */
-    fullname = set_fname( fullname);    /* Search or append to fnamelist[]  */
-    file = get_file( filename, src_dir, fullname, (size_t) NBUFF, include_opt);
+    filename1 = set_fname( filename);    /* Search or append to fnamelist[]  */
+    fullname1 = set_fname( fullname);    /* Search or append to fnamelist[]  */
+    file = get_file( filename1, src_dir, fullname1, (size_t) NBUFF, include_opt);
                                         /* file == infile           */
     file->fp = fp;                      /* Better remember FILE *   */
-    cur_fname = filename;
+    cur_fname = filename1;
 
     if (include_nest >= INCLUDE_NEST)   /* Probably recursive #include      */
         cfatal( too_many_include_nest, NULL, (long) INCLUDE_NEST, NULL);
@@ -3625,6 +3629,12 @@ void    add_file(
             && include_nest == std_limits.inc_nest + 1)
         cwarn( too_many_include_nest, NULL, (long) std_limits.inc_nest, NULL);
     include_nest++;
+
+    /* free filename and fullname, as set_fname returns a pointer to the
+       copy of these strings in fnamelist */
+    if (fullname != filename)
+        free( (void *) fullname);
+    free( (void *) filename);
 }
 
 static const char *     set_fname(
@@ -3656,7 +3666,7 @@ static const char *     set_fname(
     fnamelen = strlen( filename);
     for (fnamep = fnamelist; fnamep < fname_end; fnamep++) {
         if (fnamep->len == fnamelen && str_case_eq( fnamep->name, filename))
-            return  filename;           /* Already registered       */
+            return  fnamep->name;           /* Already registered       */
     }
     fname_end->name = xmalloc( fnamelen + 1);
     filename = strcpy( (char *)fname_end->name, filename);
