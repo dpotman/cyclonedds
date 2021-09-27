@@ -190,11 +190,9 @@ static void ddsi_type_fini (struct ddsi_domaingv *gv, struct ddsi_type *type)
 struct ddsi_type * ddsi_type_lookup_locked (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id)
 {
   assert (type_id);
-  struct ddsi_type templ, *type = NULL;
-  ddsi_typeid_copy (&templ.xt.id, type_id);
-  type = ddsrt_avl_lookup (&ddsi_typelib_treedef, &gv->typelib, &templ);
-  ddsi_typeid_fini (&templ.xt.id);
-  return type;
+  /* The type identifier field is at offset 0 in struct ddsi_type and the compare
+     function only uses this field, so we can safely cast to a ddsi_type here. */
+  return ddsrt_avl_lookup (&ddsi_typelib_treedef, &gv->typelib, (struct ddsi_type *) type_id);
 }
 
 static struct ddsi_type * ddsi_type_new (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id, const ddsi_typeobj_t *type_obj)

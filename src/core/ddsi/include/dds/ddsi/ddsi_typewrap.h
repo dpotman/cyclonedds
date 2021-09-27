@@ -16,6 +16,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "dds/ddsrt/static_assert.h"
 #include "dds/ddsi/ddsi_xt_typeinfo.h"
 #include "dds/ddsi/ddsi_xt_typemap.h"
 #include "dds/ddsi/ddsi_typelib.h"
@@ -255,6 +256,10 @@ struct xt_type
     struct xt_bitmask bitmask;
   } _u;
 };
+
+/* Type identifier must at offset 0, see comment for ddsi_type */
+DDSRT_STATIC_ASSERT (offsetof (struct xt_type, id) == 0);
+
 
 DDS_EXPORT void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src);
 DDS_EXPORT ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src);

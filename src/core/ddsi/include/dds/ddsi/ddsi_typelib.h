@@ -16,6 +16,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "dds/ddsrt/static_assert.h"
 #include "dds/ddsrt/avl.h"
 #include "dds/ddsi/ddsi_guid.h"
 #include "dds/ddsi/ddsi_list_tmpl.h"
@@ -49,15 +50,21 @@ enum ddsi_type_state {
 };
 
 struct ddsi_type {
+  struct xt_type xt;                            /* wrapper for XTypes type id/obj */
   ddsrt_avl_node_t avl_node;
   enum ddsi_type_state state;
-  struct xt_type xt;                            /* wrapper for XTypes type id/obj */
   const struct ddsi_sertype *sertype;           /* sertype associated with the type identifier, NULL if type is unresolved or not used as a top-level type */
   seqno_t request_seqno;                        /* sequence number of the last type lookup request message */
   struct ddsi_type_proxy_guid_list proxy_guids; /* administration for proxy endpoints (not proxy topics) that are using this type */
   uint32_t refc;                                /* refcount for this record */
   struct ddsi_type_dep *deps;                   /* dependent type records */
 };
+
+/* The xt_type member must be at offset 0 so that the type identifier field
+   in this type is at offset 0, and a ddsi_type can be used for hash table lookup
+   without copying the type identifier in the search template */
+DDSRT_STATIC_ASSERT (offsetof (struct ddsi_type, xt) == 0);
+
 
 typedef struct ddsi_type_pair {
   struct ddsi_type *minimal;
