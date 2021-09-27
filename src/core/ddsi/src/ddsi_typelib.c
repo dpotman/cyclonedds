@@ -201,7 +201,11 @@ static struct ddsi_type * ddsi_type_new (struct ddsi_domaingv *gv, const ddsi_ty
   assert (!ddsi_type_lookup_locked (gv, type_id));
   struct ddsi_type *type = ddsrt_calloc (1, sizeof (*type));
   GVTRACE (" new %p", type);
-  ddsi_xt_type_init (gv, &type->xt, type_id, type_obj);
+  if (ddsi_xt_type_init (gv, &type->xt, type_id, type_obj) < 0)
+  {
+    ddsrt_free (type);
+    return NULL;
+  }
   ddsrt_avl_insert (&ddsi_typelib_treedef, &gv->typelib, type);
   return type;
 }
@@ -301,7 +305,7 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
   struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
   if (!type)
     type = ddsi_type_new (gv, type_id, type_obj);
-  else
+  else if (type_obj)
     ddsi_xt_type_add_typeobj (gv, &type->xt, type_obj);
   type->refc++;
   GVTRACE (" refc %"PRIu32"\n", type->refc);

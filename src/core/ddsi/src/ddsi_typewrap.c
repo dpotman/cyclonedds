@@ -166,7 +166,7 @@ static int type_object_hashid_compare (struct DDS_XTypes_TypeObjectHashId a, str
   return equivalence_hash_compare (a._u.hash, b._u.hash);
 }
 
-static int strong_connected_component_id_compare (struct DDS_XTypes_StronglyConnectedComponentId a, struct DDS_XTypes_StronglyConnectedComponentId b)
+static int strongly_connected_component_id_compare (struct DDS_XTypes_StronglyConnectedComponentId a, struct DDS_XTypes_StronglyConnectedComponentId b)
 {
   if (a.scc_length != b.scc_length)
     return a.scc_length > b.scc_length ? 1 : -1;
@@ -177,7 +177,7 @@ static int strong_connected_component_id_compare (struct DDS_XTypes_StronglyConn
 
 static bool type_id_with_size_equal (const struct DDS_XTypes_TypeIdentifierWithSize *a, const struct DDS_XTypes_TypeIdentifierWithSize *b)
 {
-  return !ddsi_typeid_compare (&a->type_id, &b->type_id) && a->typeobject_serialized_size == b->typeobject_serialized_size;
+  return a->typeobject_serialized_size == b->typeobject_serialized_size && !ddsi_typeid_compare (&a->type_id, &b->type_id);
 }
 
 static bool type_id_with_sizeseq_equal (const struct dds_sequence_DDS_XTypes_TypeIdentifierWithSize *a, const struct dds_sequence_DDS_XTypes_TypeIdentifierWithSize *b)
@@ -269,7 +269,7 @@ int ddsi_typeid_compare (const ddsi_typeid_t *a, const ddsi_typeid_t *b)
         return a->_u.map_ldefn.key_flags > b->_u.map_ldefn.key_flags ? 1 : -1;
       return ddsi_typeid_compare (a->_u.map_ldefn.key_identifier, b->_u.map_ldefn.key_identifier);
     case DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT:
-      return strong_connected_component_id_compare (a->_u.sc_component_id, b->_u.sc_component_id);
+      return strongly_connected_component_id_compare (a->_u.sc_component_id, b->_u.sc_component_id);
     case DDS_XTypes_EK_COMPLETE:
     case DDS_XTypes_EK_MINIMAL:
       return equivalence_hash_compare (a->_u.equivalence_hash, b->_u.equivalence_hash);
@@ -337,14 +337,18 @@ static void xt_lbounds_dup (struct DDS_XTypes_LBoundSeq *dst, const struct DDS_X
   dst->_buffer = ddsrt_memdup (&src->_buffer, dst->_length * sizeof (*dst->_buffer));
 }
 
-static void add_minimal_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeobj_t *to)
+static int add_minimal_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeobj_t *to)
 {
   const struct DDS_XTypes_MinimalTypeObject *mto = &to->_u.minimal;
+  int ret = 0;
   xt->has_obj = 1;
   if (!xt->_d)
     xt->_d = mto->_d;
-  else
-    assert (xt->_d == mto->_d);
+  else if (xt->_d != mto->_d)
+  {
+    ret = -1;
+    goto err_tk;
+  }
   switch (mto->_d)
   {
     case DDS_XTypes_TK_ALIAS:
@@ -442,44 +446,52 @@ static void add_minimal_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, c
       }
       break;
     default:
-      abort (); /* not supported */
+      ret = -1; /* not supported */
+      break;
   }
+err_tk:
+  return ret;
 }
 
-static void add_complete_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeobj_t *to)
+static int add_complete_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeobj_t *to)
 {
   // FIXME
   xt->has_obj = 1;
   (void) gv;
   (void) xt;
   (void) to;
+  return 0;
 }
 
-void ddsi_xt_type_add_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeobj_t *to)
+int ddsi_xt_type_add_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeobj_t *to)
 {
   assert (xt);
   assert (to);
   assert (xt->kind == DDSI_TYPEID_KIND_MINIMAL || xt->kind == DDSI_TYPEID_KIND_COMPLETE);
   if (xt->has_obj)
-    return;
+    return 0;
   if (xt->kind == DDSI_TYPEID_KIND_MINIMAL)
   {
     assert (to->_d == DDS_XTypes_EK_MINIMAL);
-    add_minimal_typeobj (gv, xt, to);
+    return add_minimal_typeobj (gv, xt, to);
   }
   else if (xt->kind == DDSI_TYPEID_KIND_COMPLETE)
   {
     assert (to->_d == DDS_XTypes_EK_COMPLETE);
-    add_complete_typeobj (gv, xt, to);
+    return add_complete_typeobj (gv, xt, to);
   }
   else
-    abort (); // FIXME: EK_BOTH?
+  {
+    // FIXME: EK_BOTH?
+    return -1;
+  }
 }
 
-void ddsi_xt_type_init (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_typeobj_t *to)
+int ddsi_xt_type_init (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_typeobj_t *to)
 {
   assert (xt);
   assert (ti);
+  int ret = 0;
 
   ddsi_typeid_copy (&xt->id, ti);
   if (!ddsi_typeid_is_hash (ti))
@@ -489,89 +501,89 @@ void ddsi_xt_type_init (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi
   else
     xt->kind = DDSI_TYPEID_KIND_MINIMAL;
 
-  /* Primitive types */
   if (ti->_d <= DDS_XTypes_TK_CHAR16)
   {
     assert (to == NULL);
     xt->_d = ti->_d;
-    return;
   }
-
-  /* Other types */
-  xt->is_plain_collection = ti->_d >= DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL && ti->_d <= DDS_XTypes_TI_PLAIN_MAP_LARGE;
-  switch (ti->_d)
+  else
   {
-    case DDS_XTypes_TI_STRING8_SMALL:
-      xt->_d = DDS_XTypes_TK_STRING8;
-      xt->_u.str8.bound = (DDS_XTypes_LBound) ti->_u.string_sdefn.bound;
-      break;
-    case DDS_XTypes_TI_STRING8_LARGE:
-      xt->_d = DDS_XTypes_TK_STRING8;
-      xt->_u.str8.bound = ti->_u.string_ldefn.bound;
-      break;
-    case DDS_XTypes_TI_STRING16_SMALL:
-      xt->_d = DDS_XTypes_TK_STRING16;
-      xt->_u.str16.bound = (DDS_XTypes_LBound) ti->_u.string_sdefn.bound;
-      break;
-    case DDS_XTypes_TI_STRING16_LARGE:
-      xt->_d = DDS_XTypes_TK_STRING16;
-      xt->_u.str16.bound = ti->_u.string_ldefn.bound;
-      break;
-    case DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL:
-      xt->_d = DDS_XTypes_TK_SEQUENCE;
-      xt->_u.seq.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.seq_sdefn.element_identifier);
-      xt->_u.seq.bound = (DDS_XTypes_LBound) ti->_u.seq_sdefn.bound;
-      xt_collection_common_init (&xt->_u.seq.c, &ti->_u.seq_sdefn.header);
-      break;
-    case DDS_XTypes_TI_PLAIN_SEQUENCE_LARGE:
-      xt->_d = DDS_XTypes_TK_SEQUENCE;
-      xt->_u.seq.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.seq_ldefn.element_identifier);
-      xt->_u.seq.bound = ti->_u.seq_ldefn.bound;
-      xt_collection_common_init (&xt->_u.seq.c, &ti->_u.seq_ldefn.header);
-      break;
-    case DDS_XTypes_TI_PLAIN_ARRAY_SMALL:
-      xt->_d = DDS_XTypes_TK_ARRAY;
-      xt->_u.array.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.array_sdefn.element_identifier);
-      xt_collection_common_init (&xt->_u.array.c, &ti->_u.array_sdefn.header);
-      xt_sbounds_to_lbounds (&xt->_u.array.bounds, &ti->_u.array_sdefn.array_bound_seq);
-      break;
-    case DDS_XTypes_TI_PLAIN_ARRAY_LARGE:
-      xt->_d = DDS_XTypes_TK_ARRAY;
-      xt->_u.array.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.array_ldefn.element_identifier);
-      xt_collection_common_init (&xt->_u.array.c, &ti->_u.array_ldefn.header);
-      xt_lbounds_dup (&xt->_u.array.bounds, &ti->_u.array_ldefn.array_bound_seq);
-      break;
-    case DDS_XTypes_TI_PLAIN_MAP_SMALL:
-      xt->_d = DDS_XTypes_TK_MAP;
-      xt->_u.map.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.map_sdefn.element_identifier);
-      xt->_u.map.bound = (DDS_XTypes_LBound) ti->_u.map_sdefn.bound;
-      xt_collection_common_init (&xt->_u.map.c, &ti->_u.map_sdefn.header);
-      xt->_u.map.key_type = ddsi_type_ref_id_locked (gv, ti->_u.map_sdefn.key_identifier);
-      break;
-    case DDS_XTypes_TI_PLAIN_MAP_LARGE:
-      xt->_d = DDS_XTypes_TK_MAP;
-      xt->_u.map.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.map_ldefn.element_identifier);
-      xt->_u.map.bound = (DDS_XTypes_LBound) ti->_u.map_ldefn.bound;
-      xt_collection_common_init (&xt->_u.map.c, &ti->_u.map_ldefn.header);
-      xt->_u.map.key_type = ddsi_type_ref_id_locked (gv, ti->_u.map_ldefn.key_identifier);
-      break;
-    case DDS_XTypes_EK_MINIMAL:
-      if (to != NULL)
-        add_minimal_typeobj (gv, xt, to);
-      break;
-    case DDS_XTypes_EK_COMPLETE:
-      if (to != NULL)
-        add_complete_typeobj (gv, xt, to);
-      break;
-    case DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT:
-      xt->_d = DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT;
-      xt->sc_component_id = ti->_u.sc_component_id;
-      break;
-    default:
-      abort (); /* not supported */
-      break;
+    xt->is_plain_collection = ti->_d >= DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL && ti->_d <= DDS_XTypes_TI_PLAIN_MAP_LARGE;
+    switch (ti->_d)
+    {
+      case DDS_XTypes_TI_STRING8_SMALL:
+        xt->_d = DDS_XTypes_TK_STRING8;
+        xt->_u.str8.bound = (DDS_XTypes_LBound) ti->_u.string_sdefn.bound;
+        break;
+      case DDS_XTypes_TI_STRING8_LARGE:
+        xt->_d = DDS_XTypes_TK_STRING8;
+        xt->_u.str8.bound = ti->_u.string_ldefn.bound;
+        break;
+      case DDS_XTypes_TI_STRING16_SMALL:
+        xt->_d = DDS_XTypes_TK_STRING16;
+        xt->_u.str16.bound = (DDS_XTypes_LBound) ti->_u.string_sdefn.bound;
+        break;
+      case DDS_XTypes_TI_STRING16_LARGE:
+        xt->_d = DDS_XTypes_TK_STRING16;
+        xt->_u.str16.bound = ti->_u.string_ldefn.bound;
+        break;
+      case DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL:
+        xt->_d = DDS_XTypes_TK_SEQUENCE;
+        xt->_u.seq.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.seq_sdefn.element_identifier);
+        xt->_u.seq.bound = (DDS_XTypes_LBound) ti->_u.seq_sdefn.bound;
+        xt_collection_common_init (&xt->_u.seq.c, &ti->_u.seq_sdefn.header);
+        break;
+      case DDS_XTypes_TI_PLAIN_SEQUENCE_LARGE:
+        xt->_d = DDS_XTypes_TK_SEQUENCE;
+        xt->_u.seq.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.seq_ldefn.element_identifier);
+        xt->_u.seq.bound = ti->_u.seq_ldefn.bound;
+        xt_collection_common_init (&xt->_u.seq.c, &ti->_u.seq_ldefn.header);
+        break;
+      case DDS_XTypes_TI_PLAIN_ARRAY_SMALL:
+        xt->_d = DDS_XTypes_TK_ARRAY;
+        xt->_u.array.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.array_sdefn.element_identifier);
+        xt_collection_common_init (&xt->_u.array.c, &ti->_u.array_sdefn.header);
+        xt_sbounds_to_lbounds (&xt->_u.array.bounds, &ti->_u.array_sdefn.array_bound_seq);
+        break;
+      case DDS_XTypes_TI_PLAIN_ARRAY_LARGE:
+        xt->_d = DDS_XTypes_TK_ARRAY;
+        xt->_u.array.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.array_ldefn.element_identifier);
+        xt_collection_common_init (&xt->_u.array.c, &ti->_u.array_ldefn.header);
+        xt_lbounds_dup (&xt->_u.array.bounds, &ti->_u.array_ldefn.array_bound_seq);
+        break;
+      case DDS_XTypes_TI_PLAIN_MAP_SMALL:
+        xt->_d = DDS_XTypes_TK_MAP;
+        xt->_u.map.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.map_sdefn.element_identifier);
+        xt->_u.map.bound = (DDS_XTypes_LBound) ti->_u.map_sdefn.bound;
+        xt_collection_common_init (&xt->_u.map.c, &ti->_u.map_sdefn.header);
+        xt->_u.map.key_type = ddsi_type_ref_id_locked (gv, ti->_u.map_sdefn.key_identifier);
+        break;
+      case DDS_XTypes_TI_PLAIN_MAP_LARGE:
+        xt->_d = DDS_XTypes_TK_MAP;
+        xt->_u.map.c.element_type = ddsi_type_ref_id_locked (gv, ti->_u.map_ldefn.element_identifier);
+        xt->_u.map.bound = (DDS_XTypes_LBound) ti->_u.map_ldefn.bound;
+        xt_collection_common_init (&xt->_u.map.c, &ti->_u.map_ldefn.header);
+        xt->_u.map.key_type = ddsi_type_ref_id_locked (gv, ti->_u.map_ldefn.key_identifier);
+        break;
+      case DDS_XTypes_EK_MINIMAL:
+        if (to != NULL)
+          ret = add_minimal_typeobj (gv, xt, to);
+        break;
+      case DDS_XTypes_EK_COMPLETE:
+        if (to != NULL)
+          ret = add_complete_typeobj (gv, xt, to);
+        break;
+      case DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT:
+        xt->_d = DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT;
+        xt->sc_component_id = ti->_u.sc_component_id;
+        break;
+      default:
+        ddsi_typeid_fini (&xt->id);
+        ret = -1; /* not supported */
+        break;
+    }
   }
-  return;
+  return ret;
 }
 
 static void get_type_detail (DDS_XTypes_CompleteTypeDetail *dst, const struct xt_type_detail *src)
