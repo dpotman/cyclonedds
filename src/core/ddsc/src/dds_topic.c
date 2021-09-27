@@ -671,12 +671,27 @@ dds_entity_t dds_create_topic (dds_entity_t participant, const dds_topic_descrip
   st->type.ops.nops = dds_stream_countops (desc->m_ops, desc->m_nkeys, desc->m_keys);
   st->type.ops.ops = ddsrt_memdup (desc->m_ops, st->type.ops.nops * sizeof (*st->type.ops.ops));
 
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  st->type.typeinfo_ser.data = desc->type_information.sz ? ddsrt_memdup (desc->type_information.data, desc->type_information.sz) : NULL;
-  st->type.typeinfo_ser.sz = desc->type_information.sz;
-  st->type.typemap_ser.data = desc->type_mapping.sz ? ddsrt_memdup (desc->type_mapping.data, desc->type_mapping.sz) : NULL;
-  st->type.typemap_ser.sz = desc->type_mapping.sz;
-#endif
+  if (desc->m_flagset & DDS_TOPIC_XTYPES_METADATA)
+  {
+    if (desc->type_information.sz == 0 || desc->type_information.data == NULL
+      || desc->type_mapping.sz == 0 || desc->type_mapping.data == NULL)
+    {
+      hdl = DDS_RETCODE_BAD_PARAMETER;
+      ddsi_sertype_unref (&st->c);
+      goto err_xt_meta;
+    }
+    st->type.typeinfo_ser.data =  ddsrt_memdup (desc->type_information.data, desc->type_information.sz);
+    st->type.typeinfo_ser.sz = desc->type_information.sz;
+    st->type.typemap_ser.data = ddsrt_memdup (desc->type_mapping.data, desc->type_mapping.sz);
+    st->type.typemap_ser.sz = desc->type_mapping.sz;
+  }
+  else
+  {
+    st->type.typeinfo_ser.data = NULL;
+    st->type.typeinfo_ser.sz = 0;
+    st->type.typemap_ser.data = NULL;
+    st->type.typemap_ser.sz = 0;
+  }
 
   /* Check if topic cannot be optimised (memcpy marshal) */
   if (!(st->type.flagset & DDS_TOPIC_NO_OPTIMIZE)) {
@@ -710,6 +725,7 @@ dds_entity_t dds_create_topic (dds_entity_t participant, const dds_topic_descrip
     ddsi_sertype_unref (st_tmp);
   ddsi_plist_fini (&plist);
 err_data_repr:
+err_xt_meta:
   dds_delete_qos (tpqos);
   dds_entity_unpin (ppent);
   return hdl;

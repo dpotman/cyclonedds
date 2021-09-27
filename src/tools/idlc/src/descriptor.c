@@ -1937,8 +1937,7 @@ err_keys:
 }
 
 #define MAX_FLAGS 30
-
-static int print_flags(FILE *fp, struct descriptor *descriptor)
+static int print_flags(FILE *fp, struct descriptor *descriptor, bool type_info)
 {
   const char *fmt;
   const char *vec[MAX_FLAGS] = { NULL };
@@ -1968,6 +1967,11 @@ static int print_flags(FILE *fp, struct descriptor *descriptor)
 
   if (fixed_size)
     vec[len++] = "DDS_TOPIC_FIXED_SIZE";
+
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  if (type_info)
+    vec[len++] = "DDS_TOPIC_XTYPES_METADATA";
+#endif
 
   if (!len)
     vec[len++] = "0u";
@@ -2001,7 +2005,7 @@ static int print_descriptor(
         "  .m_flagset = ";
   if (idl_fprintf(fp, fmt, type, descriptor->alignment->rendering) < 0)
     return -1;
-  if (print_flags(fp, descriptor) < 0)
+  if (print_flags(fp, descriptor, type_info) < 0)
     return -1;
   fmt = "  .m_nkeys = %1$"PRIu32"u,\n" /* number of keys */
         "  .m_typename = \"%2$s\",\n"; /* fully qualified name in IDL */
