@@ -440,10 +440,11 @@ void dds_write_set_batch (bool enable)
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
 
-dds_return_t dds_domain_resolve_type (dds_entity_t entity, const ddsi_typeid_t *type_id, dds_duration_t timeout, struct ddsi_sertype **sertype)
+dds_return_t dds_domain_resolve_type (dds_entity_t entity, const dds_typeid_t *type_id, dds_duration_t timeout, struct ddsi_sertype **sertype)
 {
   struct dds_entity *e;
   dds_return_t rc;
+  const ddsi_typeid_t *ddsi_type_id = (const ddsi_typeid_t *) type_id;
 
   if (type_id == NULL)
     return DDS_RETCODE_BAD_PARAMETER;
@@ -458,7 +459,7 @@ dds_return_t dds_domain_resolve_type (dds_entity_t entity, const ddsi_typeid_t *
 
   struct ddsi_domaingv *gv = &e->m_domain->gv;
   ddsrt_mutex_lock (&gv->typelib_lock);
-  struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
+  struct ddsi_type *type = ddsi_type_lookup_locked (gv, ddsi_type_id);
   if (type == NULL)
   {
     ddsrt_mutex_unlock (&gv->typelib_lock);
@@ -479,7 +480,7 @@ dds_return_t dds_domain_resolve_type (dds_entity_t entity, const ddsi_typeid_t *
   else
   {
     ddsrt_mutex_unlock (&gv->typelib_lock);
-    if (!ddsi_tl_request_type (gv, type_id, NULL, 0))
+    if (!ddsi_tl_request_type (gv, ddsi_type_id, NULL, 0))
     {
       rc = DDS_RETCODE_PRECONDITION_NOT_MET;
       goto failed;

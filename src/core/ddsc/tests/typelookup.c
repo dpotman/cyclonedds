@@ -148,7 +148,7 @@ static endpoint_info_t * find_typeid_match (dds_entity_t participant, dds_entity
       {
         dds_builtintopic_endpoint_t *data = ptrs[i];
         ddsi_typeid_t *t;
-        dds_return_t ret = dds_builtintopic_get_endpoint_typeid (data, &t);
+        dds_return_t ret = dds_builtintopic_get_endpoint_typeid (data, (dds_typeid_t **) &t);
         CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
         if (t != NULL)
         {
@@ -281,7 +281,7 @@ CU_Test(ddsc_typelookup, api_resolve, .init = typelookup_init, .fini = typelooku
   assert (writer_ep); // clang static analyzer
 
   /* check if type can be resolved */
-  ret = dds_domain_resolve_type (g_participant2, type_id, DDS_SECS (15), &sertype);
+  ret = dds_domain_resolve_type (g_participant2, (dds_typeid_t *) type_id, DDS_SECS (15), &sertype);
   CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
   CU_ASSERT_FATAL (sertype != NULL);
 
@@ -333,7 +333,7 @@ CU_Test(ddsc_typelookup, api_resolve_invalid, .init = typelookup_init, .fini = t
   assert (writer_ep); // clang static analyzer
 
   /* confirm that invalid type id cannot be resolved */
-  ret = dds_domain_resolve_type (g_participant2, type_id, DDS_SECS (15), &sertype);
+  ret = dds_domain_resolve_type (g_participant2, (dds_typeid_t *) type_id, DDS_SECS (15), &sertype);
   CU_ASSERT_NOT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
 
   dds_delete_qos (qos);

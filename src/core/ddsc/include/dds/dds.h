@@ -50,12 +50,15 @@ typedef int32_t dds_entity_t;
 extern "C" {
 #endif
 
+struct ddsi_typeid_t;
+typedef struct ddsi_typeid_t dds_typeid_t;
+
 struct dds_rhc;
 struct ddsi_plist;
 struct ddsi_sertype;
 struct ddsi_serdata;
 struct ddsi_sertopic; // deprecated, binary compatibility only
-struct DDS_XTypes_TypeIdentifier;
+
 
 #define DDS_MIN_PSEUDO_HANDLE ((dds_entity_t) 0x7fff0000)
 
@@ -3869,7 +3872,7 @@ dds_get_matched_publication_data (
 DDS_EXPORT dds_return_t
 dds_builtintopic_get_endpoint_typeid (
   dds_builtintopic_endpoint_t * builtintopic_endpoint,
-  struct DDS_XTypes_TypeIdentifier **type_identifier);
+  dds_typeid_t **type_identifier);
 #endif
 
 /**
@@ -4003,7 +4006,7 @@ dds_domain_set_deafmute (
 DDS_EXPORT dds_return_t
 dds_domain_resolve_type (
   dds_entity_t entity,
-  const struct DDS_XTypes_TypeIdentifier *type_id,
+  const dds_typeid_t *type_id,
   dds_duration_t timeout,
   struct ddsi_sertype **sertype);
 
