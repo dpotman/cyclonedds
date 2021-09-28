@@ -446,7 +446,7 @@ dds_return_t dds_domain_resolve_type (dds_entity_t entity, const dds_typeid_t *t
   dds_return_t rc;
   const ddsi_typeid_t *ddsi_type_id = (const ddsi_typeid_t *) type_id;
 
-  if (type_id == NULL)
+  if (ddsi_typeid_is_none (ddsi_type_id) || !ddsi_typeid_is_hash (ddsi_type_id))
     return DDS_RETCODE_BAD_PARAMETER;
 
   if ((rc = dds_entity_pin (entity, &e)) < 0)

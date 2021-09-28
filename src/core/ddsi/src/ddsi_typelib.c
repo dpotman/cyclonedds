@@ -71,7 +71,7 @@ ddsi_typeinfo_t * ddsi_typeinfo_dup (const ddsi_typeinfo_t *src)
   return dst;
 }
 
-void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typeinfo)
+void ddsi_typeinfo_deserLE (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typeinfo)
 {
   unsigned char *data;
   uint32_t srcoff = 0;
@@ -90,7 +90,7 @@ void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typ
   *typeinfo = ddsrt_calloc (1, sizeof (**typeinfo));
   dds_stream_read (&is, (void *) *typeinfo, DDS_XTypes_TypeInformation_desc.m_ops);
   if (bswap)
-    dds_free (data);
+    ddsrt_free (data);
 }
 
 void ddsi_typeinfo_fini (ddsi_typeinfo_t *typeinfo)
@@ -134,7 +134,7 @@ void ddsi_typemap_deser (unsigned char *buf, uint32_t sz, ddsi_typemap_t **typem
   *typemap = ddsrt_calloc (1, sizeof (**typemap));
   dds_stream_read (&is, (void *) *typemap, DDS_XTypes_TypeMapping_desc.m_ops);
   if (bswap)
-    dds_free (data);
+    ddsrt_free (data);
 }
 
 static void ddsi_typemap_fini (ddsi_typemap_t *typemap)
@@ -178,7 +178,7 @@ static void ddsi_type_fini (struct ddsi_domaingv *gv, struct ddsi_type *type)
   {
     ddsi_type_unref_locked (gv, dep->type);
     dep1 = dep->prev;
-    dds_free (dep);
+    ddsrt_free (dep);
     dep = dep1;
   }
 #ifndef NDEBUG
@@ -318,11 +318,9 @@ struct ddsi_type * ddsi_type_ref_local (struct ddsi_domaingv *gv, const struct d
     GVTRACE ("type "PTYPEIDFMT" resolved\n", PTYPEID(*type_id));
     resolved = true;
   }
-
-  ddsrt_mutex_unlock (&gv->typelib_lock);
-
   if (resolved)
     ddsrt_cond_broadcast (&gv->typelib_resolved_cond);
+  ddsrt_mutex_unlock (&gv->typelib_lock);
 
   if (gpe_match_upd != NULL)
   {

@@ -688,29 +688,36 @@ static dds_return_t deser_type_information (void * __restrict dst, struct flagse
   size_t dstoff = 0;
   uint32_t srcoff = 0;
   unsigned char *buf;
-  ddsi_typeinfo_t const ** x = deser_generic_dst (dst, &dstoff, alignof (ddsi_typeinfo_t *));
-  *x = ddsrt_calloc (1, sizeof (**x));
+  dds_return_t ret = 0;
+
   if (dd->bswap)
   {
     buf = ddsrt_memdup (dd->buf, dd->bufsz);
-    dds_stream_normalize1 ((char *) buf, &srcoff, (uint32_t) dd->bufsz, dd->bswap, /* FIXME */ CDR_ENC_VERSION_2, DDS_XTypes_TypeInformation_desc.m_ops);
+    if (!dds_stream_normalize1 ((char *) buf, &srcoff, (uint32_t) dd->bufsz, dd->bswap, CDR_ENC_VERSION_2, DDS_XTypes_TypeInformation_desc.m_ops))
+    {
+      ret = DDS_RETCODE_BAD_PARAMETER;
+      goto err_normalize;
+    }
   }
   else
     buf = (unsigned char *) dd->buf;
 
   dds_istream_t is = { .m_buffer = buf, .m_index = 0, .m_size = (uint32_t) dd->bufsz, .m_xcdr_version = CDR_ENC_VERSION_2 };
+  ddsi_typeinfo_t const ** x = deser_generic_dst (dst, &dstoff, alignof (ddsi_typeinfo_t *));
+  *x = ddsrt_calloc (1, sizeof (**x));
   dds_stream_read (&is, (void *) *x, DDS_XTypes_TypeInformation_desc.m_ops);
   *flagset->present |= flag;
+err_normalize:
   if (dd->bswap)
     ddsrt_free (buf);
-  return 0;
+  return ret;
 }
 
 static dds_return_t ser_type_information (struct nn_xmsg *xmsg, nn_parameterid_t pid, const void *src, size_t srcoff, enum ddsrt_byte_order_selector bo)
 {
   ddsi_typeinfo_t const * const * x = deser_generic_src (src, &srcoff, alignof (ddsi_typeinfo_t *));
 
-  dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = /* FIXME */ CDR_ENC_VERSION_2 };
+  dds_ostream_t os = { .m_buffer = NULL, .m_index = 0, .m_size = 0, .m_xcdr_version = CDR_ENC_VERSION_2 };
   if (bo == DDSRT_BOSEL_LE)
     dds_stream_writeLE ((dds_ostreamLE_t *) &os, (const void *) *x, DDS_XTypes_TypeInformation_desc.m_ops);
   else if (bo == DDSRT_BOSEL_BE)

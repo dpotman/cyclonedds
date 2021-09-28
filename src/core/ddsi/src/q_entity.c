@@ -5694,7 +5694,7 @@ static void set_topic_definition_hash (struct ddsi_topic_definition *tpd)
   ddsi_typeid_ser (&tpd->type_pair->complete->xt.id, &buf, &sz);
   assert (sz && buf);
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) buf, sz);
-  dds_free (buf);
+  ddsrt_free (buf);
 
   /* Add serialized qos as part of the key. The type_information field
      of the QoS is not included, as this field may contain a list of

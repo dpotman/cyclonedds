@@ -80,12 +80,10 @@ static struct ktopic_type_guid * topic_guid_map_refc_impl (const struct dds_ktop
 {
   ddsi_typeid_t *tid = ddsi_sertype_typeid (sertype, DDSI_TYPEID_KIND_COMPLETE);
   if (ddsi_typeid_is_none (tid))
-    tid = ddsi_sertype_typeid (sertype, DDSI_TYPEID_KIND_MINIMAL);
-  if (ddsi_typeid_is_none (tid))
     return NULL;
-  struct ktopic_type_guid
-    templ = { .type_id = tid, .refc = 0, .guid = {.prefix.u = {0, 0, 0}, .entityid.u = 0}, .tp = NULL },
-    *m = ddsrt_hh_lookup (ktp->topic_guid_map, &templ);
+  struct ktopic_type_guid *m,
+    templ = { .type_id = tid, .refc = 0, .guid = {.prefix.u = {0, 0, 0}, .entityid.u = 0}, .tp = NULL };
+  m = ddsrt_hh_lookup (ktp->topic_guid_map, &templ);
   assert (m != NULL);
   if (unref)
     m->refc--;

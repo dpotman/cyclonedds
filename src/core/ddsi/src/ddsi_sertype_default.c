@@ -68,9 +68,10 @@ static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn,
   const struct ddsi_sertype_default *type = (struct ddsi_sertype_default *) tpcmn;
   if (type->type.typeinfo_ser.sz == 0 || type->type.typeinfo_ser.data == NULL)
     return NULL;
-  ddsi_typeinfo_t *type_info = NULL;
   ddsi_typeid_t *type_id = NULL;
-  ddsi_typeinfo_deser (type->type.typeinfo_ser.data, type->type.typeinfo_ser.sz, &type_info);
+  ddsi_typeinfo_t *type_info = NULL;
+  /* The type information blob is little endian XCDR2 data */
+  ddsi_typeinfo_deserLE (type->type.typeinfo_ser.data, type->type.typeinfo_ser.sz, &type_info);
   if (kind == DDSI_TYPEID_KIND_MINIMAL && !ddsi_typeid_is_none (&type_info->minimal.typeid_with_size.type_id))
     type_id = ddsi_typeid_dup (&type_info->minimal.typeid_with_size.type_id);
   else if (!ddsi_typeid_is_none (&type_info->complete.typeid_with_size.type_id))
@@ -98,7 +99,8 @@ static ddsi_typeinfo_t *sertype_default_typeinfo (const struct ddsi_sertype *tpc
   if (tp->type.typeinfo_ser.sz == 0 || tp->type.typeinfo_ser.data == NULL)
     return false;
   ddsi_typeinfo_t *type_info = NULL;
-  ddsi_typeinfo_deser (tp->type.typeinfo_ser.data, tp->type.typeinfo_ser.sz, &type_info);
+  /* The type information blob is little endian XCDR2 data */
+  ddsi_typeinfo_deserLE (tp->type.typeinfo_ser.data, tp->type.typeinfo_ser.sz, &type_info);
   return type_info;
 }
 

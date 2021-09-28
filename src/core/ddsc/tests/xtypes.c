@@ -50,9 +50,9 @@ typedef void (*sample_check) (void *s1, void *s2);
 
 static void xtypes_init (void)
 {
-  /* Domains for pub and sub use a different domain id, but the portgain setting
-         * in configuration is 0, so that both domains will map to the same port number.
-         * This allows to create two domains in a single test process. */
+  /* Domains for pub and sub use a different internal domain id, but the external
+   * domain id in configuration is 0, so that both domains will map to the same port number.
+   * This allows to create two domains in a single test process. */
   char *conf1 = ddsrt_expand_envvars (DDS_CONFIG, DDS_DOMAINID_PUB);
   char *conf2 = ddsrt_expand_envvars (DDS_CONFIG, DDS_DOMAINID_SUB);
   g_domain1 = dds_create_domain (DDS_DOMAINID_PUB, conf1);
@@ -201,7 +201,7 @@ CU_TheoryDataPoints (ddsc_xtypes, basic) = {
 };
 
 CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_topic_descriptor_t *desc2, size_t size1, size_t size2, sample_init fn_init1, sample_init fn_init2, sample_check fn_cmp1, sample_check fn_cmp2),
-    ddsc_xtypes, basic, .init = xtypes_init, .fini = xtypes_fini)
+    ddsc_xtypes, basic, .init = xtypes_init, .fini = xtypes_fini, .disabled = 1)
 {
   for (int t = 0; t <= 1; t++)
   {

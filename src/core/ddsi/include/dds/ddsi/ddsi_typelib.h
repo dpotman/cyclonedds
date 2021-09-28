@@ -72,7 +72,7 @@ typedef struct ddsi_type_pair {
 } ddsi_type_pair_t;
 
 bool ddsi_typeinfo_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b);
-void ddsi_typeinfo_deser (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typeinfo);
+void ddsi_typeinfo_deserLE (unsigned char *buf, uint32_t sz, ddsi_typeinfo_t **typeinfo);
 void ddsi_typeinfo_fini (ddsi_typeinfo_t *typeinfo);
 ddsi_typeinfo_t * ddsi_typeinfo_dup (const ddsi_typeinfo_t *src);
 
