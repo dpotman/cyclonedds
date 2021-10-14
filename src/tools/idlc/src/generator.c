@@ -27,6 +27,7 @@
 #include "idl/print.h"
 #include "idlc/generator.h"
 
+/* C back-end specific command line options */
 const char *export_macro = NULL;
 
 static int print_base_type(
@@ -409,6 +410,7 @@ idlc_generate(const idl_pstate_t *pstate)
   } else {
     generator.export_macro = NULL;
   }
+
   ret = generate_nosetup(pstate, &generator);
 
 err_options:

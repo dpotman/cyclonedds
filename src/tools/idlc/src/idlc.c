@@ -51,6 +51,7 @@ static struct {
   int preprocess;
   int keylist;
   int case_sensitive;
+  int default_extensibility;
   int help;
   int version;
 #ifdef DDS_HAS_TYPE_DISCOVERY
@@ -358,6 +359,9 @@ static idl_retcode_t idlc_parse(void)
     ret = idl_parse(pstate);
     assert(ret != IDL_RETCODE_NEED_REFILL);
     if (ret == IDL_RETCODE_OK) {
+      if ((ret = idl_set_default_extensibility(pstate->root, config.default_extensibility)) != IDL_RETCODE_OK)
+        return ret;
+
       if (config.keylist) {
         pstate->flags |= IDL_FLAG_KEYLIST;
       } else if (pstate->keylists && pstate->annotations) {
@@ -415,6 +419,20 @@ static int set_preprocess_only(const idlc_option_t *opt, const char *arg)
   (void)arg;
   config.compile = 0;
   config.preprocess = 1;
+  return 0;
+}
+
+static int set_default_extensibility(const idlc_option_t *opt, const char *arg)
+{
+  (void)opt;
+  if (strcmp(arg, "final") == 0)
+    config.default_extensibility = IDL_FINAL;
+  else if (strcmp(arg, "appendable") == 0)
+    config.default_extensibility = IDL_APPENDABLE;
+  else if (strcmp(arg, "mutable") == 0)
+    config.default_extensibility = IDL_MUTABLE;
+  else
+    return IDLC_BAD_ARGUMENT;
   return 0;
 }
 
@@ -477,6 +495,11 @@ static const idlc_option_t *compopts[] = {
   &(idlc_option_t){
     IDLC_FLAG, { .flag = &config.version }, 'v', "", "",
     "Display version information." },
+  &(idlc_option_t){
+    IDLC_FUNCTION, { .function = &set_default_extensibility }, 'x', "", "<extensibility>",
+    "Set the default extensibility that is used in case no extensibility"
+    "is set on a type. Possible values are final, appendable and mutable. "
+    "(default: final)" },
 #ifdef DDS_HAS_TYPE_DISCOVERY
   &(idlc_option_t){
     IDLC_FLAG, { .flag = &config.no_type_info }, 't', "", "",
@@ -534,6 +557,7 @@ int main(int argc, char *argv[])
 
   config.compile = 1;
   config.preprocess = 1;
+  config.default_extensibility = IDL_FINAL;
 #ifdef DDS_HAS_TYPE_DISCOVERY
   config.no_type_info = 0;
 #endif
@@ -602,7 +626,17 @@ int main(int argc, char *argv[])
       if (ret == IDL_RETCODE_NO_MEMORY)
         fprintf(stderr, "Out of memory\n");
       goto err_parse;
-    } else if (config.compile) {
+    }
+
+    if (config.default_extensibility < 0 && idl_has_implicit_extensibility(pstate->root)) {
+      idl_warning(pstate, NULL, "No default extensibility provided. For one or more of the "
+        "aggregated types in the IDL the extensibility is not explicitly set. "
+        "Currently the default extensibility for these types is 'final', but this "
+        "may change to 'appendable' in a future release because that is the "
+        "default in the DDS XTypes specification.");
+    }
+
+    if (config.compile) {
       if (gen.generate)
         ret = gen.generate(pstate);
       idl_delete_pstate(pstate);

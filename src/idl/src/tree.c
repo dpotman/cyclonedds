@@ -3502,9 +3502,59 @@ bool idl_is_topic_key(const void *node, bool keylist, const idl_path_t *path, ui
 
 bool idl_is_extensible(const idl_node_t *node, idl_extensibility_t extensibility)
 {
-  return (idl_is_struct(node) && ((idl_struct_t *)node)->extensibility.value == extensibility) ||
-    (idl_is_union(node) && ((idl_union_t *)node)->extensibility.value == extensibility);
+  if (idl_is_struct(node)) {
+    const idl_struct_t *_struct = (const idl_struct_t *)node;
+    return _struct->extensibility.value == extensibility;
+  }
+  if (idl_is_union(node)) {
+    const idl_union_t *_union = (const idl_union_t *)node;
+    return _union->extensibility.value == extensibility;
+  }
+  return false;
 }
+
+bool idl_has_implicit_extensibility(const idl_node_t *node)
+{
+  assert(node);
+  for (; node; node = idl_next(node)) {
+    if (idl_mask(node) == IDL_MODULE) {
+      const idl_module_t *module = (const idl_module_t *)node;
+      return idl_has_implicit_extensibility(module->definitions);
+    } else if (idl_mask(node) == IDL_STRUCT) {
+      const idl_struct_t *_struct = (const idl_struct_t *)node;
+      if (!_struct->extensibility.annotation)
+        return true;
+    } else if (idl_mask(node) == IDL_UNION) {
+      const idl_union_t *_union = (const idl_union_t *)node;
+      if (!_union->extensibility.annotation)
+        return true;
+    }
+  }
+  return false;
+}
+
+idl_retcode_t idl_set_default_extensibility(idl_node_t *node, idl_extensibility_t default_extensibility)
+{
+  idl_retcode_t ret = IDL_RETCODE_OK;
+
+  assert(node);
+  for (; node; node = idl_next(node)) {
+    if (idl_mask(node) == IDL_MODULE) {
+      idl_module_t *module = (idl_module_t *)node;
+      return idl_set_default_extensibility(module->definitions, default_extensibility);
+    } else if (idl_mask(node) == IDL_STRUCT) {
+      idl_struct_t *_struct = (idl_struct_t *)node;
+      if (!_struct->extensibility.annotation)
+        _struct->extensibility.value = default_extensibility;
+    } else if (idl_mask(node) == IDL_UNION) {
+      idl_union_t *_union = (idl_union_t *)node;
+      if (!_union->extensibility.annotation)
+        _union->extensibility.value = default_extensibility;
+    }
+  }
+  return ret;
+}
+
 
 bool idl_is_external(const idl_node_t *node)
 {

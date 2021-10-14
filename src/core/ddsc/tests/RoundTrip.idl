@@ -11,16 +11,18 @@
  */
 module RoundTripModule
 {
+  @topic @final
   struct DataType
   {
     sequence<octet> payload;
   };
-  #pragma keylist DataType
 
+  @topic @final
   struct Address
   {
+    @key
     string ip;
+    @key
     long port;
   };
-  #pragma keylist Address ip port
 };
