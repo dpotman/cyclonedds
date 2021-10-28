@@ -371,12 +371,12 @@ static void ddsi_type_unref_impl_locked (struct ddsi_domaingv *gv, struct ddsi_t
   assert (type->refc > 0);
   if (--type->refc == 0)
   {
-    GVTRACE (" refc 0 remove type");
+    GVTRACE (" refc 0 remove type ");
     ddsrt_avl_delete (&ddsi_typelib_treedef, &gv->typelib, type);
     ddsi_type_fini (gv, type);
   }
   else
-    GVTRACE (" refc %" PRIu32, type->refc);
+    GVTRACE (" refc %" PRIu32 " ", type->refc);
 }
 
 void ddsi_type_unreg_proxy (struct ddsi_domaingv *gv, struct ddsi_type *type, const ddsi_guid_t *proxy_guid)
@@ -429,7 +429,10 @@ void ddsi_type_unref_sertype (struct ddsi_domaingv *gv, const struct ddsi_sertyp
 void ddsi_type_unref_locked (struct ddsi_domaingv *gv, struct ddsi_type *type)
 {
   if (type)
+  {
+    GVTRACE ("unref ddsi_type id " PTYPEIDFMT, PTYPEID (type->xt.id));
     ddsi_type_unref_impl_locked (gv, type);
+  }
 }
 
 static void ddsi_type_register_with_proxy_endpoints_locked (struct ddsi_domaingv *gv, const struct ddsi_type *type)
