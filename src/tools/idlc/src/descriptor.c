@@ -886,7 +886,7 @@ emit_union(
     ret = IDL_VISIT_REVISIT;
     /* For a topic, only its top-level type should be visited, not the other
        (non-related) types in the idl */
-    if (path->length == 1)
+    if (node == descriptor->topic)
       ret |= IDL_VISIT_DONT_ITERATE;
     return ret;
   }
@@ -953,7 +953,7 @@ emit_struct(
       ret = IDL_VISIT_REVISIT;
       /* For a topic, only its top-level type should be visited, not the other
         (non-related) types in the idl */
-      if (path->length == 1)
+      if (node == descriptor->topic)
         ret |= IDL_VISIT_DONT_ITERATE;
     }
     return ret;

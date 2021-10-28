@@ -19,6 +19,7 @@
 #include "dds/ddsrt/md5.h"
 #include "dds/ddsi/ddsi_serdata.h"
 #include "dds/ddsi/ddsi_cdrstream.h"
+#include "dds/ddsi/ddsi_typewrap.h"
 #include "dds/ddsi/ddsi_xt_typeinfo.h"
 #include "dds/ddsi/ddsi_xt_typemap.h"
 #include "dds/ddsc/dds_opcodes.h"
@@ -681,7 +682,11 @@ emit_struct(
     return ret;
   if (!revisit) {
     dtm->stack->to_minimal->_u.minimal._u.struct_type.struct_flags = get_struct_flags (_struct);
-    return IDL_VISIT_REVISIT;
+    ret = IDL_VISIT_REVISIT;
+    /* For a topic, only its top-level type should be visited, not the other (non-related) types in the idl */
+    if (node == dtm->root)
+      ret |= IDL_VISIT_DONT_ITERATE;
+    return ret;
   }
   return IDL_RETCODE_OK;
 }
@@ -705,7 +710,11 @@ emit_union(
     dtm->stack->to_minimal->_u.minimal._u.union_type.union_flags = get_union_flags ((const idl_union_t *) node);
     if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.union_type.header.detail)) < 0)
       return ret;
-    return IDL_VISIT_REVISIT;
+    ret = IDL_VISIT_REVISIT;
+    /* For a topic, only its top-level type should be visited, not the other (non-related) types in the idl */
+    if (node == dtm->root)
+      ret |= IDL_VISIT_DONT_ITERATE;
+    return ret;
   }
   return IDL_RETCODE_OK;
 }
@@ -1020,6 +1029,43 @@ type_obj_fini (DDS_XTypes_TypeObject *to)
   dds_stream_free_sample (to, DDS_XTypes_TypeObject_desc.m_ops);
 }
 
+static idl_retcode_t
+print_typeid_with_deps (
+  FILE *fp,
+  const struct DDS_XTypes_TypeIdentifierWithDependencies *typeid_with_deps)
+{
+  const char *fmt = "  "PTYPEIDFMT" (#deps: %d)\n";
+  if (idl_fprintf (fp, fmt, PTYPEID(typeid_with_deps->typeid_with_size.type_id), typeid_with_deps->dependent_typeid_count) < 0)
+    return IDL_RETCODE_NO_MEMORY;
+  fmt = "   - "PTYPEIDFMT"\n";
+  for (uint32_t n = 0; n < typeid_with_deps->dependent_typeids._length; n++)
+  {
+    if (idl_fprintf (fp, fmt, PTYPEID(typeid_with_deps->dependent_typeids._buffer[n].type_id)) < 0)
+      return IDL_RETCODE_NO_MEMORY;
+  }
+  return IDL_RETCODE_OK;
+}
+
+static idl_retcode_t
+print_typeinformation_comment (
+  FILE *fp,
+  const struct DDS_XTypes_TypeInformation *type_information)
+{
+  if (idl_fprintf(fp, "/* Type Information:\n") < 0)
+    return IDL_RETCODE_NO_MEMORY;
+
+  if (print_typeid_with_deps (fp, &type_information->minimal) != IDL_RETCODE_OK)
+    return IDL_RETCODE_NO_MEMORY;
+
+  if (print_typeid_with_deps (fp, &type_information->complete) != IDL_RETCODE_OK)
+    return IDL_RETCODE_NO_MEMORY;
+
+  if (idl_fprintf (fp, "*/\n") < 0)
+    return IDL_RETCODE_NO_MEMORY;
+
+  return IDL_RETCODE_OK;
+}
+
 idl_retcode_t
 print_type_meta_ser (
   FILE *fp,
@@ -1078,6 +1124,9 @@ print_type_meta_ser (
     type_information.complete.dependent_typeid_count++;
   }
 
+  if (print_typeinformation_comment (fp, &type_information) != IDL_RETCODE_OK)
+    goto err_print;
+
   {
     dds_ostream_t os;
     xcdr2_ser (&type_information, &DDS_XTypes_TypeInformation_desc, &os);
@@ -1124,6 +1173,7 @@ err_map:
     free (mapping.identifier_object_pair_complete._buffer);
   if (mapping.identifier_object_pair_minimal._buffer)
     free (mapping.identifier_object_pair_minimal._buffer);
+err_print:
 err_dep:
   if (type_information.minimal.dependent_typeids._buffer)
     free (type_information.minimal.dependent_typeids._buffer);
