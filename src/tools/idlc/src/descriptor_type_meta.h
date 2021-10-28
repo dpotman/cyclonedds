@@ -9,6 +9,9 @@
  *
  * SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause
  */
+#ifndef DESCRIPTOR_TYPE_META_H
+#define DESCRIPTOR_TYPE_META_H
+
 #include "generator.h"
 
 idl_retcode_t
@@ -16,3 +19,5 @@ print_type_meta_ser (
   FILE *fp,
   const idl_pstate_t *pstate,
   const idl_node_t *node);
+
+#endif /* DESCRIPTOR_TYPE_META_H */

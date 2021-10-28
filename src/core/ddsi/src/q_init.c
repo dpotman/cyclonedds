@@ -875,7 +875,10 @@ static struct ddsi_sertype *make_special_type_cdrstream (const struct ddsi_domai
   st->type.keys.nkeys = desc->m_nkeys;
   st->type.keys.keys = ddsrt_malloc (st->type.keys.nkeys  * sizeof (*st->type.keys.keys));
   for (uint32_t i = 0; i < st->type.keys.nkeys; i++)
-    st->type.keys.keys[i] = desc->m_keys[i].m_index;
+  {
+    st->type.keys.keys[i].ops_offs = desc->m_keys[i].m_offset;
+    st->type.keys.keys[i].idx = desc->m_keys[i].m_idx;
+  }
   st->type.ops.nops = dds_stream_countops (desc->m_ops, desc->m_nkeys, desc->m_keys);
   st->type.ops.ops = ddsrt_memdup (desc->m_ops, st->type.ops.nops * sizeof (*st->type.ops.ops));
   return (struct ddsi_sertype *) st;

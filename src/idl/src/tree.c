@@ -2326,6 +2326,38 @@ idl_create_case_label(
   return IDL_RETCODE_OK;
 }
 
+int32_t idl_case_label_intvalue(const void *ptr)
+{
+  const idl_case_label_t *node = ptr;
+  if (!(idl_mask(node) & IDL_CASE_LABEL))
+    return -1;
+  idl_type_t type = idl_type(node->const_expr);
+  if (type & IDL_INTEGER_TYPE) {
+    idl_intval_t val = idl_intval(node->const_expr);
+    if (val.type & IDL_UNSIGNED)
+      assert(val.value.ullng <= INT32_MAX);
+    assert(val.value.llng <= INT32_MAX);
+    assert(val.value.llng >= INT32_MIN);
+    return (int32_t)val.value.llng;
+  } else if (type == IDL_CHAR) {
+    // FIXME
+    assert(false);
+  } else if (type == IDL_BOOL) {
+    idl_literal_t *literal = node->const_expr;
+    return literal->value.bln;
+  } else if (type == IDL_OCTET) {
+    idl_literal_t *literal = node->const_expr;
+    return literal->value.uint8;
+  } else if (type == IDL_ENUM) {
+    idl_enumerator_t *enumerator = node->const_expr;
+    assert(enumerator->value.value <= INT32_MAX);
+    return (int32_t)enumerator->value.value;
+  } else {
+    assert(false);
+  }
+  return 0;
+}
+
 bool idl_is_enum(const void *ptr)
 {
   const idl_enum_t *node = ptr;

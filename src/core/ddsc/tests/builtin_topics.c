@@ -524,7 +524,7 @@ CU_Test(ddsc_builtin_topics, cant_use_real_topic)
       continue;
     }
 #endif
-    
+
     // extract real topic handle by digging underneath the API
     // as a very efficient alternative to a lucky guess
     dds_return_t rc;

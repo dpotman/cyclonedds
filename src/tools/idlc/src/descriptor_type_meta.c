@@ -306,17 +306,17 @@ static DDS_XTypes_StructTypeFlag
 get_struct_flags(const idl_struct_t *_struct)
 {
   DDS_XTypes_StructTypeFlag flags = 0u;
-  if (_struct->extensibility == IDL_EXTENSIBILITY_MUTABLE)
+  if (_struct->extensibility.value == IDL_MUTABLE)
     flags |= DDS_XTypes_IS_MUTABLE;
-  else if (_struct->extensibility == IDL_EXTENSIBILITY_APPENDABLE)
+  else if (_struct->extensibility.value == IDL_APPENDABLE)
     flags |= DDS_XTypes_IS_APPENDABLE;
   else {
-    assert (_struct->extensibility == IDL_EXTENSIBILITY_FINAL);
+    assert (_struct->extensibility.value == IDL_FINAL);
     flags |= DDS_XTypes_IS_FINAL;
   }
   if (_struct->nested.value)
     flags |= DDS_XTypes_IS_NESTED;
-  if (_struct->autoid == IDL_AUTOID_HASH)
+  if (_struct->autoid.value == IDL_HASH)
     flags |= DDS_XTypes_IS_AUTOID_HASH;
   return flags;
 }
@@ -325,9 +325,9 @@ static DDS_XTypes_StructMemberFlag
 get_struct_member_flags(const idl_member_t *member)
 {
   DDS_XTypes_StructMemberFlag flags = 0u;
-  if (member->external)
+  if (member->external.value)
     flags |= DDS_XTypes_IS_EXTERNAL;
-  if (member->key)
+  if (member->key.value)
     flags |= DDS_XTypes_IS_KEY;
   /* FIXME: support for other flags */
   return flags;
@@ -337,17 +337,17 @@ static DDS_XTypes_UnionTypeFlag
 get_union_flags(const idl_union_t *_union)
 {
   DDS_XTypes_UnionTypeFlag flags = 0u;
-  if (_union->extensibility == IDL_EXTENSIBILITY_MUTABLE)
+  if (_union->extensibility.value == IDL_MUTABLE)
     flags |= DDS_XTypes_IS_MUTABLE;
-  else if (_union->extensibility == IDL_EXTENSIBILITY_APPENDABLE)
+  else if (_union->extensibility.value == IDL_APPENDABLE)
     flags |= DDS_XTypes_IS_APPENDABLE;
   else {
-    assert (_union->extensibility == IDL_EXTENSIBILITY_FINAL);
+    assert (_union->extensibility.value == IDL_FINAL);
     flags |= DDS_XTypes_IS_FINAL;
   }
   if (_union->nested.value)
     flags |= DDS_XTypes_IS_NESTED;
-  if (_union->autoid == IDL_AUTOID_HASH)
+  if (_union->autoid.value == IDL_HASH)
     flags |= DDS_XTypes_IS_AUTOID_HASH;
   return flags;
 }
@@ -356,7 +356,7 @@ static DDS_XTypes_UnionDiscriminatorFlag
 get_union_discriminator_flags(const idl_switch_type_spec_t *switch_type_spec)
 {
   DDS_XTypes_UnionDiscriminatorFlag flags = 0u;
-  if (switch_type_spec->key)
+  if (switch_type_spec->key.value)
     flags |= DDS_XTypes_IS_EXTERNAL;
   /* FIXME: support for other flags */
   return flags;
@@ -366,7 +366,7 @@ static DDS_XTypes_UnionMemberFlag
 get_union_case_flags(const idl_case_t *_case)
 {
   DDS_XTypes_UnionMemberFlag flags = 0u;
-  if (_case->external)
+  if (_case->external.value)
     flags |= DDS_XTypes_IS_EXTERNAL;
   /* FIXME: support for other flags */
   return flags;
@@ -484,7 +484,8 @@ add_struct_member (struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_m
   const idl_member_t *member = (const idl_member_t *) idl_parent (node);
   if (get_type_spec_typeid (dtm, type_spec, &m.common.member_type_id, &c.common.member_type_id) < 0)
     return -1;
-  m.common.member_id = c.common.member_id = member->id.value;
+  // FIXME: multiple declarators!!!
+  m.common.member_id = c.common.member_id = member->declarators->id.value;
   m.common.member_flags = c.common.member_flags = get_struct_member_flags (member);
   get_namehash (m.detail.name_hash, idl_identifier (node));
   if (get_complete_member_detail (node, &c.detail) < 0)
@@ -516,7 +517,8 @@ add_union_case(struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minim
   const idl_case_t *_case = (const idl_case_t *) idl_parent (node);
   if (get_type_spec_typeid (dtm, type_spec, &m.common.type_id, &c.common.type_id) < 0)
     return -1;
-  m.common.member_id = c.common.member_id = _case->id.value;
+  // FIXME: check for single declarator?
+  m.common.member_id = c.common.member_id = _case->declarator->id.value;
   m.common.member_flags = c.common.member_flags = get_union_case_flags (_case);
   get_namehash (m.detail.name_hash, idl_identifier (node));
   if (get_complete_member_detail (node, &c.detail) < 0)
@@ -533,6 +535,7 @@ add_union_case(struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minim
   for (cl = case_node->labels, cnt = 0; cl; cl = idl_next (cl))
     cnt++;
   m.common.label_seq._length = cnt;
+  m.common.label_seq._release = true;
   if (cnt) {
     m.common.label_seq._buffer = calloc (cnt, sizeof (*m.common.label_seq._buffer));
     for (cl = case_node->labels, n = 0; cl; cl = idl_next (cl))
@@ -668,7 +671,7 @@ emit_struct(
   (void) path;
   if (revisit) {
     if (_struct->inherit_spec) {
-      if ((ret = get_type_spec_typeid (dtm, _struct->inherit_spec->type_spec, &dtm->stack->to_minimal->_u.minimal._u.struct_type.header.base_type, &dtm->stack->to_complete->_u.complete._u.struct_type.header.base_type)) < 0)
+      if ((ret = get_type_spec_typeid (dtm, _struct->inherit_spec->base, &dtm->stack->to_minimal->_u.minimal._u.struct_type.header.base_type, &dtm->stack->to_complete->_u.complete._u.struct_type.header.base_type)) < 0)
         return ret;
     }
     if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.struct_type.header.detail)) < 0)
@@ -822,7 +825,7 @@ emit_enum (
   if ((ret = emit_hashed_type (DDS_XTypes_TK_ENUM, node, revisit, (struct descriptor_type_meta *) user_data)) < 0)
     return ret;
   if (!revisit) {
-    dtm->stack->to_minimal->_u.minimal._u.enumerated_type.header.common.bit_bound = dtm->stack->to_complete->_u.complete._u.enumerated_type.header.common.bit_bound = _enum->bit_bound;
+    dtm->stack->to_minimal->_u.minimal._u.enumerated_type.header.common.bit_bound = dtm->stack->to_complete->_u.complete._u.enumerated_type.header.common.bit_bound = _enum->bit_bound.value;
     if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.enumerated_type.header.detail)) < 0)
       return ret;
     return IDL_VISIT_REVISIT;
@@ -854,8 +857,8 @@ emit_enumerator (
   memset (&c, 0, sizeof (c));
 
   const idl_enumerator_t *enumerator = (idl_enumerator_t *) node;
-  assert (enumerator->value <= INT32_MAX);
-  m.common.value = c.common.value = (int32_t) enumerator->value;
+  assert (enumerator->value.value <= INT32_MAX);
+  m.common.value = c.common.value = (int32_t) enumerator->value.value;
   get_namehash (m.detail.name_hash, idl_identifier (enumerator));
   if (get_complete_member_detail (node, &c.detail) < 0)
     return -1;
@@ -886,7 +889,7 @@ emit_bitmask(
   if ((ret = emit_hashed_type (DDS_XTypes_TK_BITMASK, node, revisit, (struct descriptor_type_meta *) user_data)) < 0)
     return ret;
   if (!revisit) {
-    dtm->stack->to_minimal->_u.minimal._u.bitmask_type.header.common.bit_bound = dtm->stack->to_complete->_u.complete._u.bitmask_type.header.common.bit_bound = _bitmask->bit_bound;
+    dtm->stack->to_minimal->_u.minimal._u.bitmask_type.header.common.bit_bound = dtm->stack->to_complete->_u.complete._u.bitmask_type.header.common.bit_bound = _bitmask->bit_bound.value;
     if ((ret = get_complete_type_detail (node, &dtm->stack->to_complete->_u.complete._u.bitmask_type.header.detail)) < 0)
       return ret;
     return IDL_VISIT_REVISIT;
@@ -918,7 +921,7 @@ emit_bit_value (
   memset (&c, 0, sizeof (c));
 
   const idl_bit_value_t *bit_value = (idl_bit_value_t *) node;
-  m.common.position = c.common.position = bit_value->position;
+  m.common.position = c.common.position = bit_value->position.value;
   get_namehash (m.detail.name_hash, idl_identifier (bit_value));
   if (get_complete_member_detail (node, &c.detail) < 0)
     return -1;

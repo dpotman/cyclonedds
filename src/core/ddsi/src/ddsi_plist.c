@@ -744,10 +744,11 @@ static bool equal_type_information (const void *srcx, const void *srcy, size_t s
   return ddsi_typeinfo_equal (*x, *y);
 }
 
-static dds_return_t unalias_type_information (void * __restrict dst, size_t * __restrict dstoff)
+static dds_return_t unalias_type_information (void * __restrict dst, size_t * __restrict dstoff, bool gen_seq_aliased)
 {
   ddsi_typeinfo_t const * * x = deser_generic_dst (dst, dstoff, alignof (ddsi_typeinfo_t *));
   ddsi_typeinfo_t * new_type_info = ddsi_typeinfo_dup (*x);
+  (void) gen_seq_aliased;
   *x = new_type_info;
   *dstoff += sizeof (*x);
   return 0;

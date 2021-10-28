@@ -225,7 +225,7 @@ CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_to
     dds_qos_t *qos = dds_create_qos ();
     dds_qset_reliability (qos, DDS_RELIABILITY_RELIABLE, DDS_SECS (10));
     dds_qset_history (qos, DDS_HISTORY_KEEP_ALL, 0);
-    dds_qset_data_representation (qos, 1, (dds_data_representation_id_t[]) { XCDR2_DATA_REPRESENTATION });
+    dds_qset_data_representation (qos, 1, (dds_data_representation_id_t[]) { DDS_DATA_REPRESENTATION_XCDR2 });
     CU_ASSERT_FATAL (qos != NULL);
 
     dds_entity_t writer = dds_create_writer (g_participant1, topic_wr, qos, NULL);

@@ -27,9 +27,6 @@
 #include "idl/print.h"
 #include "idlc/generator.h"
 
-#ifdef DDS_HAS_TYPE_DISCOVERY
-int no_type_info = 0;
-#endif
 const char *export_macro = NULL;
 
 static int print_base_type(
@@ -344,11 +341,6 @@ generate_nosetup(const idl_pstate_t *pstate, struct generator *generator)
 }
 
 static const idlc_option_t *opts[] = {
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  &(idlc_option_t){
-    IDLC_FLAG, { .flag = &no_type_info }, 't', "", "",
-    "Don't generate type information in the topic descriptor" },
-#endif
   &(idlc_option_t){
     IDLC_STRING, { .string = &export_macro }, 'e', "", "<export macro>",
     "Add export macro before topic descriptors." },
