@@ -867,6 +867,7 @@ static struct ddsi_sertype *make_special_type_cdrstream (const struct ddsi_domai
 #endif
   st->c.fixed_size = (st->c.fixed_size || (desc->m_flagset & DDS_TOPIC_FIXED_SIZE)) ? 1u : 0u;
   st->encoding_format = ddsi_sertype_get_encoding_format (DDS_TOPIC_TYPE_EXTENSIBILITY (desc->m_flagset));
+  st->encoding_version = CDR_ENC_VERSION_2;
   st->serpool = gv->serpool;
   st->type.size = desc->m_size;
   st->type.align = desc->m_align;
