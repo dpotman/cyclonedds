@@ -856,12 +856,14 @@ static struct ddsi_sertype *make_special_type_plist (const char *typename, nn_pa
 }
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
+/* Creates a sertype that is used for built-in type lookup readers and writers, which are using XCDR2
+   because the request/response messages contain mutable and appendable types. */
 static struct ddsi_sertype *make_special_type_cdrstream (const struct ddsi_domaingv *gv, const char *typename, const dds_topic_descriptor_t *desc)
 {
   struct ddsi_sertype_default *st = ddsrt_malloc (sizeof (*st));
   memset (st, 0, sizeof (*st));
 
-  ddsi_sertype_init (&st->c, typename, &ddsi_sertype_ops_default, desc->m_nkeys ? &ddsi_serdata_ops_cdr : &ddsi_serdata_ops_cdr_nokey, (desc->m_nkeys == 0));
+  ddsi_sertype_init (&st->c, typename, &ddsi_sertype_ops_default, desc->m_nkeys ? &ddsi_serdata_ops_xcdr2 : &ddsi_serdata_ops_xcdr2_nokey, (desc->m_nkeys == 0));
 #ifdef DDS_HAS_SHM
   st->c.iox_size = desc->m_size;
 #endif
