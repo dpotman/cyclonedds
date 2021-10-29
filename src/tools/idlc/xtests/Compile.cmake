@@ -95,7 +95,7 @@ foreach(_source ${_sources})
 
   # idl compile the idl file
   execute_process(
-    COMMAND ${_idl_compiler} ${_source}
+    COMMAND ${_idl_compiler} ${_source} "-t"   # FIXME: generating type meta-data disabled because recursive types are not supported yet
     COMMAND_ECHO STDOUT
     WORKING_DIRECTORY ${_base_dir}
     RESULT_VARIABLE _result)

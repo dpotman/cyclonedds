@@ -201,7 +201,7 @@ CU_TheoryDataPoints (ddsc_xtypes, basic) = {
 };
 
 CU_Theory ((const char *descr, const dds_topic_descriptor_t *desc1, const dds_topic_descriptor_t *desc2, size_t size1, size_t size2, sample_init fn_init1, sample_init fn_init2, sample_check fn_cmp1, sample_check fn_cmp2),
-    ddsc_xtypes, basic, .init = xtypes_init, .fini = xtypes_fini, .disabled = 1)
+    ddsc_xtypes, basic, .init = xtypes_init, .fini = xtypes_fini)
 {
   for (int t = 0; t <= 1; t++)
   {
