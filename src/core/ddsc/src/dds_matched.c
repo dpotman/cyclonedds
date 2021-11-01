@@ -234,7 +234,7 @@ dds_return_t dds_builtintopic_get_endpoint_typeid (dds_builtintopic_endpoint_t *
 {
   if (builtintopic_endpoint == NULL)
     return DDS_RETCODE_BAD_PARAMETER;
-  if (builtintopic_endpoint->qos->present & QP_TYPE_INFORMATION)
+  if (builtintopic_endpoint->qos && builtintopic_endpoint->qos->present & QP_TYPE_INFORMATION)
     *type_id = (dds_typeid_t *) ddsi_typeid_dup (&builtintopic_endpoint->qos->type_information->minimal.typeid_with_size.type_id);
   else
     *type_id = NULL;
