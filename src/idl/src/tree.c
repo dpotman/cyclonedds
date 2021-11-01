@@ -2326,7 +2326,7 @@ idl_create_case_label(
   return IDL_RETCODE_OK;
 }
 
-int32_t idl_case_label_intvalue(const void *ptr)
+int64_t idl_case_label_intvalue(const void *ptr)
 {
   const idl_case_label_t *node = ptr;
   if (!(idl_mask(node) & IDL_CASE_LABEL))
@@ -2334,11 +2334,7 @@ int32_t idl_case_label_intvalue(const void *ptr)
   idl_type_t type = idl_type(node->const_expr);
   if (type & IDL_INTEGER_TYPE) {
     idl_intval_t val = idl_intval(node->const_expr);
-    if (val.type & IDL_UNSIGNED)
-      assert(val.value.ullng <= INT32_MAX);
-    assert(val.value.llng <= INT32_MAX);
-    assert(val.value.llng >= INT32_MIN);
-    return (int32_t)val.value.llng;
+    return val.value.llng;
   } else if (type == IDL_CHAR) {
     // FIXME
     assert(false);
@@ -2351,7 +2347,7 @@ int32_t idl_case_label_intvalue(const void *ptr)
   } else if (type == IDL_ENUM) {
     idl_enumerator_t *enumerator = node->const_expr;
     assert(enumerator->value.value <= INT32_MAX);
-    return (int32_t)enumerator->value.value;
+    return enumerator->value.value;
   } else {
     assert(false);
   }

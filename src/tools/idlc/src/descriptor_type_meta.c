@@ -31,22 +31,6 @@
 #include "generator.h"
 #include "descriptor_type_meta.h"
 
-struct type_meta {
-  struct type_meta *admin_next;
-  struct type_meta *stack_prev;
-  const void *node;
-  DDS_XTypes_TypeIdentifier *ti_complete;
-  DDS_XTypes_TypeObject *to_complete;
-  DDS_XTypes_TypeIdentifier *ti_minimal;
-  DDS_XTypes_TypeObject *to_minimal;
-};
-
-struct descriptor_type_meta {
-  const idl_node_t *root;
-  struct type_meta *admin;
-  struct type_meta *stack;
-};
-
 static idl_retcode_t
 push_type (struct descriptor_type_meta *dtm, const void *node)
 {
@@ -468,6 +452,8 @@ get_complete_member_detail(
 static idl_retcode_t
 add_struct_member (const idl_pstate_t *pstate, struct descriptor_type_meta *dtm, DDS_XTypes_TypeObject *to_minimal, DDS_XTypes_TypeObject *to_complete, const void *node, const idl_type_spec_t *type_spec)
 {
+  idl_retcode_t ret;
+
   assert (to_minimal->_u.minimal._d == DDS_XTypes_TK_STRUCTURE);
   assert (to_complete->_u.complete._d == DDS_XTypes_TK_STRUCTURE);
   assert (idl_is_member (idl_parent (node)));
@@ -484,10 +470,9 @@ add_struct_member (const idl_pstate_t *pstate, struct descriptor_type_meta *dtm,
   m.common.member_id = c.common.member_id = member->declarators->id.value;
   m.common.member_flags = c.common.member_flags = get_struct_member_flags (member);
   get_namehash (m.detail.name_hash, idl_identifier (node));
-  if (get_complete_member_detail (node, &c.detail) < 0)
-    return -1;
+  if ((ret = get_complete_member_detail (node, &c.detail) < 0))
+    return ret;
 
-  idl_retcode_t ret;
   if ((ret = add_to_seq ((dds_sequence_t *) &to_minimal->_u.minimal._u.struct_type.member_seq, &m, sizeof (m))) < 0)
     return ret;
   if ((ret = add_to_seq ((dds_sequence_t *) &to_complete->_u.complete._u.struct_type.member_seq, &c, sizeof (c))) < 0)
@@ -517,8 +502,8 @@ add_union_case(const idl_pstate_t *pstate, struct descriptor_type_meta *dtm, DDS
   m.common.member_id = c.common.member_id = _case->declarator->id.value;
   m.common.member_flags = c.common.member_flags = get_union_case_flags (_case);
   get_namehash (m.detail.name_hash, idl_identifier (node));
-  if (get_complete_member_detail (node, &c.detail) < 0)
-    return -1;
+  if ((ret = get_complete_member_detail (node, &c.detail)) < 0)
+    return ret;
   get_builtin_member_ann (idl_parent (node), &c.detail.ann_builtin);
   /* FIXME*/
   memset (&c.detail.ann_custom, 0, sizeof (c.detail.ann_custom));
@@ -534,8 +519,17 @@ add_union_case(const idl_pstate_t *pstate, struct descriptor_type_meta *dtm, DDS
   m.common.label_seq._release = true;
   if (cnt) {
     m.common.label_seq._buffer = calloc (cnt, sizeof (*m.common.label_seq._buffer));
-    for (cl = case_node->labels, n = 0; cl; cl = idl_next (cl))
-      m.common.label_seq._buffer[n++] = idl_case_label_intvalue (cl);
+    for (cl = case_node->labels, n = 0; cl; cl = idl_next (cl)) {
+      int64_t val = idl_case_label_intvalue (cl);
+      /* A type object has an int32 field for case label value, so the value
+         must be in that range when generating xtypes meta-data for a type. */
+      if (val < INT32_MIN || val > INT32_MAX) {
+        idl_error (pstate, idl_location (cl), "Case label value must be in range INT32_MIN..INT32_MAX (inclusive) when generating type meta-data");
+        ret = IDL_RETCODE_OUT_OF_RANGE;
+        goto err;
+      }
+      m.common.label_seq._buffer[n++] = (int32_t) val;
+    }
   }
 
   if ((ret = add_to_seq ((dds_sequence_t *) &to_minimal->_u.minimal._u.union_type.member_seq, &m, sizeof (m))) < 0)
@@ -794,12 +788,12 @@ emit_declarator (
     assert(tm);
     if (tm->to_minimal->_u.minimal._d == DDS_XTypes_TK_STRUCTURE) {
       assert (tm->to_complete->_u.complete._d == DDS_XTypes_TK_STRUCTURE);
-      if (add_struct_member (pstate, dtm, tm->to_minimal, tm->to_complete, node, idl_is_array (node) ? node : idl_type_spec (node)) < 0)
-        return -1;
+      if ((ret = add_struct_member (pstate, dtm, tm->to_minimal, tm->to_complete, node, idl_is_array (node) ? node : idl_type_spec (node))) < 0)
+        return ret;
     } else if (tm->to_minimal->_u.minimal._d == DDS_XTypes_TK_UNION) {
       assert (tm->to_complete->_u.complete._d == DDS_XTypes_TK_UNION);
-      if (add_union_case (pstate, dtm, tm->to_minimal, tm->to_complete, node, idl_is_array (node) ? node : idl_type_spec (node)) < 0)
-        return -1;
+      if ((ret = add_union_case (pstate, dtm, tm->to_minimal, tm->to_complete, node, idl_is_array (node) ? node : idl_type_spec (node))) < 0)
+        return ret;
     } else {
       abort ();
     }
@@ -851,6 +845,7 @@ emit_enumerator (
   (void)revisit;
   (void)path;
 
+  idl_retcode_t ret;
   struct descriptor_type_meta *dtm = (struct descriptor_type_meta *) user_data;
   struct type_meta *tm = dtm->stack;
 
@@ -866,10 +861,9 @@ emit_enumerator (
   assert (enumerator->value.value <= INT32_MAX);
   m.common.value = c.common.value = (int32_t) enumerator->value.value;
   get_namehash (m.detail.name_hash, idl_identifier (enumerator));
-  if (get_complete_member_detail (node, &c.detail) < 0)
-    return -1;
+  if ((ret = get_complete_member_detail (node, &c.detail)) < 0)
+    return ret;
 
-  idl_retcode_t ret;
   if ((ret = add_to_seq ((dds_sequence_t *) &tm->to_minimal->_u.minimal._u.enumerated_type.literal_seq, &m, sizeof (m))) < 0)
     return ret;
   if ((ret = add_to_seq ((dds_sequence_t *) &tm->to_complete->_u.complete._u.enumerated_type.literal_seq, &c, sizeof (c))) < 0)
@@ -915,6 +909,7 @@ emit_bit_value (
   (void) revisit;
   (void) path;
 
+  idl_retcode_t ret;
   struct descriptor_type_meta *dtm = (struct descriptor_type_meta *) user_data;
   struct type_meta *tm = dtm->stack;
 
@@ -929,10 +924,9 @@ emit_bit_value (
   const idl_bit_value_t *bit_value = (idl_bit_value_t *) node;
   m.common.position = c.common.position = bit_value->position.value;
   get_namehash (m.detail.name_hash, idl_identifier (bit_value));
-  if (get_complete_member_detail (node, &c.detail) < 0)
-    return -1;
+  if ((ret = get_complete_member_detail (node, &c.detail)) < 0)
+    return ret;
 
-  idl_retcode_t ret;
   if ((ret = add_to_seq ((dds_sequence_t *) &tm->to_minimal->_u.minimal._u.bitmask_type.flag_seq, &m, sizeof (m))) < 0)
     return ret;
   if ((ret = add_to_seq ((dds_sequence_t *) &tm->to_complete->_u.complete._u.bitmask_type.flag_seq, &c, sizeof (c))) < 0)
@@ -984,17 +978,17 @@ print_ser_data(FILE *fp, const char *kind, const char *type, unsigned char *data
 
   fmt = "#define %1$s_%2$s (unsigned char []){ ";
   if (idl_fprintf(fp, fmt, kind, type) < 0)
-    return -1;
+    return IDL_RETCODE_NO_MEMORY;
 
   fmt = "%1$s%2$s0x%3$02"PRIx8;
   for (uint32_t n = 0; n < sz; n++)
     if (idl_fprintf(fp, fmt, n > 0 ? sep : "", !(n % 16) ? lsep : "", data[n]) < 0)
-      return -1;
+      return IDL_RETCODE_NO_MEMORY;
 
   fmt = "\\\n}\n"
         "#define %1$s_SZ_%2$s %3$"PRIu32"u\n";
   if (idl_fprintf(fp, fmt, kind, type, sz) < 0)
-    return -1;
+    return IDL_RETCODE_NO_MEMORY;
 
   return 0;
 }
@@ -1064,17 +1058,15 @@ print_typeinformation_comment (
 }
 
 idl_retcode_t
-print_type_meta_ser (
-  FILE *fp,
+generate_descriptor_type_meta (
   const idl_pstate_t *pstate,
-  const idl_node_t *node)
+  const idl_node_t *node,
+  struct descriptor_type_meta *dtm)
 {
-  char *type_name;
   idl_retcode_t ret;
-  struct descriptor_type_meta dtm;
   idl_visitor_t visitor;
 
-  memset (&dtm, 0, sizeof (dtm));
+  memset (dtm, 0, sizeof (*dtm));
   memset (&visitor, 0, sizeof (visitor));
 
   visitor.visit = IDL_STRUCT | IDL_UNION | IDL_DECLARATOR | IDL_BITMASK | IDL_BIT_VALUE | IDL_ENUM | IDL_ENUMERATOR | IDL_SWITCH_TYPE_SPEC | IDL_INHERIT_SPEC | IDL_SEQUENCE;
@@ -1092,12 +1084,48 @@ print_type_meta_ser (
   /* must be invoked for topics only, so structs and unions */
   assert (idl_is_struct (node) || idl_is_union (node));
 
-  dtm.root = node;
-  if ((ret = idl_visit (pstate, node, &visitor, &dtm)))
-    goto err_emit;
+  dtm->root = node;
+  if ((ret = idl_visit (pstate, node, &visitor, dtm)))
+    return ret;
+  return IDL_RETCODE_OK;
+}
+
+void
+descriptor_type_meta_fini (struct descriptor_type_meta *dtm)
+{
+  struct type_meta *tm = dtm->admin;
+  while (tm) {
+    type_id_fini (tm->ti_minimal);
+    free (tm->ti_minimal);
+    type_obj_fini (tm->to_minimal);
+    free (tm->to_minimal);
+
+    type_id_fini (tm->ti_complete);
+    free (tm->ti_complete);
+    type_obj_fini (tm->to_complete);
+    free (tm->to_complete);
+
+    struct type_meta *tmp = tm;
+    tm = tm->admin_next;
+    free (tmp);
+  }
+}
+
+idl_retcode_t
+print_type_meta_ser (
+  FILE *fp,
+  const idl_pstate_t *pstate,
+  const idl_node_t *node)
+{
+  char *type_name;
+  idl_retcode_t ret;
+  struct descriptor_type_meta dtm;
+
+  if ((ret = generate_descriptor_type_meta (pstate, node, &dtm)) != IDL_RETCODE_OK)
+    goto err_gen;
 
   if (IDL_PRINTA(&type_name, print_type, node) < 0)
-    return -1;
+    return IDL_RETCODE_NO_MEMORY;
 
   struct DDS_XTypes_TypeInformation type_information;
   memset (&type_information, 0, sizeof (type_information));
@@ -1177,24 +1205,9 @@ err_dep:
   if (type_information.complete.dependent_typeids._buffer)
     free (type_information.complete.dependent_typeids._buffer);
 
-  struct type_meta *tm = dtm.admin;
-  while (tm) {
-    type_id_fini (tm->ti_minimal);
-    free (tm->ti_minimal);
-    type_obj_fini (tm->to_minimal);
-    free (tm->to_minimal);
+  descriptor_type_meta_fini (&dtm);
 
-    type_id_fini (tm->ti_complete);
-    free (tm->ti_complete);
-    type_obj_fini (tm->to_complete);
-    free (tm->to_complete);
-
-    struct type_meta *tmp = tm;
-    tm = tm->admin_next;
-    free (tmp);
-  }
-
-err_emit:
+err_gen:
   return ret;
 }
 

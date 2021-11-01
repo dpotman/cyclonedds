@@ -16,7 +16,9 @@ set(sources
   ../src/generator.c
   ../src/descriptor.c
   ../src/types.c
-  descriptor.c)
+  test_common.c
+  descriptor.c
+  type_meta.c)
 
 if(ENABLE_TYPE_DISCOVERY)
   list(APPEND sources ../src/descriptor_type_meta.c)
