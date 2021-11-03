@@ -602,7 +602,7 @@ annotate_bit_bound(
     _enum->bit_bound.value = value;
     uint32_t cnt = 0;
     for (idl_enumerator_t *e1 = _enum->enumerators; e1; e1 = idl_next(e1)) {
-      if (++cnt >= (1ull << _enum->bit_bound.value)) {
+      if (++cnt > (1ull << _enum->bit_bound.value)) {
         idl_error(pstate, idl_location(e1), "Enumerator count (%u) overflow, bit_bound is %u", cnt, _enum->bit_bound.value);
         return IDL_RETCODE_OUT_OF_RANGE;
       }
