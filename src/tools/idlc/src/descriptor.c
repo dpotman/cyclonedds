@@ -27,6 +27,7 @@
 #include "generator.h"
 #include "descriptor.h"
 #include "hashid.h"
+#include "descriptor_type_meta.h"
 #include "dds/ddsc/dds_opcodes.h"
 
 #define TYPE (16)
@@ -773,21 +774,6 @@ emit_case(
     if (idl_is_forward(type_spec))
       type_spec = ((const idl_forward_t *)type_spec)->definition;
 
-    if (idl_is_empty(type_spec)) {
-      /* In case of an empty type (a struct without members), stash no-ops for the
-         case labels so that offset to type ops for non-simple inline cases is correct.
-         FIXME: This needs a better solution... */
-      for (label = _case->labels; label; label = idl_next(label)) {
-        off = stype->offset + 2 + (stype->label * 4);
-        if ((ret = stash_opcode(pstate, descriptor, &ctype->instructions, off++, DDS_OP_RTS, 0u))
-            || (ret = stash_opcode(pstate, descriptor, &ctype->instructions, off++, DDS_OP_RTS, 0u))
-            || (ret = stash_opcode(pstate, descriptor, &ctype->instructions, off++, DDS_OP_RTS, 0u))
-            || (ret = stash_opcode(pstate, descriptor, &ctype->instructions, off, DDS_OP_RTS, 0u)))
-          return ret;
-      }
-      return IDL_RETCODE_OK;
-    }
-
     if (idl_is_external(node) && !idl_is_unbounded_string(type_spec))
       opcode |= DDS_OP_FLAG_EXT;
 
@@ -811,10 +797,6 @@ emit_case(
     if ((ret = push_field(descriptor, _case->declarator, NULL)))
       return ret;
 
-    /* FIXME: see above.
-       For labels that are omitted because of empty target struct/union type, dummy ops
-       will be stashed, so that we can safely assume that offset of type instructions is
-       after last label */
     /* Note: this function currently only outputs JEQ4 ops and does not use JEQ where
        that would be possibly (in case it is not type ENU, or an @external member). This
        could be optimized to save some instructions in the descriptor. */
@@ -844,8 +826,9 @@ emit_case(
       /* generate union case discriminator */
       if ((ret = stash_constant(pstate, &ctype->instructions, off++, label->const_expr)))
         return ret;
-      /* generate union case offset */
-      if ((ret = stash_offset(pstate, &ctype->instructions, off++, stype->fields)))
+      /* generate union case member (address) offset; use offset 0 for empty types,
+         as these members are not generated and no offset can be calculated */
+      if ((ret = stash_offset(pstate, &ctype->instructions, off++, idl_is_empty(type_spec) ? NULL : stype->fields)))
         return ret;
       /* For @external union members include the size of the member to allow the
          serializer to allocate memory when deserializing. Stash 0 in case
@@ -979,7 +962,7 @@ emit_union(
     ret = IDL_VISIT_REVISIT;
     /* For a topic, only its top-level type should be visited, not the other
        (non-related) types in the idl */
-    if (path->length == 1)
+    if (node == descriptor->topic)
       ret |= IDL_VISIT_DONT_ITERATE;
     return ret;
   }
@@ -1104,7 +1087,7 @@ emit_struct(
       ret = IDL_VISIT_REVISIT;
       /* For a topic, only its top-level type should be visited, not the other
         (non-related) types in the idl */
-      if (path->length == 1)
+      if (node == descriptor->topic)
         ret |= IDL_VISIT_DONT_ITERATE;
     }
     return ret;
@@ -1189,7 +1172,7 @@ emit_sequence(
       return ret;
 
     /* short-circuit on simple types */
-    if (idl_is_string(type_spec) || idl_is_base_type(type_spec) || idl_is_bitmask(type_spec)) {
+    if (idl_is_string(type_spec) || idl_is_base_type(type_spec) || idl_is_bitmask(type_spec) || idl_is_enum(type_spec)) {
       if (idl_is_bounded(type_spec)) {
         if ((ret = stash_single(pstate, &ctype->instructions, nop, idl_bound(type_spec) + 1)))
           return ret;
@@ -1408,9 +1391,6 @@ emit_declarator(
     return ret;
   }
 
-  if (idl_is_empty(type_spec))
-    return IDL_RETCODE_OK | IDL_VISIT_REVISIT;
-
   /* close the mutable member when revisiting */
   if (revisit) {
     if (!idl_is_alias(node) && idl_is_struct(stype->node))
@@ -1475,8 +1455,9 @@ emit_declarator(
     /* generate data field opcode */
     if ((ret = stash_opcode(pstate, descriptor, &ctype->instructions, nop, opcode, order)))
       return ret;
-    /* generate data field offset */
-    if ((ret = stash_offset(pstate, &ctype->instructions, nop, field)))
+    /* generate data field offset; for empty types the offset cannot be used
+       because the member is commented-out, so set to 0 in that case */
+    if ((ret = stash_offset(pstate, &ctype->instructions, nop, idl_is_empty(type_spec) ? NULL : field)))
       return ret;
     /* generate data field bound */
     if (idl_is_bounded_string(type_spec)) {
@@ -1839,8 +1820,8 @@ static uint32_t add_to_key_size(uint32_t keysize, uint32_t field_size, uint32_t 
   if (sz % field_align)
     sz += field_align - (sz % field_align);
   sz += field_size * field_dims;
-  if (sz > FIXED_KEY_MAX_SIZE)
-    sz = FIXED_KEY_MAX_SIZE + 1;
+  if (sz > DDS_FIXED_KEY_MAX_SIZE)
+    sz = DDS_FIXED_KEY_MAX_SIZE + 1;
   return sz;
 }
 
@@ -1907,7 +1888,7 @@ static idl_retcode_t get_ctype_keys_adr(
       }
       break;
       default:
-        size = FIXED_KEY_MAX_SIZE + 1;
+        size = DDS_FIXED_KEY_MAX_SIZE + 1;
         align = 1;
         break;
     }
@@ -2117,8 +2098,7 @@ err_keys:
 }
 
 #define MAX_FLAGS 30
-
-static int print_flags(FILE *fp, struct descriptor *descriptor)
+static int print_flags(FILE *fp, struct descriptor *descriptor, bool type_info)
 {
   const char *fmt;
   const char *vec[MAX_FLAGS] = { NULL };
@@ -2149,6 +2129,11 @@ static int print_flags(FILE *fp, struct descriptor *descriptor)
   if (fixed_size)
     vec[len++] = "DDS_TOPIC_FIXED_SIZE";
 
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  if (type_info)
+    vec[len++] = "DDS_TOPIC_XTYPES_METADATA";
+#endif
+
   if (!len)
     vec[len++] = "0u";
 
@@ -2163,6 +2148,9 @@ static int print_flags(FILE *fp, struct descriptor *descriptor)
 static int print_descriptor(
     FILE *fp,
     struct descriptor *descriptor
+#ifdef DDS_HAS_TYPE_DISCOVERY
+    , bool type_info
+#endif
 )
 {
   char *name, *type;
@@ -2179,7 +2167,7 @@ static int print_descriptor(
   assert(descriptor->alignment);
   if (idl_fprintf(fp, fmt, type, descriptor->alignment->rendering) < 0)
     return -1;
-  if (print_flags(fp, descriptor) < 0)
+  if (print_flags(fp, descriptor, type_info) < 0)
     return -1;
   fmt = "  .m_nkeys = %1$"PRIu32"u,\n" /* number of keys */
         "  .m_typename = \"%2$s\",\n"; /* fully qualified name in IDL */
@@ -2199,6 +2187,16 @@ static int print_descriptor(
         "  .m_meta = \"\""; /* OpenSplice metadata */
   if (idl_fprintf(fp, fmt, descriptor->n_opcodes, type) < 0)
     return -1;
+
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  if (type_info) {
+    fmt = ",\n"
+          "  .type_information = { .data = TYPE_INFO_CDR_%1$s, .sz = TYPE_INFO_CDR_SZ_%1$s },\n" /* CDR serialized XTypes TypeInformation object */
+          "  .type_mapping = { .data = TYPE_MAP_CDR_%1$s, .sz = TYPE_MAP_CDR_SZ_%1$s }"; /* CDR serialized type id to type object mapping */
+    if (idl_fprintf(fp, fmt, type) < 0)
+      return -1;
+  }
+#endif
 
   if (idl_fprintf(fp, "\n};\n\n") < 0)
     return -1;
@@ -2348,9 +2346,9 @@ generate_descriptor_impl(
     goto err;
 
   /* Set fixed-key flags */
-  if (descriptor->keysz_xcdr1 > 0 && descriptor->keysz_xcdr1 <= FIXED_KEY_MAX_SIZE)
+  if (descriptor->keysz_xcdr1 > 0 && descriptor->keysz_xcdr1 <= DDS_FIXED_KEY_MAX_SIZE)
     descriptor->flags |= DDS_TOPIC_FIXED_KEY;
-  if (descriptor->keysz_xcdr2 > 0 && descriptor->keysz_xcdr2 <= FIXED_KEY_MAX_SIZE)
+  if (descriptor->keysz_xcdr2 > 0 && descriptor->keysz_xcdr2 <= DDS_FIXED_KEY_MAX_SIZE)
     descriptor->flags |= DDS_TOPIC_FIXED_KEY_XCDR2;
 
 err:
@@ -2375,8 +2373,16 @@ generate_descriptor(
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
   if (print_keys(generator->source.handle, &descriptor, inst_count) < 0)
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  bool type_info = (pstate->flags & IDL_FLAG_TYPE_INFO) != 0;
+  if (type_info && print_type_meta_ser(generator->source.handle, pstate, node) < 0)
+    { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+  if (print_descriptor(generator->source.handle, &descriptor, type_info) < 0)
+    { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+#else
   if (print_descriptor(generator->source.handle, &descriptor) < 0)
     { ret = IDL_RETCODE_NO_MEMORY; goto err_print; }
+#endif
 
 err_print:
   descriptor_fini(&descriptor);
