@@ -44,6 +44,9 @@
 /* flag used by idlc to indicate end-of-buffer (private) */
 #define IDL_WRITE (1u<<31)
 
+/* used to indicate that default extensibility is not set */
+#define IDL_DEFAULT_EXTENSIBILITY_UNDEFINED (-1)
+
 typedef struct idl_buffer idl_buffer_t;
 struct idl_buffer {
   char *data;
@@ -67,6 +70,7 @@ struct idl_pstate {
   idl_file_t *paths; /**< normalized paths used in include statements */
   idl_file_t *files; /**< filenames used in #line directives */
   idl_source_t *sources;
+  int default_extensibility;
   idl_scope_t *global_scope, *annotation_scope, *scope;
   void *directive;
   idl_node_t *builtin_root, *root;

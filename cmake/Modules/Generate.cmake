@@ -12,7 +12,7 @@
 
 
 function(IDLC_GENERATE)
-  set(one_value_keywords TARGET)
+  set(one_value_keywords TARGET DEFAULT_EXTENSIBILITY)
   set(multi_value_keywords FILES FEATURES)
   cmake_parse_arguments(
     IDLC "" "${one_value_keywords}" "${multi_value_keywords}" "" ${ARGN})
@@ -57,6 +57,11 @@ function(IDLC_GENERATE)
     list(APPEND IDLC_ARGS "-f" ${_feature})
   endforeach()
 
+  if(IDLC_DEFAULT_EXTENSIBILITY)
+    set(_default_extensibility ${IDLC_DEFAULT_EXTENSIBILITY})
+    list(APPEND IDLC_ARGS "-x" ${_default_extensibility})
+  endif()
+
   set(_dir ${CMAKE_CURRENT_BINARY_DIR})
   set(_target ${IDLC_TARGET})
   foreach(_file ${IDLC_FILES})
@@ -73,7 +78,7 @@ function(IDLC_GENERATE)
     add_custom_command(
       OUTPUT   "${_source}" "${_header}"
       COMMAND  ${_idlc_executable}
-      ARGS     ${_file} ${IDLC_ARGS}
+      ARGS     ${IDLC_ARGS} ${_file}
       DEPENDS  ${_files} ${_idlc_depends})
   endforeach()
 
