@@ -1356,7 +1356,7 @@ emit_member(
   (void)user_data;
   const idl_member_t *member = (const idl_member_t *)node;
   if (member->value.annotation)
-    idl_warning(pstate, idl_location(node), "Explicit defaults are not supported yet in the C generator, the value from the @default annotation will not be used");
+    idl_warning(pstate, IDL_WARN_GENERIC, idl_location(node), "Explicit defaults are not supported yet in the C generator, the value from the @default annotation will not be used");
   return IDL_RETCODE_OK;
 }
 
@@ -1373,7 +1373,7 @@ emit_bitmask(
   (void)user_data;
   const idl_bitmask_t *bitmask = (const idl_bitmask_t *)node;
   if (bitmask->extensibility.annotation && bitmask->extensibility.value != IDL_FINAL)
-    idl_warning(pstate, idl_location(node), "Extensibility appendable and mutable for bitmask type are not yet supported in the C generator, the extensibility will not be used");
+    idl_warning(pstate, IDL_WARN_GENERIC, idl_location(node), "Extensibility appendable and mutable for bitmask type are not yet supported in the C generator, the extensibility will not be used");
   return IDL_RETCODE_OK;
 }
 
@@ -1390,7 +1390,7 @@ emit_enum(
   (void)user_data;
   const idl_enum_t *_enum = (const idl_enum_t *)node;
   if (_enum->extensibility.annotation && _enum->extensibility.value != IDL_FINAL)
-    idl_warning(pstate, idl_location(node), "Extensibility appendable and mutable for enum type are not yet supported in the C generator, the extensibility will not be used");
+    idl_warning(pstate, IDL_WARN_GENERIC, idl_location(node), "Extensibility appendable and mutable for enum type are not yet supported in the C generator, the extensibility will not be used");
   return IDL_RETCODE_OK;
 }
 
