@@ -473,6 +473,8 @@ grammar:
     goto err;
   if ((ret = idl_propagate_autoid(pstate, pstate->root, IDL_SEQUENTIAL)) != IDL_RETCODE_OK)
     goto err;
+  if ((ret = idl_set_xcdr2_required(pstate->root) != IDL_RETCODE_OK))
+    goto err;
 
   if (pstate->keylists) {
     if ((ret = idl_validate_keylists(pstate)) != IDL_RETCODE_OK)

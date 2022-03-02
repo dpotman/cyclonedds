@@ -822,9 +822,6 @@ annotate_datarepresentation(
   assert(idl_type(literal) == IDL_BITMASK);
   allowable_data_representations_t val = (allowable_data_representations_t)literal->value.uint32;  //native type of datarepresentation is uint32_t
 
-  if (idl_requires_xtypes_functionality(node))
-    val &= ~((allowable_data_representations_t)IDL_DATAREPRESENTATION_FLAG_XCDR1);
-
   if (0 == val) {
     idl_error(pstate, idl_location(annotation_appl),
       "no viable datarepresentations for type %s", idl_name(node)->identifier);

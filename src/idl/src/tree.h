@@ -295,4 +295,8 @@ idl_create_inherit_spec(
   void *base,
   void *nodep);
 
+idl_retcode_t
+idl_set_xcdr2_required(
+  void *node);
+
 #endif /* TREE_H */
