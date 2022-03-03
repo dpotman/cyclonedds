@@ -61,6 +61,10 @@ struct dds_type_meta_ser
   uint32_t sz;
 };
 
+#define DDS_DATA_REPRESENTATION_XCDR1    0
+#define DDS_DATA_REPRESENTATION_XML      1
+#define DDS_DATA_REPRESENTATION_XCDR2    2
+
 typedef struct dds_topic_descriptor
 {
   const uint32_t m_size;               /* Size of topic type */
@@ -75,6 +79,8 @@ typedef struct dds_topic_descriptor
   struct dds_type_meta_ser type_information;  /* XCDR2 serialized TypeInformation, only present if flag DDS_TOPIC_XTYPES_METADATA is set */
   struct dds_type_meta_ser type_mapping;      /* XCDR2 serialized TypeMapping: maps type-id to type object and minimal to complete type id,
                                                    only present if flag DDS_TOPIC_XTYPES_METADATA is set */
+  const uint32_t restrict_data_representation; /* restrictions on the data representations allowed for the top-level type for this topic,
+                                           only present if flag DDS_TOPIC_RESTRICT_DATA_REPRESENTATION */
 }
 dds_topic_descriptor_t;
 

@@ -140,9 +140,6 @@ dds_type_consistency_kind_t;
 
 /** Data Representation QoS: Applies to Topic, DataReader, DataWriter */
 typedef int16_t dds_data_representation_id_t;
-#define DDS_DATA_REPRESENTATION_XCDR1    0
-#define DDS_DATA_REPRESENTATION_XML      1
-#define DDS_DATA_REPRESENTATION_XCDR2    2
 
 #if defined (__cplusplus)
 }
