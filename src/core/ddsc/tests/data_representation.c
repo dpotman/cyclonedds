@@ -472,3 +472,41 @@ CU_Test (ddsc_data_representation, update_qos, .init = data_representation_init,
     }
   }
 }
+
+
+CU_Test(ddsc_data_representation, qos_annotation, .init = data_representation_init, .fini = data_representation_fini)
+{
+#define X_ { { -1 }, 0 }
+#define X1 { { XCDR1 }, 1 }
+#define X1_2 { { XCDR1, XCDR2 }, 2 }
+#define X2 { { XCDR2 }, 1 }
+#define X2_1 { { XCDR2, XCDR1 }, 2 }
+  static const struct {
+    const dds_topic_descriptor_t *desc;
+    datarep_qos_exp_t tp;
+  } tests[] = {
+    { &DESC(TypeXcdr1), { X_,   true,  X1 } },
+    { &DESC(TypeXcdr1), { X1,   true,  X1 } },
+    { &DESC(TypeXcdr1), { X2,   false, X_ } },
+    { &DESC(TypeXcdr1), { X1_2, false, X_ } },
+  };
+#undef X_
+#undef X1
+#undef X1_2
+#undef X2
+#undef X2_1
+
+  char topicname[100];
+
+  for (uint32_t i = 0; i < sizeof (tests) / sizeof (tests[0]); i++)
+  {
+    printf ("running test %u for type %s \n", i, tests[i].desc->m_typename);
+    create_unique_topic_name ("ddsc_data_representation", topicname, sizeof topicname);
+    dds_qos_t *qos_tp = get_qos (&tests[i].tp);
+    dds_entity_t tp = dds_create_topic (dp1, tests[i].desc, topicname, qos_tp, NULL);
+    CU_ASSERT_EQUAL_FATAL (tp > 0, tests[i].tp.valid);
+    if (tests[i].tp.valid)
+      exp_qos (tp, &tests[i].tp);
+    dds_delete_qos (qos_tp);
+  }
+}

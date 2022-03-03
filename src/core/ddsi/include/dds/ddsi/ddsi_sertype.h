@@ -48,6 +48,7 @@ struct ddsi_sertype {
   uint32_t request_keyhash : 1;
   uint32_t fixed_size : 1;
   uint16_t min_xcdrv;  /* minimum XCDR version required for (de)serialization */
+  uint32_t allowed_data_representation; /* allowed data representations set in IDL for this type, or DDS_DATA_REPRESENTATION_RESTRICT_DEFAULT in case of no restrictions in the IDL */
   char *type_name;
   ddsrt_atomic_voidp_t gv; /* set during registration */
   ddsrt_atomic_uint32_t flags_refc; /* counts refs from entities (topic, reader, writer), not from data */

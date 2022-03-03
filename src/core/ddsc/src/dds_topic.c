@@ -653,7 +653,9 @@ dds_entity_t dds_create_topic (dds_entity_t participant, const dds_topic_descrip
      If the data representation is not set in the QoS (or no QoS object provided), the allowed
      data representations are added to the QoS object. */
   uint16_t min_xcdrv = dds_stream_minimum_xcdr_version (desc->m_ops);
-  if ((hdl = dds_ensure_valid_data_representation (tpqos, min_xcdrv, true)) != 0)
+  uint32_t allowed_dr = desc->m_flagset & DDS_TOPIC_RESTRICT_DATA_REPRESENTATION ?
+      desc->restrict_data_representation : DDS_DATA_REPRESENTATION_RESTRICT_DEFAULT;
+  if ((hdl = dds_ensure_valid_data_representation (tpqos, min_xcdrv, allowed_dr, true)) != 0)
     goto err_data_repr;
 
   assert (tpqos->present & QP_DATA_REPRESENTATION && tpqos->data_representation.value.n > 0);
