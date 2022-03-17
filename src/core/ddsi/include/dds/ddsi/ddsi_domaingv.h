@@ -327,6 +327,8 @@ struct ddsi_domaingv {
 #ifdef DDS_HAS_TYPE_DISCOVERY
   ddsrt_mutex_t typelib_lock;
   ddsrt_avl_tree_t typelib;
+  ddsrt_avl_tree_t typedeps;
+  ddsrt_avl_tree_t typedeps_reverse;
   ddsrt_cond_t typelib_resolved_cond;
 #endif
 #ifdef DDS_HAS_TOPIC_DISCOVERY
