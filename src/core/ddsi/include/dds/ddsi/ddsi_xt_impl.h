@@ -298,7 +298,7 @@ DDS_EXPORT ddsi_typeid_t * ddsi_typeid_dup_from_impl (const struct DDS_XTypes_Ty
 DDS_EXPORT bool ddsi_typeid_is_none_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 
 DDS_EXPORT void ddsi_xt_get_typeobject_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to);
-DDS_EXPORT struct ddsi_type * ddsi_type_ref_id_locked_impl (struct ddsi_domaingv *gv, const struct DDS_XTypes_TypeIdentifier *type_id);
+DDS_EXPORT dds_return_t ddsi_type_ref_id_locked_impl (struct ddsi_domaingv *gv, struct ddsi_type **type, const struct DDS_XTypes_TypeIdentifier *type_id);
 DDS_EXPORT struct ddsi_type * ddsi_type_lookup_locked_impl (struct ddsi_domaingv *gv, const struct DDS_XTypes_TypeIdentifier *type_id);
 
 DDS_EXPORT bool ddsi_typeid_is_hash_impl (const struct DDS_XTypes_TypeIdentifier *type_id);

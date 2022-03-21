@@ -551,15 +551,22 @@ dds_entity_t dds_create_topic_impl (
     ddsrt_mutex_unlock (&gv->sertypes_lock);
   }
 
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  if (ddsi_type_ref_local (gv, NULL, sertype_registered, DDSI_TYPEID_KIND_MINIMAL) != DDS_RETCODE_OK
+      || ddsi_type_ref_local (gv, NULL, sertype_registered, DDSI_TYPEID_KIND_COMPLETE) != DDS_RETCODE_OK)
+  {
+    ddsi_sertype_unref (*sertype);
+    ddsrt_mutex_unlock (&pp->m_entity.m_mutex);
+    GVTRACE ("dds_create_topic_generic: invalid type\n");
+    rc = DDS_RETCODE_BAD_PARAMETER;
+    goto error;
+  }
+#endif
+
   /* Create topic referencing ktopic & sertype_registered */
   hdl = create_topic_pp_locked (pp, ktp, (sertype_registered->ops == &ddsi_sertype_ops_builtintopic), name, sertype_registered, listener, sedp_plist);
   ddsi_sertype_unref (*sertype);
   *sertype = sertype_registered;
-
-#ifdef DDS_HAS_TYPE_DISCOVERY
-  (void) ddsi_type_ref_local (gv, sertype_registered, DDSI_TYPEID_KIND_MINIMAL);
-  (void) ddsi_type_ref_local (gv, sertype_registered, DDSI_TYPEID_KIND_COMPLETE);
-#endif
 
   const bool new_topic_def = register_topic_type_for_discovery (gv, pp, ktp, is_builtin, sertype_registered);
   ddsrt_mutex_unlock (&pp->m_entity.m_mutex);
