@@ -76,7 +76,7 @@ static bool is_endpoint_type_resolved (struct ddsi_domaingv *gv, char *type_name
 {
   assert (type_pair);
   ddsrt_mutex_lock (&gv->typelib_lock);
-  if (!ddsi_type_pair_has_minimal_obj (type_pair) && !ddsi_type_pair_has_complete_obj (type_pair))
+  if (!ddsi_type_resolved (gv, type_pair->minimal, true) && !ddsi_type_resolved (gv, type_pair->complete, true))
   {
     struct ddsi_typeid_str str;
     const ddsi_typeid_t *tid_m = ddsi_type_pair_minimal_id (type_pair),
