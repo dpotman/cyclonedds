@@ -63,4 +63,26 @@ module XSpace {
       @id(3) XType3_1a struct_3;
     };
 
+    /* Types for top-level type checking */
+    typedef sequence<long> seql;
+    enum e { E1, E2 };
+    bitmask bm { BM1, BM2 };
+    @final struct to_toplevel {
+      seql f1;
+      e f2;
+      bm f3;
+    };
+
+    @nested struct to_base {
+      long b1;
+    };
+    @nested union u switch (long) { case 1: long u1; };
+    struct to_inherit : to_base {
+      u f1;
+    };
+
+    union to_uniondisc switch (long) {
+      case 1: long u1;
+    };
+
 };

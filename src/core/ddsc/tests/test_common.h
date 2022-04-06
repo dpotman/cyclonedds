@@ -18,9 +18,14 @@
 #include "CUnit/Test.h"
 #include "CUnit/Theory.h"
 
+#include "dds/ddsrt/heap.h"
+#include "dds/ddsi/ddsi_cdrstream.h"
 #include "test_util.h"
 
 #include "Space.h"
 #include "RoundTrip.h"
+
+void xcdr2_ser (const void *obj, const dds_topic_descriptor_t *desc, dds_ostream_t *os);
+void xcdr2_deser (unsigned char *buf, uint32_t sz, void **obj, const dds_topic_descriptor_t *desc);
 
 #endif /* _TEST_COMMON_H_ */
