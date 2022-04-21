@@ -1,0 +1,58 @@
+/*
+ * Copyright(c) 2006 to 2022 ZettaScale Technology and others
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License v. 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0, or the Eclipse Distribution License
+ * v. 1.0 which is available at
+ * http://www.eclipse.org/org/documents/edl-v10.php.
+ *
+ * SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause
+ */
+
+module TypeBuilderTypes {
+
+  struct t1 {
+    long f1;
+  };
+
+  enum en { E1, E2 };
+  bitmask bm { BM1, BM2 };
+
+  struct t2 {
+    octet f1;
+    char f2;
+    unsigned short f3;
+    @external
+    short f4;
+    unsigned long f5;
+    long f6;
+    @external
+    unsigned long long f7;
+    long long f8;
+    boolean f9;
+    @external
+    string f10;
+    string<10> f11;
+    @external
+    en f12;
+    bm f13;
+  };
+
+  struct t1a {
+    short f1;
+  };
+
+  struct t3 {
+    t1 f1;
+    t1a f2;
+    t2 f3;
+  };
+
+  struct t4 {
+    sequence<long> f1;
+    sequence<string> f2;
+    sequence<t1> f3;
+  };
+
+};
