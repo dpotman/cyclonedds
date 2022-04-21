@@ -404,7 +404,7 @@ void ddsi_typeid_get_equivalence_hash (const ddsi_typeid_t *type_id, DDS_XTypes_
   memcpy (hash, type_id->x._u.equivalence_hash, sizeof (*hash));
 }
 
-dds_return_t ddsi_typeobj_get_hash_id (const struct DDS_XTypes_TypeObject *type_obj, ddsi_typeid_t *type_id)
+dds_return_t ddsi_typeobj_get_hash_id_impl (const struct DDS_XTypes_TypeObject *type_obj, struct DDS_XTypes_TypeIdentifier *type_id)
 {
   assert (type_obj);
   assert (type_id);
@@ -418,10 +418,15 @@ dds_return_t ddsi_typeobj_get_hash_id (const struct DDS_XTypes_TypeObject *type_
   ddsrt_md5_init (&md5st);
   ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) os.m_buffer, os.m_index);
   ddsrt_md5_finish (&md5st, (ddsrt_md5_byte_t *) buf);
-  type_id->x._d = type_obj->_d;
-  memcpy (type_id->x._u.equivalence_hash, buf, sizeof(DDS_XTypes_EquivalenceHash));
+  type_id->_d = type_obj->_d;
+  memcpy (type_id->_u.equivalence_hash, buf, sizeof(DDS_XTypes_EquivalenceHash));
   dds_ostream_fini (&os);
   return DDS_RETCODE_OK;
+}
+
+dds_return_t ddsi_typeobj_get_hash_id (const struct DDS_XTypes_TypeObject *type_obj, ddsi_typeid_t *type_id)
+{
+  return ddsi_typeobj_get_hash_id_impl (type_obj, &type_id->x);
 }
 
 void ddsi_typeobj_fini_impl (struct DDS_XTypes_TypeObject *typeobj)
@@ -2442,7 +2447,7 @@ ddsi_typeid_kind_t ddsi_typeid_kind (const ddsi_typeid_t *type_id)
   return ddsi_typeid_is_minimal (type_id) ? DDSI_TYPEID_KIND_MINIMAL : DDSI_TYPEID_KIND_COMPLETE;
 }
 
-void ddsi_xt_get_typeobject_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to)
+void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to, ddsi_typeid_kind_t kind)
 {
   assert (xt);
   assert (to);
@@ -2450,7 +2455,7 @@ void ddsi_xt_get_typeobject_impl (const struct xt_type *xt, struct DDS_XTypes_Ty
   assert (!xt_is_fully_descriptive (xt));
 
   memset (to, 0, sizeof (*to));
-  if (xt->kind == DDSI_TYPEID_KIND_MINIMAL)
+  if (xt->kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDS_XTypes_EK_MINIMAL)
   {
     to->_d = DDS_XTypes_EK_MINIMAL;
     struct DDS_XTypes_MinimalTypeObject *mto = &to->_u.minimal;
@@ -2714,6 +2719,11 @@ void ddsi_xt_get_typeobject_impl (const struct xt_type *xt, struct DDS_XTypes_Ty
         break;
     }
   }
+}
+
+void ddsi_xt_get_typeobject_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to)
+{
+  ddsi_xt_get_typeobject_kind_impl (xt, to, xt->kind);
 }
 
 void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to)
