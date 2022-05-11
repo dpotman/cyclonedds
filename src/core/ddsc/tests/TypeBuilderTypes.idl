@@ -55,4 +55,54 @@ module TypeBuilderTypes {
     sequence<t1> f3;
   };
 
+  typedef sequence<float, 2> td1;
+
+  @bit_bound(4) enum en8 { EN8_1, EN8_2 };
+  @bit_bound(12) bitmask bm16 { BM16_1, BM16_2 };
+  union t5 switch (short) {
+    case 1: char u1;
+    case 2: long u2;
+    case 3: string<5> u3;
+    case 4: case 5: long u4;
+    case 6: case 7: t1 u6;
+    case 8: bm u8;
+    case 9: sequence<long> u9;
+    case 10: sequence<long, 3> u10;
+    case 11: string u11;
+    case 12: en u12;
+    case 13: @external long u13;
+    case 14: @external string u14;
+    case 15: case 16: @external t1 u15;
+    case 17: boolean u17;
+    case 18: float u18;
+    case 19: en8 u19;
+    case 21: bm16 u20;
+    case 22: td1 u21;
+  };
+
+  typedef long adef[300];
+
+  struct t6 {
+    // long f1[2];
+    // char f2[1000];
+    // t1 f3[3];
+    // en f4[15];
+    // en8 f5[1];
+    // bm f6[10];
+    // bm16 f7[100];
+    // @external long f8[2];
+    // sequence<long> f9[10];
+    // adef f10;
+    adef f11[3];
+  };
+
+  // test extensibility
+  // test padding at end of struct
+  // test arrays
+  // test opt/ext/mu flags
+  // test typedefs
+  // test struct member union type
+  // test union with enum discr
+  // test struct inheritance
+
 };

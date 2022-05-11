@@ -70,8 +70,11 @@ static struct ddsi_domaingv *gv_from_topic (dds_entity_t topic)
 
 
 #define D(n) TypeBuilderTypes_ ## n ## _desc
+// CU_TheoryDataPoints (ddsc_typebuilder, topic_desc) = {
+//   CU_DataPoints (const dds_topic_descriptor_t *,  &D(t1), &D(t2), &D(t3), &D(t4), &D(t5), &D(t6) ),
+// };
 CU_TheoryDataPoints (ddsc_typebuilder, topic_desc) = {
-  CU_DataPoints (const dds_topic_descriptor_t *,  &D(t1), &D(t2), &D(t3), &D(t4) ),
+  CU_DataPoints (const dds_topic_descriptor_t *,  &D(t6) ),
 };
 #undef D
 
