@@ -80,29 +80,89 @@ module TypeBuilderTypes {
     case 22: td1 u21;
   };
 
-  typedef long adef[300];
+  typedef long arr_def[300];
+  typedef arr_def arr_def2[300];
+  typedef sequence<arr_def> seq_def;
+  typedef sequence<arr_def> seq_arr_def[2];
 
   struct t6 {
-    // long f1[2];
-    // char f2[1000];
-    // t1 f3[3];
-    // en f4[15];
-    // en8 f5[1];
-    // bm f6[10];
-    // bm16 f7[100];
-    // @external long f8[2];
-    // sequence<long> f9[10];
-    // adef f10;
-    adef f11[3];
+    long f1[2];
+    char f2[1000];
+    t1 f3[3];
+    en f4[15];
+    en8 f5[1];
+    bm f6[10];
+    bm16 f7[100];
+    @external long f8[2];
+    sequence<long> f9[10];
+    arr_def f10;
+    arr_def f11[3];
+    arr_def2 f12;
+    arr_def2 f13[6];
+    seq_def f14;
+    seq_def f15[5];
+    seq_arr_def f16;
+    seq_arr_def f17[10];
+    sequence<arr_def> f18;
+    sequence<seq_def> f19;
+    sequence<seq_arr_def, 200> f20;
+    sequence<seq_arr_def, 4> f21[3];
+  };
+
+  @nested
+  struct tk1 {
+    @id(2) long tk1_1;
+    @id(1) long tk1_2;
+  };
+
+  @nested
+  struct tk2 {
+    long tk2_1;
+    @id(15) @key long tk2_2;
+  };
+
+  @nested
+  struct tk3n {
+    long tk3n_1;
+  };
+
+  @nested
+  struct tk3 {
+    long tk3_1;
+    tk3n tk3_2;
+  };
+
+  struct t7 {
+    @id (3) @key long f1;
+    @id (0) @key tk1 f2;
+    @id (1) @key tk2 f3;
+    @id (2) long f4;
+    @id (5) @key tk3 f5;
+  };
+
+  struct t8 {
+    char f1;
+    @key bm f2;
+    bm f3;
+    @key char f4;
+    char f5;
+    @key en f6;
+    en f7;
+  };
+
+  struct t9 {
+    @optional long f1;
+    @optional t8 f2;
+    @optional t5 f3;
+    @optional t7 f4;
   };
 
   // test extensibility
   // test padding at end of struct
-  // test arrays
   // test opt/ext/mu flags
-  // test typedefs
   // test struct member union type
   // test union with enum discr
   // test struct inheritance
+  // test hash member ids
 
 };

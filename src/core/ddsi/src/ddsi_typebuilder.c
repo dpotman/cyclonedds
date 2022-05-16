@@ -27,6 +27,8 @@
 
 #define alignof(type_) offsetof (struct { char c; type_ d; }, d)
 #define OPS_CHUNK_SZ 100
+#define XCDR1_MAX_ALIGN 8
+#define XCDR2_MAX_ALIGN 4
 
 struct typebuilder_ops
 {
@@ -54,6 +56,8 @@ struct typebuilder_type_ref
 struct typebuilder_type
 {
   enum dds_stream_typecode type_code;
+  uint32_t size;
+  uint32_t align;
   union {
     struct {
       bool is_signed;
@@ -87,7 +91,11 @@ struct typebuilder_type
 struct typebuilder_struct_member
 {
   struct typebuilder_type type;
-  uint32_t member_offset;
+  char *member_name;
+  uint32_t member_index;            // index of member in the struct
+  uint32_t member_id;               // id assigned by annotation or hash id
+  uint32_t member_offset;           // in-memory offset of the member in its parent struct
+  uint16_t insn_offs;               // offset of the ADR instruction for the member within its parent aggregated type
   bool is_key;
   bool is_must_understand;
   bool is_external;
@@ -111,6 +119,7 @@ struct typebuilder_union
 {
   struct typebuilder_type disc_type;
   uint32_t disc_size;
+  bool disc_is_key;
   uint32_t member_offs;
   uint32_t n_cases;
   struct typebuilder_union_member *cases;
@@ -125,6 +134,7 @@ struct typebuilder_aggregated_type
   uint32_t size;              // size of this aggregated type, including padding at the end
   uint32_t align;             // max alignment for this aggregated type
   uint16_t ops_index;         // index in ops array of first instruction for this type
+  bool has_explicit_key;      // has the @key annotation set on one or more members
   union {
     struct typebuilder_struct _struct;
     struct typebuilder_union _union;
@@ -137,13 +147,27 @@ struct typebuilder_data_dep
   struct typebuilder_aggregated_type type;
 };
 
+struct typebuilder_key_path {
+  uint32_t n_parts;
+  struct typebuilder_struct_member **parts;
+  size_t name_len;
+};
+
+struct typebuilder_key
+{
+  uint32_t key_index;
+  uint16_t kof_idx;
+  struct typebuilder_key_path *path;
+};
+
 struct typebuilder_data
 {
   struct ddsi_domaingv *gv;
   const struct ddsi_type *type;
   struct typebuilder_aggregated_type toplevel_type;
   struct ddsrt_circlist dep_types;
-  uint32_t num_keys;
+  uint32_t n_keys;
+  struct typebuilder_key *keys;
   bool no_optimize;
   bool contains_union;
   bool fixed_key_xcdr1;
@@ -151,6 +175,11 @@ struct typebuilder_data
   bool fixed_size;
 };
 
+static dds_return_t typebuilder_add_aggrtype (struct typebuilder_data *tbd, struct typebuilder_aggregated_type *tb_aggrtype, const struct ddsi_type *type);
+static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t *size, uint32_t *align, struct typebuilder_type *tbtype, const struct ddsi_type *type, bool is_ext, bool use_ext_type);
+static dds_return_t resolve_ops_offsets_aggrtype (const struct typebuilder_aggregated_type *tb_aggrtype, struct typebuilder_ops *ops);
+static dds_return_t get_keys_aggrtype (struct typebuilder_data *tbd, struct typebuilder_key_path *path, const struct typebuilder_aggregated_type *tb_aggrtype, bool parent_key);
+static dds_return_t set_implicit_keys_aggrtype (struct typebuilder_aggregated_type *tb_aggrtype, bool is_toplevel, bool parent_is_key);
 
 static struct typebuilder_data *typebuilder_data_new (struct ddsi_domaingv *gv, const struct ddsi_type *type)
 {
@@ -177,30 +206,33 @@ static void typebuilder_type_fini (struct typebuilder_type *tbtype)
   }
 }
 
-static void typebuilder_struct_free (struct typebuilder_struct *tb_struct)
+static void typebuilder_struct_fini (struct typebuilder_struct *tb_struct)
 {
   for (uint32_t n = 0; n < tb_struct->n_members; n++)
+  {
+    ddsrt_free (tb_struct->members[n].member_name);
     typebuilder_type_fini (&tb_struct->members[n].type);
+  }
   ddsrt_free (tb_struct->members);
 }
 
-static void typebuilder_union_free (struct typebuilder_union *tb_union)
+static void typebuilder_union_fini (struct typebuilder_union *tb_union)
 {
   for (uint32_t n = 0; n < tb_union->n_cases; n++)
     typebuilder_type_fini (&tb_union->cases[n].type);
   ddsrt_free (tb_union->cases);
 }
 
-static void typebuilder_aggrtype_free (struct typebuilder_aggregated_type *tb_aggrtype)
+static void typebuilder_aggrtype_fini (struct typebuilder_aggregated_type *tb_aggrtype)
 {
   ddsrt_free (tb_aggrtype->type_name);
   switch (tb_aggrtype->kind)
   {
     case DDS_XTypes_TK_STRUCTURE:
-      typebuilder_struct_free (&tb_aggrtype->detail._struct);
+      typebuilder_struct_fini (&tb_aggrtype->detail._struct);
       break;
     case DDS_XTypes_TK_UNION:
-      typebuilder_union_free (&tb_aggrtype->detail._union);
+      typebuilder_union_fini (&tb_aggrtype->detail._union);
       break;
     default:
       abort ();
@@ -209,7 +241,7 @@ static void typebuilder_aggrtype_free (struct typebuilder_aggregated_type *tb_ag
 
 static void typebuilder_data_free (struct typebuilder_data *tbd)
 {
-  typebuilder_aggrtype_free (&tbd->toplevel_type);
+  typebuilder_aggrtype_fini (&tbd->toplevel_type);
 
   if (!ddsrt_circlist_isempty (&tbd->dep_types))
   {
@@ -217,13 +249,21 @@ static void typebuilder_data_free (struct typebuilder_data *tbd)
     do
     {
       struct typebuilder_data_dep *dep = DDSRT_FROM_CIRCLIST (struct typebuilder_data_dep, e, elem);
-      typebuilder_aggrtype_free (&dep->type);
+      typebuilder_aggrtype_fini (&dep->type);
       elem = elem->next;
       ddsrt_free (dep);
     } while (elem != elem0);
   }
 
-  free (tbd);
+  for (uint32_t n = 0; n < tbd->n_keys; n++)
+  {
+    assert (tbd->keys[n].path && tbd->keys[n].path->parts && tbd->keys[n].path->n_parts);
+    ddsrt_free (tbd->keys[n].path->parts);
+    ddsrt_free (tbd->keys[n].path);
+  }
+  ddsrt_free (tbd->keys);
+
+  ddsrt_free (tbd);
 }
 
 static uint16_t get_extensibility (DDS_XTypes_TypeFlag flags)
@@ -252,9 +292,6 @@ static void align_to (uint32_t *offs, uint32_t align)
 {
   *offs = (*offs + align - 1) & ~(align - 1);
 }
-
-static dds_return_t typebuilder_add_aggrtype (struct typebuilder_data *tbd, struct typebuilder_aggregated_type *tb_aggrtype, const struct ddsi_type *type);
-static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t *size, uint32_t *align, struct typebuilder_type *tbtype, const struct ddsi_type *type, bool ext, bool use_ext_type);
 
 static struct typebuilder_aggregated_type *typebuilder_find_aggrtype (struct typebuilder_data *tbd, const struct ddsi_type *type)
 {
@@ -288,31 +325,31 @@ static const struct ddsi_type *type_unalias (const struct ddsi_type *t)
   return t->xt._d == DDS_XTypes_TK_ALIAS ? type_unalias (t->xt._u.alias.related_type) : t;
 }
 
-static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t *size, uint32_t *align, struct typebuilder_type *tbtype, const struct ddsi_type *type, bool ext, bool use_ext_type)
+static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t *size, uint32_t *align, struct typebuilder_type *tbtype, const struct ddsi_type *type, bool is_ext, bool use_ext_type)
 {
   dds_return_t ret = DDS_RETCODE_OK;
-  if (ext)
+  if (is_ext)
     tbd->no_optimize = true;
   switch (type->xt._d)
   {
     case DDS_XTypes_TK_BOOLEAN:
       tbtype->type_code = DDS_OP_VAL_BLN;
-      *align = ALGN (uint8_t, ext);
-      *size = SZ (uint8_t, ext);
+      *align = ALGN (uint8_t, is_ext);
+      *size = SZ (uint8_t, is_ext);
       break;
     case DDS_XTypes_TK_CHAR8:
     case DDS_XTypes_TK_BYTE:
       tbtype->type_code = DDS_OP_VAL_1BY;
       tbtype->args.prim_args.is_signed = (type->xt._d == DDS_XTypes_TK_CHAR8);
-      *align = ALGN (uint8_t, ext);
-      *size = SZ (uint8_t, ext);
+      *align = ALGN (uint8_t, is_ext);
+      *size = SZ (uint8_t, is_ext);
       break;
     case DDS_XTypes_TK_INT16:
     case DDS_XTypes_TK_UINT16:
       tbtype->type_code = DDS_OP_VAL_2BY;
       tbtype->args.prim_args.is_signed = (type->xt._d == DDS_XTypes_TK_INT16);
-      *align = ALGN (uint16_t, ext);
-      *size = SZ (uint16_t, ext);
+      *align = ALGN (uint16_t, is_ext);
+      *size = SZ (uint16_t, is_ext);
       break;
     case DDS_XTypes_TK_INT32:
     case DDS_XTypes_TK_UINT32:
@@ -320,8 +357,8 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       tbtype->type_code = DDS_OP_VAL_4BY;
       tbtype->args.prim_args.is_signed = (type->xt._d == DDS_XTypes_TK_INT32);
       tbtype->args.prim_args.is_fp = (type->xt._d == DDS_XTypes_TK_FLOAT32);
-      *align = ALGN (uint32_t, ext);
-      *size = SZ (uint32_t, ext);
+      *align = ALGN (uint32_t, is_ext);
+      *size = SZ (uint32_t, is_ext);
       break;
     case DDS_XTypes_TK_INT64:
     case DDS_XTypes_TK_UINT64:
@@ -329,14 +366,14 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       tbtype->type_code = DDS_OP_VAL_8BY;
       tbtype->args.prim_args.is_signed = (type->xt._d == DDS_XTypes_TK_INT64);
       tbtype->args.prim_args.is_fp = (type->xt._d == DDS_XTypes_TK_FLOAT64);
-      *align = ALGN (uint64_t, ext);
-      *size = SZ (uint64_t, ext);
+      *align = ALGN (uint64_t, is_ext);
+      *size = SZ (uint64_t, is_ext);
       break;
     case DDS_XTypes_TK_STRING8: {
       bool bounded = (type->xt._u.str8.bound > 0);
       tbtype->type_code = bounded ? DDS_OP_VAL_BST : DDS_OP_VAL_STR;
       tbtype->args.string_args.max_size = type->xt._u.str8.bound + 1;
-      *align = ALGN (char, !bounded || ext);
+      *align = ALGN (char, !bounded || is_ext);
       if (bounded)
         *size = type->xt._u.str8.bound * sizeof (char);
       else
@@ -356,8 +393,8 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       tbtype->type_code = DDS_OP_VAL_ENU;
       tbtype->args.enum_args.max = max;
       tbtype->args.enum_args.bit_bound = type->xt._u.enum_type.bit_bound;
-      *align = ALGN (uint32_t, ext);
-      *size = SZ (uint32_t, ext);
+      *align = ALGN (uint32_t, is_ext);
+      *size = SZ (uint32_t, is_ext);
       if (tbtype->args.enum_args.bit_bound <= 16 || tbtype->args.enum_args.bit_bound > 32)
         tbd->no_optimize = true;
       break;
@@ -375,23 +412,23 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       tbtype->args.bitmask_args.bit_bound = type->xt._u.bitmask.bit_bound;
       if (type->xt._u.bitmask.bit_bound > 32)
       {
-        *align = ALGN (uint64_t, ext);
-        *size = SZ (uint64_t, ext);
+        *align = ALGN (uint64_t, is_ext);
+        *size = SZ (uint64_t, is_ext);
       }
       else if (type->xt._u.bitmask.bit_bound > 16)
       {
-        *align = ALGN (uint32_t, ext);
-        *size = SZ (uint32_t, ext);
+        *align = ALGN (uint32_t, is_ext);
+        *size = SZ (uint32_t, is_ext);
       }
       else if (type->xt._u.bitmask.bit_bound > 8)
       {
-        *align = ALGN (uint16_t, ext);
-        *size = SZ (uint16_t, ext);
+        *align = ALGN (uint16_t, is_ext);
+        *size = SZ (uint16_t, is_ext);
       }
       else
       {
-        *align = ALGN (uint8_t, ext);
-        *size = SZ (uint8_t, ext);
+        *align = ALGN (uint8_t, is_ext);
+        *size = SZ (uint8_t, is_ext);
       }
       break;
     }
@@ -404,8 +441,8 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       ret = typebuilder_add_type (tbd, &tbtype->args.collection_args.elem_sz,
               &tbtype->args.collection_args.elem_align,
               tbtype->args.collection_args.element_type.type, type->xt._u.seq.c.element_type, false, false);
-      *align = ALGN (dds_sequence_t, ext);
-      *size = SZ (dds_sequence_t, ext);
+      *align = ALGN (dds_sequence_t, is_ext);
+      *size = SZ (dds_sequence_t, is_ext);
       tbd->fixed_size = false;
       tbd->no_optimize = true;
       break;
@@ -429,20 +466,12 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       ret = typebuilder_add_type (tbd, &tbtype->args.collection_args.elem_sz,
               &tbtype->args.collection_args.elem_align,
               tbtype->args.collection_args.element_type.type, el_type, false, false);
-      if (ext)
-      {
-        *align = alignof (void *);
-        *size = sizeof (void *);
-      }
-      else
-      {
-        *align = tbtype->args.collection_args.elem_align;
-        *size = bound * tbtype->args.collection_args.elem_sz;
-      }
+      *align = is_ext ? alignof (void *) : tbtype->args.collection_args.elem_align;
+      *size = is_ext ? sizeof (void *) : bound * tbtype->args.collection_args.elem_sz;
       break;
     }
     case DDS_XTypes_TK_ALIAS:
-      ret = typebuilder_add_type (tbd, size, align, tbtype, type->xt._u.alias.related_type, ext, use_ext_type);
+      ret = typebuilder_add_type (tbd, size, align, tbtype, type->xt._u.alias.related_type, is_ext, use_ext_type);
       break;
     case DDS_XTypes_TK_STRUCTURE:
     case DDS_XTypes_TK_UNION: {
@@ -457,12 +486,13 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
         struct typebuilder_data_dep *dep;
         dep = ddsrt_calloc (1, sizeof (*dep));
         aggrtype = &dep->type;
-        ret = typebuilder_add_aggrtype (tbd, aggrtype, type);
         ddsrt_circlist_append (&tbd->dep_types, &dep->e);
+        if ((ret = typebuilder_add_aggrtype (tbd, aggrtype, type)))
+          return ret;
       }
       tbtype->args.external_type_args.external_type.type = aggrtype;
-      *size = aggrtype->size;
-      *align = aggrtype->align;
+      *align = is_ext ? alignof (void *) : aggrtype->align;
+      *size = is_ext ? sizeof (void *) : aggrtype->size;
       if (type->xt._d == DDS_XTypes_TK_UNION)
       {
         tbd->no_optimize = true;
@@ -482,34 +512,75 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       ret = DDS_RETCODE_BAD_PARAMETER;
       break;
   }
+
+  tbtype->align = *align;
+  tbtype->size = *size;
+
   return ret;
 }
 #undef SZ
 #undef ALGN
+
+static bool supported_key_type (const struct typebuilder_type *tb_type, bool allow_nesting)
+{
+  if (allow_nesting && (tb_type->type_code == DDS_OP_VAL_EXT || tb_type->type_code == DDS_OP_VAL_STU))
+    return true;
+  if (tb_type->type_code <= DDS_OP_VAL_8BY || tb_type->type_code == DDS_OP_VAL_BLN || tb_type->type_code == DDS_OP_VAL_ENU || tb_type->type_code == DDS_OP_VAL_BMK)
+    return true;
+  if (tb_type->type_code == DDS_OP_VAL_ARR)
+     return supported_key_type (tb_type->args.collection_args.element_type.type, false);
+  return false;
+}
 
 static dds_return_t typebuilder_add_struct (struct typebuilder_data *tbd, struct typebuilder_aggregated_type *tb_aggrtype, const struct ddsi_type *type)
 {
   dds_return_t ret = DDS_RETCODE_OK;
   uint32_t offs = 0;
 
-  tb_aggrtype->type_name = ddsrt_strdup (type->xt._u.structure.detail.type_name);
+  if (!(tb_aggrtype->type_name = ddsrt_strdup (type->xt._u.structure.detail.type_name)))
+  {
+    ret = DDS_RETCODE_OUT_OF_RESOURCES;
+    goto err;
+  }
   tb_aggrtype->extensibility = get_extensibility (type->xt._u.structure.flags);
 
   // FIXME: inheritance
   //type->xt._u.structure.base_type
 
   tb_aggrtype->detail._struct.n_members = type->xt._u.structure.members.length;
-  tb_aggrtype->detail._struct.members = ddsrt_calloc (tb_aggrtype->detail._struct.n_members, sizeof (*tb_aggrtype->detail._struct.members));
+  if (!(tb_aggrtype->detail._struct.members = ddsrt_calloc (tb_aggrtype->detail._struct.n_members, sizeof (*tb_aggrtype->detail._struct.members))))
+  {
+    typebuilder_aggrtype_fini (tb_aggrtype);
+    ret = DDS_RETCODE_OUT_OF_RESOURCES;
+    goto err;
+  }
+
   for (uint32_t n = 0; n < type->xt._u.structure.members.length; n++)
   {
     uint32_t sz, align;
-    bool ext = type->xt._u.structure.members.seq[n].flags & DDS_XTypes_IS_EXTERNAL;
-    tb_aggrtype->detail._struct.members[n].is_external = ext;
-    tb_aggrtype->detail._struct.members[n].is_key = type->xt._u.structure.members.seq[n].flags & DDS_XTypes_IS_KEY;
-    tb_aggrtype->detail._struct.members[n].is_must_understand = type->xt._u.structure.members.seq[n].flags & DDS_XTypes_IS_MUST_UNDERSTAND;
-    tb_aggrtype->detail._struct.members[n].is_optional = type->xt._u.structure.members.seq[n].flags & DDS_XTypes_IS_OPTIONAL;
-    if ((ret = typebuilder_add_type (tbd, &sz, &align, &tb_aggrtype->detail._struct.members[n].type, type->xt._u.structure.members.seq[n].type, ext, true)) != DDS_RETCODE_OK)
+    bool is_ext = type->xt._u.structure.members.seq[n].flags & DDS_XTypes_IS_EXTERNAL;
+    bool is_key = type->xt._u.structure.members.seq[n].flags & DDS_XTypes_IS_KEY;
+    bool is_opt = type->xt._u.structure.members.seq[n].flags & DDS_XTypes_IS_OPTIONAL;
+    if (is_key)
+      tb_aggrtype->has_explicit_key = true;
+    tb_aggrtype->detail._struct.members[n] = (struct typebuilder_struct_member) {
+      .member_name = ddsrt_strdup (type->xt._u.structure.members.seq[n].detail.name),
+      .member_index = n,
+      .member_id = type->xt._u.structure.members.seq[n].id,
+      .is_external = is_ext,
+      .is_key = is_key,
+      .is_must_understand = is_key || type->xt._u.structure.members.seq[n].flags & DDS_XTypes_IS_MUST_UNDERSTAND,
+      .is_optional = is_opt
+    };
+    if ((ret = typebuilder_add_type (tbd, &sz, &align, &tb_aggrtype->detail._struct.members[n].type, type->xt._u.structure.members.seq[n].type, is_ext || is_opt, true)) != DDS_RETCODE_OK)
       break;
+
+    if (is_key && !supported_key_type (&tb_aggrtype->detail._struct.members[n].type, true))
+    {
+      typebuilder_aggrtype_fini (tb_aggrtype);
+      ret = DDS_RETCODE_UNSUPPORTED;
+      goto err;
+    }
 
     if (align > tb_aggrtype->align)
       tb_aggrtype->align = align;
@@ -523,7 +594,7 @@ static dds_return_t typebuilder_add_struct (struct typebuilder_data *tbd, struct
   // add padding at end of struct
   align_to (&offs, tb_aggrtype->align);
   tb_aggrtype->size = offs;
-
+err:
   return ret;
 }
 
@@ -538,13 +609,25 @@ static dds_return_t typebuilder_add_union (struct typebuilder_data *tbd, struct 
   if ((ret = typebuilder_add_type (tbd, &disc_sz, &disc_align, &tb_aggrtype->detail._union.disc_type, type->xt._u.union_type.disc_type, false, false)) != DDS_RETCODE_OK)
     return ret;
   tb_aggrtype->detail._union.disc_size = disc_sz;
+  tb_aggrtype->detail._union.disc_is_key = type->xt._u.union_type.disc_flags & DDS_XTypes_IS_KEY;
+  // TODO: support for union (discriminator) as part of a type's key
+  if (tb_aggrtype->detail._union.disc_is_key)
+  {
+    ddsrt_free (tb_aggrtype->type_name);
+    ret = DDS_RETCODE_UNSUPPORTED;
+    goto err;
+  }
 
   uint32_t n_cases = 0;
   for (uint32_t n = 0; n < type->xt._u.union_type.members.length; n++)
     n_cases += type->xt._u.union_type.members.seq[n].label_seq._length;
 
   tb_aggrtype->detail._union.n_cases = n_cases;
-  tb_aggrtype->detail._union.cases = ddsrt_calloc (n_cases, sizeof (*tb_aggrtype->detail._union.cases));
+  if (!(tb_aggrtype->detail._union.cases = ddsrt_calloc (n_cases, sizeof (*tb_aggrtype->detail._union.cases))))
+  {
+    ret = DDS_RETCODE_OUT_OF_RESOURCES;
+    goto err;
+  }
   for (uint32_t n = 0, c = 0; n < type->xt._u.union_type.members.length; n++)
   {
     uint32_t sz, align;
@@ -580,7 +663,7 @@ static dds_return_t typebuilder_add_union (struct typebuilder_data *tbd, struct 
 
   tbd->contains_union = true;
   tbd->no_optimize = true;
-
+err:
   return ret;
 }
 
@@ -694,7 +777,7 @@ static uint32_t get_type_flags (const struct typebuilder_type *tb_type)
   return flags;
 }
 
-static dds_return_t get_typebuilder_ops_type (struct typebuilder_type *tb_type, uint32_t flags, uint32_t member_offset, struct typebuilder_ops *ops)
+static dds_return_t get_ops_type (struct typebuilder_type *tb_type, uint32_t flags, uint32_t member_offset, struct typebuilder_ops *ops)
 {
   dds_return_t ret = DDS_RETCODE_OK;
   switch (tb_type->type_code)
@@ -794,10 +877,10 @@ static dds_return_t get_typebuilder_ops_type (struct typebuilder_type *tb_type, 
         case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_BSQ: {
           if ((ret = push_op_arg (ops, tb_type->args.collection_args.elem_sz)))
             return ret;
+          uint16_t next_insn_idx = ops->index;
           if ((ret = push_op_arg (ops, 4 + (bounded ? 1 : 0))))  // set elem_insn, next_insn is set after element
             return ret;
-          uint16_t next_insn_idx = ops->index;
-          if ((ret = get_typebuilder_ops_type (element_type, 0u, 0u, ops)))
+          if ((ret = get_ops_type (element_type, 0u, 0u, ops)))
             goto err;
           if ((ret = push_op (ops, DDS_OP_RTS)))
             return ret;
@@ -873,7 +956,7 @@ static dds_return_t get_typebuilder_ops_type (struct typebuilder_type *tb_type, 
             return ret;
           if ((ret = push_op_arg (ops, tb_type->args.collection_args.elem_sz)))
             return ret;
-          if ((ret = get_typebuilder_ops_type (element_type, 0u, 0u, ops)))
+          if ((ret = get_ops_type (element_type, 0u, 0u, ops)))
             goto err;
           if ((ret = push_op (ops, DDS_OP_RTS)))
             return ret;
@@ -895,7 +978,7 @@ err:
   return ret;
 }
 
-static dds_return_t get_typebuilder_ops_struct (const struct typebuilder_struct *tb_struct, uint16_t extensibility, struct typebuilder_ops *ops)
+static dds_return_t get_ops_struct (const struct typebuilder_struct *tb_struct, uint16_t extensibility, uint16_t parent_insn_offs, struct typebuilder_ops *ops, bool parent_is_key)
 {
   dds_return_t ret;
   if (extensibility == DDS_XTypes_IS_MUTABLE)
@@ -916,17 +999,18 @@ static dds_return_t get_typebuilder_ops_struct (const struct typebuilder_struct 
   {
     uint32_t flags = 0u;
     flags |= tb_struct->members[m].is_external ? DDS_OP_FLAG_EXT : 0u;
-    flags |= tb_struct->members[m].is_optional ? DDS_OP_FLAG_OPT : 0u;
-    flags |= tb_struct->members[m].is_key ? DDS_OP_FLAG_KEY : 0u;
+    flags |= tb_struct->members[m].is_optional ? (DDS_OP_FLAG_OPT | DDS_OP_FLAG_EXT) : 0u;
+    flags |= (tb_struct->members[m].is_key || parent_is_key) ? DDS_OP_FLAG_KEY : 0u;
     flags |= tb_struct->members[m].is_must_understand ? DDS_OP_FLAG_MU : 0u;
-    if ((ret = get_typebuilder_ops_type (&tb_struct->members[m].type, flags, tb_struct->members[m].member_offset, ops)))
+    tb_struct->members[m].insn_offs = ops->index - parent_insn_offs;
+    if ((ret = get_ops_type (&tb_struct->members[m].type, flags, tb_struct->members[m].member_offset, ops)))
       return ret;
   }
 
   return ret;
 }
 
-static dds_return_t get_typebuilder_ops_union_case (struct typebuilder_type *tb_type, uint32_t flags, uint32_t disc_value, uint32_t offset, uint16_t *inline_types_offs, struct typebuilder_ops *ops)
+static dds_return_t get_ops_union_case (struct typebuilder_type *tb_type, uint32_t flags, uint32_t disc_value, uint32_t offset, uint16_t *inline_types_offs, struct typebuilder_ops *ops)
 {
   dds_return_t ret = DDS_RETCODE_OK;
   switch (tb_type->type_code)
@@ -1030,7 +1114,7 @@ static dds_return_t get_typebuilder_ops_union_case (struct typebuilder_type *tb_
       // store ops index and temporarily replace it with index for inline types
       uint16_t ops_idx = ops->index;
       ops->index = *inline_types_offs;
-      if ((ret = get_typebuilder_ops_type (tb_type, 0u, 0u, ops)))
+      if ((ret = get_ops_type (tb_type, 0u, 0u, ops)))
         return ret;
       *inline_types_offs = ops->index;
       ops->index = ops_idx;
@@ -1046,7 +1130,7 @@ static dds_return_t get_typebuilder_ops_union_case (struct typebuilder_type *tb_
   return ret;
 }
 
-static dds_return_t get_typebuilder_ops_union (const struct typebuilder_union *tb_union, uint16_t extensibility, struct typebuilder_ops *ops)
+static dds_return_t get_ops_union (const struct typebuilder_union *tb_union, uint16_t extensibility, struct typebuilder_ops *ops)
 {
   dds_return_t ret;
   if (extensibility == DDS_XTypes_IS_MUTABLE)
@@ -1086,7 +1170,7 @@ static dds_return_t get_typebuilder_ops_union (const struct typebuilder_union *t
   {
     uint32_t flags = 0u;
     flags |= tb_union->cases[c].is_external ? DDS_OP_FLAG_EXT : 0u;
-    if ((ret = get_typebuilder_ops_union_case (&tb_union->cases[c].type, flags, tb_union->cases[c].disc_value, tb_union->member_offs, &inline_types_offs, ops)))
+    if ((ret = get_ops_union_case (&tb_union->cases[c].type, flags, tb_union->cases[c].disc_value, tb_union->member_offs, &inline_types_offs, ops)))
       return ret;
   }
 
@@ -1098,21 +1182,21 @@ static dds_return_t get_typebuilder_ops_union (const struct typebuilder_union *t
   return ret;
 }
 
-static dds_return_t get_typebuilder_ops_aggrtype (struct typebuilder_aggregated_type *tb_aggrtype, struct typebuilder_ops *ops)
+static dds_return_t get_ops_aggrtype (struct typebuilder_aggregated_type *tb_aggrtype, struct typebuilder_ops *ops, bool parent_is_key)
 {
   dds_return_t ret = DDS_RETCODE_UNSUPPORTED;
   tb_aggrtype->ops_index = ops->index;
   switch (tb_aggrtype->kind)
   {
     case DDS_XTypes_TK_STRUCTURE:
-      if ((ret = get_typebuilder_ops_struct (&tb_aggrtype->detail._struct, tb_aggrtype->extensibility, ops)))
+      if ((ret = get_ops_struct (&tb_aggrtype->detail._struct, tb_aggrtype->extensibility, tb_aggrtype->ops_index, ops, parent_is_key)))
       {
         free_ops (ops);
         return ret;
       }
       break;
     case DDS_XTypes_TK_UNION:
-      if ((ret = get_typebuilder_ops_union (&tb_aggrtype->detail._union, tb_aggrtype->extensibility, ops)))
+      if ((ret = get_ops_union (&tb_aggrtype->detail._union, tb_aggrtype->extensibility, ops)))
       {
         free_ops (ops);
         return ret;
@@ -1128,10 +1212,10 @@ static dds_return_t get_typebuilder_ops_aggrtype (struct typebuilder_aggregated_
   return ret;
 }
 
-static dds_return_t get_typebuilder_ops (struct typebuilder_data *tbd, struct typebuilder_ops *ops)
+static dds_return_t get_ops (struct typebuilder_data *tbd, struct typebuilder_ops *ops)
 {
   dds_return_t ret;
-  if ((ret = get_typebuilder_ops_aggrtype (&tbd->toplevel_type, ops)))
+  if ((ret = get_ops_aggrtype (&tbd->toplevel_type, ops, false)))
     return ret;
 
   if (!ddsrt_circlist_isempty (&tbd->dep_types))
@@ -1140,7 +1224,7 @@ static dds_return_t get_typebuilder_ops (struct typebuilder_data *tbd, struct ty
     do
     {
       struct typebuilder_data_dep *dep = DDSRT_FROM_CIRCLIST (struct typebuilder_data_dep, e, elem);
-      ret = get_typebuilder_ops_aggrtype (&dep->type, ops);
+      ret = get_ops_aggrtype (&dep->type, ops, false);
       elem = elem->next;
     } while (!ret && elem != elem0);
   }
@@ -1170,7 +1254,7 @@ static dds_return_t resolve_ops_offsets_type (struct typebuilder_type *tb_type, 
           break;
         }
         default:
-          // no offset updates for other collection element types
+          // no offset updates required for other collection element types
           break;
       }
       break;
@@ -1181,10 +1265,11 @@ static dds_return_t resolve_ops_offsets_type (struct typebuilder_type *tb_type, 
       ref_op = tb_type->args.external_type_args.external_type.ref_insn;
       offs_base = tb_type->args.external_type_args.external_type.ref_base;
       offs_target = tb_type->args.external_type_args.external_type.type->ops_index;
+      ret = resolve_ops_offsets_aggrtype (tb_type->args.external_type_args.external_type.type, ops);
       update_offs = true;
       break;
     default:
-      // no offset updates for other member types
+      // no offset updates required for other member types
       break;
   }
 
@@ -1250,7 +1335,234 @@ static dds_return_t resolve_ops_offsets (const struct typebuilder_data *tbd, str
   return ret;
 }
 
-static dds_return_t get_typebuilder_desc (dds_topic_descriptor_t **desc, struct typebuilder_data *tbd)
+static dds_return_t get_keys_struct (struct typebuilder_data *tbd, struct typebuilder_key_path *path, const struct typebuilder_struct *tb_struct, bool has_explicit_keys, bool parent_is_key)
+{
+  dds_return_t ret = DDS_RETCODE_OK;
+  for (uint32_t n = 0; n < tb_struct->n_members; n++)
+  {
+    struct typebuilder_struct_member *member = &tb_struct->members[n];
+    if (member->is_key || (parent_is_key && !has_explicit_keys))
+    {
+      struct typebuilder_key_path *member_path;
+      if (!(member_path = ddsrt_calloc (1, sizeof (*member_path))))
+      {
+        ret = DDS_RETCODE_OUT_OF_RESOURCES;
+        goto err;
+      }
+      member_path->n_parts = 1 + (path ? path->n_parts : 0);
+      if (!(member_path->parts = ddsrt_calloc (member_path->n_parts, sizeof (*member_path->parts))))
+      {
+        ret = DDS_RETCODE_OUT_OF_RESOURCES;
+        goto err;
+      }
+      if (path)
+      {
+        memcpy (member_path->parts, path->parts, path->n_parts * sizeof (*path->parts));
+        member_path->name_len = path->name_len;
+      }
+      member_path->name_len += strlen (member->member_name) + 1; // +1 for separator (parts 0..n-1) and \0 (part n)
+      member_path->parts[member_path->n_parts - 1] = member;
+      if (member->type.type_code == DDS_OP_VAL_EXT)
+      {
+        if ((ret = get_keys_aggrtype (tbd, member_path, member->type.args.external_type_args.external_type.type, true)))
+          goto err;
+        ddsrt_free (member_path->parts);
+        ddsrt_free (member_path);
+      }
+      else
+      {
+        tbd->n_keys++;
+        struct typebuilder_key *tmp;
+        if (!(tmp = ddsrt_realloc (tbd->keys, tbd->n_keys * sizeof (*tbd->keys))))
+        {
+          ret = DDS_RETCODE_OUT_OF_RESOURCES;
+          goto err;
+        }
+        tbd->keys = tmp;
+        tbd->keys[tbd->n_keys - 1].path = member_path;
+      }
+    }
+  }
+err:
+  return ret;
+}
+
+static dds_return_t get_keys_aggrtype (struct typebuilder_data *tbd, struct typebuilder_key_path *path, const struct typebuilder_aggregated_type *tb_aggrtype, bool parent_key)
+{
+  dds_return_t ret = DDS_RETCODE_UNSUPPORTED;
+  switch (tb_aggrtype->kind)
+  {
+    case DDS_XTypes_TK_STRUCTURE:
+      if ((ret = get_keys_struct (tbd, path, &tb_aggrtype->detail._struct, tb_aggrtype->has_explicit_key, parent_key)))
+        return ret;
+      break;
+    case DDS_XTypes_TK_UNION:
+      /* TODO: Support union types as key. The discriminator is the key in that case, and currently
+         this is rejected in typebuilder_add_union, so at this point a union has no key attribute set */
+      ret = DDS_RETCODE_OK;
+      break;
+    default:
+      abort ();
+  }
+  return ret;
+}
+
+static int key_id_cmp (const void *va, const void *vb)
+{
+  const struct typebuilder_key * const *a = va;
+  const struct typebuilder_key * const *b = vb;
+
+  assert ((*a)->path->n_parts && (*a)->path->parts);
+  for (uint32_t n = 0; n < (*a)->path->n_parts; n++)
+  {
+    assert (n < (*b)->path->n_parts);
+    if ((*a)->path->parts[n]->member_id != (*b)->path->parts[n]->member_id)
+      return (*a)->path->parts[n]->member_id < (*b)->path->parts[n]->member_id ? -1 : 1;
+  }
+  assert ((*a)->path->n_parts == (*b)->path->n_parts);
+  return 0;
+}
+
+static uint32_t add_to_key_size (uint32_t keysize, uint32_t field_size, bool dheader, uint32_t field_align, uint32_t max_align)
+{
+  uint32_t sz = keysize;
+  if (field_align > max_align)
+    field_align = max_align;
+  if (dheader) {
+    uint32_t dh_size = 4, dh_align = 4;
+    if (sz % dh_align)
+      sz += dh_align - (sz % dh_align);
+    sz += dh_size;
+  }
+  if (sz % field_align)
+    sz += field_align - (sz % field_align);
+  sz += field_size;
+  if (sz > DDS_FIXED_KEY_MAX_SIZE)
+    sz = DDS_FIXED_KEY_MAX_SIZE + 1;
+  return sz;
+}
+
+static dds_return_t get_keys (struct typebuilder_data *tbd, struct typebuilder_ops *ops, struct dds_key_descriptor **key_desc)
+{
+  dds_return_t ret = DDS_RETCODE_OK;
+  if ((ret = get_keys_aggrtype (tbd, NULL, &tbd->toplevel_type, false)))
+    return ret;
+
+  if (tbd->n_keys)
+  {
+    struct typebuilder_key **keys_by_id;
+    if (!(keys_by_id = ddsrt_malloc (tbd->n_keys * sizeof (*keys_by_id))))
+      return DDS_RETCODE_OUT_OF_RESOURCES;
+    if (!(*key_desc = ddsrt_malloc (tbd->n_keys * sizeof (**key_desc))))
+      return DDS_RETCODE_OUT_OF_RESOURCES;
+
+    for (uint32_t k = 0; k < tbd->n_keys; k++)
+      keys_by_id[k] = &tbd->keys[k];
+    qsort (keys_by_id, tbd->n_keys, sizeof (*keys_by_id), key_id_cmp);
+
+    // key ops (sorted by member index)
+    for (uint32_t k = 0; k < tbd->n_keys; k++)
+    {
+      struct typebuilder_key *key = &tbd->keys[k];
+      assert (key->path && key->path->parts && key->path->n_parts);
+      key->key_index = k;
+
+      key->kof_idx = ops->index;
+      push_op_arg (ops, DDS_OP_KOF);
+
+      uint32_t n_key_offs = 0;
+      for (uint32_t n = 0; n < key->path->n_parts; n++)
+      {
+        push_op_arg (ops, key->path->parts[n]->insn_offs);
+        n_key_offs++;
+      }
+      or_op (ops, key->kof_idx, n_key_offs);
+    }
+
+    uint32_t keysz_xcdr1 = 0, keysz_xcdr2 = 0;
+    for (uint32_t k = 0; k < tbd->n_keys; k++)
+    {
+      // size XCDR2: using key definition order
+      struct typebuilder_key *key_xcdr1 = &tbd->keys[k];
+      keysz_xcdr1 = add_to_key_size (keysz_xcdr1, key_xcdr1->path->parts[key_xcdr1->path->n_parts - 1]->type.size, false,
+          key_xcdr1->path->parts[key_xcdr1->path->n_parts - 1]->type.align, XCDR1_MAX_ALIGN);
+
+      // size XCDR2: using member id sort order
+      struct typebuilder_key *key_xcdr2 = keys_by_id[k];
+      const struct typebuilder_struct_member *key_member = key_xcdr2->path->parts[key_xcdr2->path->n_parts - 1];
+      bool dheader = key_member->type.type_code == DDS_OP_VAL_ARR &&
+          !(key_member->type.args.collection_args.element_type.type->type_code == DDS_OP_VAL_BLN || key_member->type.args.collection_args.element_type.type->type_code <= DDS_OP_VAL_8BY);
+      keysz_xcdr2 = add_to_key_size (keysz_xcdr2, key_member->type.size, dheader,
+          key_xcdr2->path->parts[key_xcdr2->path->n_parts - 1]->type.align, XCDR2_MAX_ALIGN);
+    }
+
+    if (keysz_xcdr1 > 0 && keysz_xcdr1 <= DDS_FIXED_KEY_MAX_SIZE)
+      tbd->fixed_key_xcdr1 = true;
+    if (keysz_xcdr2 > 0 && keysz_xcdr2 <= DDS_FIXED_KEY_MAX_SIZE)
+      tbd->fixed_key_xcdr2 = true;
+
+    // build key descriptor list (keys sorted by member id)
+    for (uint32_t k = 0; k < tbd->n_keys; k++)
+    {
+      struct typebuilder_key *key = keys_by_id[k];
+      (*key_desc)[k] = (struct dds_key_descriptor) { .m_name = ddsrt_malloc (key->path->name_len + 1), .m_offset = key->kof_idx, .m_idx = key->key_index };
+      if (!(*key_desc)[k].m_name)
+      {
+        ret = DDS_RETCODE_OUT_OF_RESOURCES;
+        ddsrt_free (keys_by_id);
+        goto err;
+      }
+
+      size_t name_csr = 0;
+      for (uint32_t p = 0; p < key->path->n_parts; p++)
+      {
+        if (name_csr > 0)
+          strcpy ((char *) (*key_desc)[k].m_name + name_csr++, ".");
+        strcpy ((char *) (*key_desc)[k].m_name + name_csr, key->path->parts[p]->member_name);
+        name_csr += strlen (key->path->parts[p]->member_name);
+      }
+    }
+    ddsrt_free (keys_by_id);
+  }
+
+err:
+  return ret;
+}
+
+static void set_implicit_keys_struct (struct typebuilder_struct *tb_struct, bool has_explicit_key, bool is_toplevel, bool parent_is_key)
+{
+  for (uint32_t n = 0; n < tb_struct->n_members; n++)
+  {
+    if (parent_is_key && !has_explicit_key)
+    {
+      tb_struct->members[n].is_key = true;
+      tb_struct->members[n].is_must_understand = true;
+    }
+
+    struct typebuilder_type *tb_type = &tb_struct->members[n].type;
+    if (tb_type->type_code == DDS_OP_VAL_EXT)
+      set_implicit_keys_aggrtype (tb_type->args.external_type_args.external_type.type, false, (parent_is_key || is_toplevel) && tb_struct->members[n].is_key);
+  }
+}
+
+static dds_return_t set_implicit_keys_aggrtype (struct typebuilder_aggregated_type *tb_aggrtype, bool is_toplevel, bool parent_is_key)
+{
+  dds_return_t ret = DDS_RETCODE_UNSUPPORTED;
+  switch (tb_aggrtype->kind)
+  {
+    case DDS_XTypes_TK_STRUCTURE:
+      set_implicit_keys_struct (&tb_aggrtype->detail._struct, tb_aggrtype->has_explicit_key, is_toplevel, parent_is_key);
+      break;
+    case DDS_XTypes_TK_UNION:
+      ret = DDS_RETCODE_OK;
+      break;
+    default:
+      abort ();
+  }
+  return ret;
+}
+
+static dds_return_t get_topic_descriptor (dds_topic_descriptor_t **desc, struct typebuilder_data *tbd)
 {
   dds_return_t ret;
   unsigned char *typeinfo_data , *typemap_data;
@@ -1264,8 +1576,16 @@ static dds_return_t get_typebuilder_desc (dds_topic_descriptor_t **desc, struct 
   }
 
   struct typebuilder_ops ops = { NULL, 0, 0, 0 };
-  if ((ret = get_typebuilder_ops (tbd, &ops))
+  if ((ret = get_ops (tbd, &ops))
     || (ret = resolve_ops_offsets (tbd, &ops)))
+  {
+    ddsrt_free (typeinfo_data);
+    ddsrt_free (typemap_data);
+    return ret;
+  }
+
+  struct dds_key_descriptor *key_desc;
+  if ((ret = get_keys (tbd, &ops, &key_desc)))
   {
     ddsrt_free (typeinfo_data);
     ddsrt_free (typemap_data);
@@ -1278,8 +1598,8 @@ static dds_return_t get_typebuilder_desc (dds_topic_descriptor_t **desc, struct 
     .m_align = (uint32_t) tbd->toplevel_type.align,
     .m_flagset = typebuilder_flagset (tbd),
     .m_typename = ddsrt_strdup (tbd->toplevel_type.type_name),
-    .m_nkeys = tbd->num_keys,
-    .m_keys = NULL,
+    .m_nkeys = tbd->n_keys,
+    .m_keys = key_desc,
     .m_nops = ops.n_ops,
     .m_ops = ops.ops,
     .m_meta = "",
@@ -1304,12 +1624,18 @@ static dds_return_t get_typebuilder_desc (dds_topic_descriptor_t **desc, struct 
 
 dds_return_t ddsi_topic_desc_from_type (struct ddsi_domaingv *gv, dds_topic_descriptor_t **desc, const struct ddsi_type *type)
 {
-  dds_return_t ret = DDS_RETCODE_OK;
+  assert (type);
   assert (desc);
 
+  dds_return_t ret;
   struct typebuilder_data *tbd = typebuilder_data_new (gv, type);
-  if ((ret = typebuilder_add_aggrtype (tbd, &tbd->toplevel_type, type)) == DDS_RETCODE_OK)
-    ret = get_typebuilder_desc (desc, tbd);
+  if ((ret = typebuilder_add_aggrtype (tbd, &tbd->toplevel_type, type)))
+    goto err;
+  set_implicit_keys_aggrtype (&tbd->toplevel_type, true, false);
+  if ((ret = get_topic_descriptor (desc, tbd)))
+    goto err;
+
+err:
   typebuilder_data_free (tbd);
   return ret;
 }
@@ -1318,7 +1644,12 @@ void ddsi_topic_desc_fini (dds_topic_descriptor_t *desc)
 {
   ddsrt_free ((char *) desc->m_typename);
   ddsrt_free ((void *) desc->m_ops);
-  ddsrt_free ((void *) desc->m_keys);
+  if (desc->m_nkeys)
+  {
+    for (uint32_t n = 0; n < desc->m_nkeys; n++)
+      ddsrt_free ((void *) desc->m_keys[n].m_name);
+    ddsrt_free ((void *) desc->m_keys);
+  }
   ddsrt_free ((void *) desc->type_information.data);
   ddsrt_free ((void *) desc->type_mapping.data);
 }
