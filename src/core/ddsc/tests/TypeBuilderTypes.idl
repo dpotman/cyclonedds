@@ -157,6 +157,18 @@ module TypeBuilderTypes {
     @optional t7 f4;
   };
 
+  struct t10_2 {
+    long f10_2;
+  };
+
+  struct t10_1 : t10_2 {
+    long f10_1;
+  };
+
+  struct t10 : t10_1 {
+    long f10;
+  };
+
   // test extensibility
   // test padding at end of struct
   // test opt/ext/mu flags
