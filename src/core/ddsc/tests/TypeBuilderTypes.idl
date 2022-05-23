@@ -56,6 +56,12 @@ module TypeBuilderTypes {
   };
 
   typedef sequence<float, 2> td1;
+  typedef long tda1[2];
+  typedef tda1 tda2;
+  typedef td1 tda3;
+  typedef tda3 tda4[6];
+  typedef sequence<sequence<sequence<tda4, 3> >, 2> td2;
+  typedef sequence<long> temp;
 
   @bit_bound(4) enum en8 { EN8_1, EN8_2 };
   @bit_bound(12) bitmask bm16 { BM16_1, BM16_2 };
@@ -76,8 +82,21 @@ module TypeBuilderTypes {
     case 17: boolean u17;
     case 18: float u18;
     case 19: en8 u19;
-    case 21: bm16 u20;
-    case 22: td1 u21;
+    case 21: bm16 u21;
+    case 22: td1 u22;
+    case 23: @external sequence<long> u23[3];
+    case 24: @external sequence<sequence<long> > u24[3];
+    case 25: @external sequence<sequence<bm16> > u25[3][4];
+    case 26: @external sequence<td1> u26[3];
+    case 27: @external sequence<sequence<td2>, 2> u27[500][500][500];
+    case 28: sequence<sequence<bm16, 12>, 8> u28[3][4];
+    case 29: sequence<sequence<tda1, 5> > u29[3][4];
+    case 30: sequence<tda2> u30[3000][4];
+    case 31: sequence<tda3> u31[3][4000];
+    case 32: tda4 u32[4000][5000];
+    case 33: sequence<td2> u33[5000];
+    case 34: temp u34;
+    case 35: t4 u35;
   };
 
   typedef long arr_def[300];
@@ -107,6 +126,7 @@ module TypeBuilderTypes {
     sequence<seq_def> f19;
     sequence<seq_arr_def, 200> f20;
     sequence<seq_arr_def, 4> f21[3];
+    sequence<sequence<sequence<seq_arr_def, 4> >, 2> f22[3][4];
   };
 
   @nested
@@ -150,6 +170,7 @@ module TypeBuilderTypes {
     en f7;
   };
 
+  @appendable
   struct t9 {
     @optional long f1;
     @optional t8 f2;
@@ -160,16 +181,44 @@ module TypeBuilderTypes {
   struct t10_2 {
     long f10_2;
   };
-
   struct t10_1 : t10_2 {
     long f10_1;
   };
-
   struct t10 : t10_1 {
-    long f10;
+    long f1;
+    t10_2 f2;
   };
 
-  // test extensibility
+  @nested struct t11a { long f1; };
+  @nested @appendable struct t11b { t11a f1; };
+  struct t11 {
+    t11a u1;
+    t11b u2;
+  };
+
+  @nested struct t12a { long fa1; };
+  @nested struct t12b { long fb1; t12a fb2; };
+  @mutable
+  struct t12 {
+    long f1;
+    @key short f2;
+    t12a f3;
+    t12b f4;
+    @external string<5> f5;
+    @key t12a f6;
+    sequence<sequence<t12b, 5>, 4> f7[3];
+    @key float f8[3][4];
+    string f9[5];
+  };
+
+  @nested @mutable struct t13a { long b1; };
+  @mutable struct t13 : t13a {
+    long f1;
+  };
+
+  // mut+inherit
+  // mut+keys
+
   // test padding at end of struct
   // test opt/ext/mu flags
   // test struct member union type
