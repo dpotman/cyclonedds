@@ -986,7 +986,7 @@ emit_switch_type_spec(
 
   // XTypes spec 7.2.2.4.4.4.6: In a union type, the discriminator member shall always have the 'must understand' attribute set to true.
   opcode |= DDS_OP_FLAG_MU;
-  if (idl_is_topic_key(descriptor->topic, (pstate->config.flags & IDL_FLAG_KEYLIST) != 0, path, &order)) {
+  if (idl_is_topic_key(descriptor->topic, (pstate->config.flags & IDL_FLAG_KEYLIST) != 0, path, &order) != IDL_KEYTYPE_NONE) {
     opcode |= DDS_OP_FLAG_KEY;
     ctype->has_key_member = true;
   }
@@ -1247,8 +1247,9 @@ emit_sequence(
     opcode |= idl_is_bounded(node) ? DDS_OP_TYPE_BSQ : DDS_OP_TYPE_SEQ;
     if ((ret = add_typecode(pstate, type_spec, SUBTYPE, false, &opcode)))
       return ret;
-    if (idl_is_topic_key(descriptor->topic, (pstate->config.flags & IDL_FLAG_KEYLIST) != 0, path, &order)) {
-      opcode |= DDS_OP_FLAG_KEY | DDS_OP_FLAG_MU;
+    idl_keytype_t keytype;
+    if ((keytype = idl_is_topic_key(descriptor->topic, (pstate->config.flags & IDL_FLAG_KEYLIST) != 0, path, &order)) != IDL_KEYTYPE_NONE) {
+      opcode |= DDS_OP_FLAG_KEY | (keytype == IDL_KEYTYPE_EXPLICIT ? DDS_OP_FLAG_MU : 0u);
       ctype->has_key_member = true;
     }
 
@@ -1383,8 +1384,9 @@ emit_array(
 
     if ((ret = add_typecode(pstate, type_spec, SUBTYPE, false, &opcode)))
       return ret;
-    if (idl_is_topic_key(descriptor->topic, (pstate->config.flags & IDL_FLAG_KEYLIST) != 0, path, &order)) {
-      opcode |= DDS_OP_FLAG_KEY | DDS_OP_FLAG_MU;
+    idl_keytype_t keytype;
+    if ((keytype = idl_is_topic_key(descriptor->topic, (pstate->config.flags & IDL_FLAG_KEYLIST) != 0, path, &order)) != IDL_KEYTYPE_NONE) {
+      opcode |= DDS_OP_FLAG_KEY | (keytype == IDL_KEYTYPE_EXPLICIT ? DDS_OP_FLAG_MU : 0u);
       ctype->has_key_member = true;
     }
 
@@ -1594,9 +1596,14 @@ emit_declarator(
         member is not part of the key (which resulted in idl_is_topic_key returning false).
         The reason for adding the key flag here, is that if any other member (that is a key)
         refers to this type, it will require the key flag. */
-    if (idl_is_topic_key(descriptor->topic, keylist, path, &order) ||
-        (idl_is_member(parent) && ((idl_member_t *)parent)->key.value)
-    ) {
+    idl_keytype_t keytype;
+    if ((keytype = idl_is_topic_key(descriptor->topic, keylist, path, &order)) != IDL_KEYTYPE_NONE)
+    {
+      opcode |= DDS_OP_FLAG_KEY | (keytype == IDL_KEYTYPE_EXPLICIT ? DDS_OP_FLAG_MU : 0u);
+      ctype->has_key_member = true;
+    }
+    else if (idl_is_member(parent) && ((idl_member_t *)parent)->key.value)
+    {
       opcode |= DDS_OP_FLAG_KEY | DDS_OP_FLAG_MU;
       ctype->has_key_member = true;
     }
