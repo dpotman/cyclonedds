@@ -1262,6 +1262,13 @@ emit_sequence(
       assert(idl_is_member(member_node));
       if (idl_is_external(member_node))
         opcode |= DDS_OP_FLAG_EXT;
+
+      if (((idl_member_t *)member_node)->key.value)
+      {
+        opcode |= DDS_OP_FLAG_KEY | DDS_OP_FLAG_MU;
+        ctype->has_key_member = true;
+      }
+
       /* Add FLAG_OPT, and add FLAG_EXT, because an optional field is represented in the same way as
          external fields */
       if (idl_is_optional(member_node))
@@ -1395,8 +1402,17 @@ emit_array(
        an external member */
     idl_node_t *parent = idl_parent(node);
     if (idl_is_struct(stype->node)) {
+      assert(idl_is_member(parent));
+
       if (idl_is_external(parent))
         opcode |= DDS_OP_FLAG_EXT;
+
+      if (((idl_member_t *)parent)->key.value)
+      {
+        opcode |= DDS_OP_FLAG_KEY | DDS_OP_FLAG_MU;
+        ctype->has_key_member = true;
+      }
+
       /* Add FLAG_OPT, and add FLAG_EXT, because an optional field is represented in the same way as
          external fields */
       if (idl_is_optional(parent))
