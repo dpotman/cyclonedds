@@ -117,6 +117,7 @@ struct typebuilder_union_member
   struct typebuilder_type type;
   uint32_t disc_value;
   bool is_external;
+  bool is_default;
 };
 
 struct typebuilder_union
@@ -718,7 +719,11 @@ static dds_return_t typebuilder_add_union (struct typebuilder_data *tbd, struct 
 
   uint32_t n_cases = 0;
   for (uint32_t n = 0; n < type->xt._u.union_type.members.length; n++)
+  {
     n_cases += type->xt._u.union_type.members.seq[n].label_seq._length;
+    if (type->xt._u.union_type.members.seq[n].flags & DDS_XTypes_IS_DEFAULT)
+      n_cases++;
+  }
 
   tb_aggrtype->detail._union.n_cases = n_cases;
   if (!(tb_aggrtype->detail._union.cases = ddsrt_calloc (n_cases, sizeof (*tb_aggrtype->detail._union.cases))))
@@ -730,12 +735,24 @@ static dds_return_t typebuilder_add_union (struct typebuilder_data *tbd, struct 
   for (uint32_t n = 0, c = 0; n < type->xt._u.union_type.members.length; n++)
   {
     uint32_t sz, align;
-    bool ext = type->xt._u.union_type.members.seq[n].flags & DDS_XTypes_IS_EXTERNAL;
+    bool is_ext = type->xt._u.union_type.members.seq[n].flags & DDS_XTypes_IS_EXTERNAL;
     for (uint32_t l = 0; l < type->xt._u.union_type.members.seq[n].label_seq._length; l++)
     {
-      tb_aggrtype->detail._union.cases[c].is_external = ext;
+      tb_aggrtype->detail._union.cases[c].is_external = is_ext;
       tb_aggrtype->detail._union.cases[c].disc_value = (uint32_t) type->xt._u.union_type.members.seq[n].label_seq._buffer[l];
-      if ((ret = typebuilder_add_type (tbd, &sz, &align, &tb_aggrtype->detail._union.cases[c].type, type->xt._u.union_type.members.seq[n].type, ext, false)))
+      if ((ret = typebuilder_add_type (tbd, &sz, &align, &tb_aggrtype->detail._union.cases[c].type, type->xt._u.union_type.members.seq[n].type, is_ext, false)))
+      {
+        typebuilder_aggrtype_fini (tb_aggrtype);
+        goto err;
+      }
+      c++;
+    }
+    if (type->xt._u.union_type.members.seq[n].flags & DDS_XTypes_IS_DEFAULT)
+    {
+      tb_aggrtype->detail._union.cases[c].is_external = is_ext;
+      tb_aggrtype->detail._union.cases[c].is_default = true;
+      tb_aggrtype->detail._union.cases[c].disc_value = 0;
+      if ((ret = typebuilder_add_type (tbd, &sz, &align, &tb_aggrtype->detail._union.cases[c].type, type->xt._u.union_type.members.seq[n].type, is_ext, false)))
       {
         typebuilder_aggrtype_fini (tb_aggrtype);
         goto err;
@@ -1259,7 +1276,7 @@ static dds_return_t get_ops_union (const struct typebuilder_union *tb_union, uin
   else
     assert (extensibility == DDS_XTypes_IS_FINAL);
 
-  uint16_t flags = DDS_OP_FLAG_MU;
+  uint32_t flags = DDS_OP_FLAG_MU;
   switch (tb_union->disc_type.type_code)
   {
     case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
@@ -1269,7 +1286,9 @@ static dds_return_t get_ops_union (const struct typebuilder_union *tb_union, uin
     default:
       break;
   }
-  // FIXME: DDS_OP_FLAG_DEFAULT
+  for (uint32_t c = 0; c < tb_union->n_cases && !(flags & DDS_OP_FLAG_DEF); c++)
+    flags |= tb_union->cases[c].is_default ? DDS_OP_FLAG_DEF : 0u;
+
   uint16_t next_insn_offs = ops->index;
   if ((ret = push_op (ops, DDS_OP_ADR | DDS_OP_TYPE_UNI | (tb_union->disc_type.type_code << 8) | flags)))
     return ret;

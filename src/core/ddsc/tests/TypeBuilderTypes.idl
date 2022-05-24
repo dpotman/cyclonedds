@@ -230,23 +230,37 @@ module TypeBuilderTypes {
   union t15a switch (char) {
     case 'a': long u1;
     case 'z': string u2;
-    default: float u2;
+    default: float u3;
   };
-  struct t15b {
+  union t15b switch (long long) {
+    case 1: @external long u1;
+    case 2: case 5: t1 u2;
+    case 10: case 11: default: @external t2 u3;
+  };
+  struct t15c {
     @optional string a1;
     @optional char a2;
     @optional long long a3;
     @optional t15a a4;
+    @optional t15b a5;
   };
-  struct t15 : t15b {
-    @optional t15b f1;
+  struct t15 : t15c {
+    @optional t15c f1;
     @optional en f2;
     @optional bm16 f3;
   };
 
-  // test padding at end of struct
-  // test opt/ext/mu flags
-  // test struct member union type
+  struct t16 {
+    @key char f1;
+    @key long long f2;
+    @key char f3;
+  };
+
+  union t17 switch(en8) {
+    case EN8_1: t1 u1;
+    case EN8_2: t2 u2;
+  };
+
   // test union with enum discr
   // test struct inheritance
   // test hash member ids
