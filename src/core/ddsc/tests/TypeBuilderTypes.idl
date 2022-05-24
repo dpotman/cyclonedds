@@ -23,19 +23,15 @@ module TypeBuilderTypes {
     octet f1;
     char f2;
     unsigned short f3;
-    @external
-    short f4;
+    @external short f4;
     unsigned long f5;
     long f6;
-    @external
-    unsigned long long f7;
+    @external unsigned long long f7;
     long long f8;
     boolean f9;
-    @external
-    string f10;
+    @external string f10;
     string<10> f11;
-    @external
-    en f12;
+    @external en f12;
     bm f13;
   };
 
@@ -211,13 +207,42 @@ module TypeBuilderTypes {
     string f9[5];
   };
 
-  @nested @mutable struct t13a { long b1; };
+  @nested @mutable struct t13a {
+    char b1;
+    @key t1 b2;
+    @key boolean b3;
+  };
   @mutable struct t13 : t13a {
-    long f1;
+    char f0;
+    long long f1;
+    t1 f2;
+    t12 f3;
+    t11 f4;
   };
 
-  // mut+inherit
-  // mut+keys
+  @nested struct t14a { long a1; };
+  @nested struct t14b { @key t14a b1; };
+  @nested struct t14c { @key t14b c1; };
+  struct t14 {
+    @key t14c f1;
+  };
+
+  union t15a switch (char) {
+    case 'a': long u1;
+    case 'z': string u2;
+    default: float u2;
+  };
+  struct t15b {
+    @optional string a1;
+    @optional char a2;
+    @optional long long a3;
+    @optional t15a a4;
+  };
+  struct t15 : t15b {
+    @optional t15b f1;
+    @optional en f2;
+    @optional bm16 f3;
+  };
 
   // test padding at end of struct
   // test opt/ext/mu flags
