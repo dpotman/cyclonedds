@@ -1378,6 +1378,20 @@ static void get_minimal_member_detail (DDS_XTypes_MinimalMemberDetail *dst, cons
   memcpy (dst->name_hash, src->name_hash, sizeof (dst->name_hash));
 }
 
+static void xt_applied_member_annotations_fini (struct xt_applied_member_annotations *ann)
+{
+  if (ann->ann_builtin)
+  {
+    ddsrt_free (ann->ann_builtin->unit);
+    ddsrt_free (ann->ann_builtin->min);
+    ddsrt_free (ann->ann_builtin->max);
+    ddsrt_free (ann->ann_builtin->hash_id);
+    ddsrt_free (ann->ann_builtin);
+  }
+  // TODO: implement custom annotations
+  //ddsrt_free (xt->_u.structure.members.seq[n].detail.annotations.ann_custom);
+}
+
 void ddsi_xt_type_fini (struct ddsi_domaingv *gv, struct xt_type *xt, bool include_typeid)
 {
   switch (xt->_d)
@@ -1392,7 +1406,10 @@ void ddsi_xt_type_fini (struct ddsi_domaingv *gv, struct xt_type *xt, bool inclu
       if (xt->_u.structure.base_type)
         ddsi_type_unref_locked (gv, xt->_u.structure.base_type);
       for (uint32_t n = 0; n < xt->_u.structure.members.length; n++)
+      {
         ddsi_type_unref_locked (gv, xt->_u.structure.members.seq[n].type);
+        xt_applied_member_annotations_fini (&xt->_u.structure.members.seq[n].detail.annotations);
+      }
       ddsrt_free (xt->_u.structure.members.seq);
       break;
     case DDS_XTypes_TK_UNION:
@@ -1401,6 +1418,7 @@ void ddsi_xt_type_fini (struct ddsi_domaingv *gv, struct xt_type *xt, bool inclu
       {
         ddsi_type_unref_locked (gv, xt->_u.union_type.members.seq[n].type);
         ddsrt_free (xt->_u.union_type.members.seq[n].label_seq._buffer);
+        xt_applied_member_annotations_fini (&xt->_u.union_type.members.seq[n].detail.annotations);
       }
       ddsrt_free (xt->_u.union_type.members.seq);
       break;
