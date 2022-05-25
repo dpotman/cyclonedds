@@ -26,7 +26,7 @@
 #include "dds/ddsi/ddsi_typebuilder.h"
 
 #define alignof(type_) offsetof (struct { char c; type_ d; }, d)
-#define OPS_CHUNK_SZ 100
+#define OPS_CHUNK_SZ 100u
 #define XCDR1_MAX_ALIGN 8
 #define XCDR2_MAX_ALIGN 4
 #define STRUCT_BASE_MEMBER_NAME "parent"
@@ -34,9 +34,9 @@
 struct typebuilder_ops
 {
   uint32_t *ops;
-  uint16_t index;
-  uint16_t maximum;
-  uint16_t n_ops;
+  uint32_t index;
+  uint32_t maximum;
+  uint32_t n_ops;
 };
 
 struct typebuilder_type;
@@ -46,8 +46,8 @@ struct typebuilder_struct;
 struct typebuilder_aggregated_type_ref
 {
   struct typebuilder_aggregated_type *type;
-  uint16_t ref_insn;
-  uint16_t ref_base;
+  uint32_t ref_insn;
+  uint32_t ref_base;
 };
 
 struct typebuilder_type_ref
@@ -98,8 +98,8 @@ struct typebuilder_struct_member
   uint32_t member_index;            // index of member in the struct
   uint32_t member_id;               // id assigned by annotation or hash id
   uint32_t member_offset;           // in-memory offset of the member in its parent struct
-  uint16_t insn_offs;               // offset of the ADR instruction for the member within its parent aggregated type
-  uint16_t plm_insn_offs;           // offset of the PLM instruction, if applicable
+  uint32_t insn_offs;               // offset of the ADR instruction for the member within its parent aggregated type
+  uint32_t plm_insn_offs;           // offset of the PLM instruction, if applicable
   bool is_key;
   bool is_must_understand;
   bool is_external;
@@ -139,7 +139,7 @@ struct typebuilder_aggregated_type
   DDS_XTypes_TypeKind kind;   // DDS_XTypes_TK_STRUCTURE / DDS_XTypes_TK_UNION
   uint32_t size;              // size of this aggregated type, including padding at the end
   uint32_t align;             // max alignment for this aggregated type
-  uint16_t insn_offs;         // index in ops array of first instruction for this type
+  uint32_t insn_offs;         // index in ops array of first instruction for this type
   bool has_explicit_key;      // has the @key annotation set on one or more members
   union {
     struct typebuilder_struct _struct;
@@ -173,7 +173,7 @@ struct typebuilder_key_path {
 struct typebuilder_key
 {
   uint32_t key_index;
-  uint16_t kof_idx;
+  uint32_t kof_idx;
   struct typebuilder_key_path *path;
 };
 
@@ -734,7 +734,7 @@ static dds_return_t typebuilder_add_union (struct typebuilder_data *tbd, struct 
   }
   for (uint32_t n = 0, c = 0; n < type->xt._u.union_type.members.length; n++)
   {
-    uint32_t sz, align;
+    uint32_t sz = 0, align = 0;
     bool is_ext = type->xt._u.union_type.members.seq[n].flags & DDS_XTypes_IS_EXTERNAL;
     for (uint32_t l = 0; l < type->xt._u.union_type.members.seq[n].label_seq._length; l++)
     {
@@ -808,11 +808,12 @@ static dds_return_t typebuilder_add_aggrtype (struct typebuilder_data *tbd, stru
   return ret;
 }
 
-static dds_return_t push_op_impl (struct typebuilder_ops *ops, uint32_t op, uint16_t index, bool inc_nops)
+static dds_return_t push_op_impl (struct typebuilder_ops *ops, uint32_t op, uint32_t index, bool inc_nops)
 {
   assert (ops);
   while (index >= ops->maximum)
   {
+    assert (UINT16_MAX - OPS_CHUNK_SZ > ops->maximum);
     ops->maximum += OPS_CHUNK_SZ;
     uint32_t *tmp = ddsrt_realloc (ops->ops, sizeof (*tmp) * ops->maximum);
     if (!tmp)
@@ -828,7 +829,7 @@ static dds_return_t push_op_impl (struct typebuilder_ops *ops, uint32_t op, uint
   return DDS_RETCODE_OK;
 }
 
-static dds_return_t set_op (struct typebuilder_ops *ops, uint16_t index, uint32_t op)
+static dds_return_t set_op (struct typebuilder_ops *ops, uint32_t index, uint32_t op)
 {
   return push_op_impl (ops, op, index, true);
 }
@@ -843,7 +844,7 @@ static dds_return_t push_op_arg (struct typebuilder_ops *ops, uint32_t op)
   return push_op_impl (ops, op, ops->index++, false);
 }
 
-static void or_op (struct typebuilder_ops *ops, uint16_t index, uint32_t value)
+static void or_op (struct typebuilder_ops *ops, uint32_t index, uint32_t value)
 {
   assert (ops);
   assert (index <= ops->index);
@@ -936,7 +937,7 @@ static dds_return_t get_ops_type (struct typebuilder_type *tb_type, uint32_t fla
       struct typebuilder_type *element_type = tb_type->args.collection_args.element_type.type;
       assert (element_type);
       flags |= get_type_flags (element_type);
-      uint16_t adr_index = ops->index;
+      uint32_t adr_index = ops->index;
       if ((ret = push_op (ops, DDS_OP_ADR | (uint32_t) (bounded ? DDS_OP_TYPE_BSQ : DDS_OP_TYPE_SEQ) | (element_type->type_code << 8u) | flags)))
         return ret;
       if ((ret = push_op_arg (ops, member_offset)))
@@ -968,14 +969,14 @@ static dds_return_t get_ops_type (struct typebuilder_type *tb_type, uint32_t fla
           if ((ret = push_op_arg (ops, element_type->args.external_type_args.external_type.type->size)))
             return ret;
           element_type->args.external_type_args.external_type.ref_insn = ops->index;
-          if ((ret = push_op_arg (ops, (4 + (bounded ? 1 : 0)) << 16)))  // set next_insn, elem_insn is set after emitting external type
+          if ((ret = push_op_arg (ops, (4 + (bounded ? 1u : 0u)) << 16u)))  // set next_insn, elem_insn is set after emitting external type
             return ret;
           break;
         case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_BSQ: {
           if ((ret = push_op_arg (ops, tb_type->args.collection_args.elem_sz)))
             return ret;
-          uint16_t next_insn_idx = ops->index;
-          if ((ret = push_op_arg (ops, 4 + (bounded ? 1 : 0))))  // set elem_insn, next_insn is set after element
+          uint32_t next_insn_idx = ops->index;
+          if ((ret = push_op_arg (ops, 4 + (bounded ? 1u : 0u))))  // set elem_insn, next_insn is set after element
             return ret;
           if ((ret = get_ops_type (element_type, 0u, 0u, ops)))
             goto err;
@@ -998,7 +999,7 @@ static dds_return_t get_ops_type (struct typebuilder_type *tb_type, uint32_t fla
       if ((ret = push_op_arg (ops, member_offset)))
         return ret;
       tb_type->args.external_type_args.external_type.ref_insn = ops->index;
-      if ((ret = push_op_arg (ops, (3 + (ext ? 1 : 0)) << 16)))  // set next_insn, elem_insn is set after emitting external type
+      if ((ret = push_op_arg (ops, (3 + (ext ? 1u : 0u)) << 16u)))  // set next_insn, elem_insn is set after emitting external type
         return ret;
       if (ext)
       {
@@ -1011,7 +1012,7 @@ static dds_return_t get_ops_type (struct typebuilder_type *tb_type, uint32_t fla
       struct typebuilder_type *element_type = tb_type->args.collection_args.element_type.type;
       assert (element_type);
       flags |= get_type_flags (element_type);
-      uint16_t adr_index = ops->index;
+      uint32_t adr_index = ops->index;
       if ((ret = push_op (ops, DDS_OP_ADR | DDS_OP_TYPE_ARR | (element_type->type_code << 8u) | flags)))
         return ret;
       if ((ret = push_op_arg (ops, member_offset)))
@@ -1048,7 +1049,7 @@ static dds_return_t get_ops_type (struct typebuilder_type *tb_type, uint32_t fla
             return ret;
           break;
         case DDS_OP_VAL_SEQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_BSQ: {
-          uint16_t next_insn_idx = ops->index;
+          uint32_t next_insn_idx = ops->index;
           if ((ret = push_op_arg (ops, 5)))  // set elem_insn, next_insn is set after element
             return ret;
           if ((ret = push_op_arg (ops, tb_type->args.collection_args.elem_sz)))
@@ -1080,9 +1081,9 @@ static bool aggrtype_has_key (struct typebuilder_aggregated_type *tb_aggrtype)
   return tb_aggrtype && (tb_aggrtype->has_explicit_key || (tb_aggrtype->base_type && aggrtype_has_key (tb_aggrtype->base_type->args.external_type_args.external_type.type)));
 }
 
-static dds_return_t get_ops_struct (const struct typebuilder_struct *tb_struct, struct typebuilder_type *tb_base_type, uint16_t extensibility, uint16_t parent_insn_offs, struct typebuilder_ops *ops, bool parent_is_key)
+static dds_return_t get_ops_struct (const struct typebuilder_struct *tb_struct, struct typebuilder_type *tb_base_type, uint16_t extensibility, uint32_t parent_insn_offs, struct typebuilder_ops *ops, bool parent_is_key)
 {
-  dds_return_t ret;
+  dds_return_t ret = DDS_RETCODE_OK;
   if (extensibility == DDS_XTypes_IS_MUTABLE)
   {
     if ((ret = push_op (ops, DDS_OP_PLC)))
@@ -1107,6 +1108,7 @@ static dds_return_t get_ops_struct (const struct typebuilder_struct *tb_struct, 
     }
     for (uint32_t m = 0; m < tb_struct->n_members; m++)
     {
+      assert (parent_insn_offs < ops->index);
       tb_struct->members[m].plm_insn_offs = ops->index - parent_insn_offs;
       if ((ret = push_op_arg (ops, DDS_OP_PLM)))  // offset to ADR instruction is added after adding members
         return ret;
@@ -1143,7 +1145,7 @@ static dds_return_t get_ops_struct (const struct typebuilder_struct *tb_struct, 
   return ret;
 }
 
-static dds_return_t get_ops_union_case (struct typebuilder_type *tb_type, uint32_t flags, uint32_t disc_value, uint32_t offset, uint16_t *inline_types_offs, struct typebuilder_ops *ops)
+static dds_return_t get_ops_union_case (struct typebuilder_type *tb_type, uint32_t flags, uint32_t disc_value, uint32_t offset, uint32_t *inline_types_offs, struct typebuilder_ops *ops)
 {
   dds_return_t ret = DDS_RETCODE_OK;
   switch (tb_type->type_code)
@@ -1221,7 +1223,7 @@ static dds_return_t get_ops_union_case (struct typebuilder_type *tb_type, uint32
     case DDS_OP_VAL_BSQ:
     case DDS_OP_VAL_SEQ:
     case DDS_OP_VAL_ARR: {
-      uint16_t inst_offs_idx = ops->index;
+      uint32_t inst_offs_idx = ops->index;
       /* don't add type flags here, because the offset of the (in-union) type ops
          is included here, which includes the member type flags */
       if ((ret = push_op (ops, DDS_OP_JEQ4 | (tb_type->type_code << 16u) | flags)))
@@ -1242,10 +1244,11 @@ static dds_return_t get_ops_union_case (struct typebuilder_type *tb_type, uint32
       }
 
       // set offset to inline type
+      assert (inst_offs_idx < *inline_types_offs);
       or_op (ops, inst_offs_idx, *inline_types_offs - inst_offs_idx);
 
       // store ops index and temporarily replace it with index for inline types
-      uint16_t ops_idx = ops->index;
+      uint32_t ops_idx = ops->index;
       ops->index = *inline_types_offs;
       if ((ret = get_ops_type (tb_type, 0u, 0u, ops)))
         return ret;
@@ -1289,26 +1292,26 @@ static dds_return_t get_ops_union (const struct typebuilder_union *tb_union, uin
   for (uint32_t c = 0; c < tb_union->n_cases && !(flags & DDS_OP_FLAG_DEF); c++)
     flags |= tb_union->cases[c].is_default ? DDS_OP_FLAG_DEF : 0u;
 
-  uint16_t next_insn_offs = ops->index;
+  uint32_t next_insn_offs = ops->index;
   if ((ret = push_op (ops, DDS_OP_ADR | DDS_OP_TYPE_UNI | (tb_union->disc_type.type_code << 8) | flags)))
     return ret;
   if ((ret = push_op_arg (ops, 0u)))
     return ret;
   if ((ret = push_op_arg (ops, tb_union->n_cases)))
     return ret;
-  uint16_t next_insn_idx = ops->index;
+  uint32_t next_insn_idx = ops->index;
   if ((ret = push_op_arg (ops, 4u + (tb_union->disc_type.type_code == DDS_OP_VAL_ENU ? 1 : 0))))
     return ret;
   if (tb_union->disc_type.type_code == DDS_OP_VAL_ENU)
     if ((ret = push_op_arg (ops, tb_union->disc_type.args.enum_args.max)))
       return ret;
 
-  uint16_t inline_types_offs = ops->index + (uint16_t) (4 * tb_union->n_cases);
+  uint32_t inline_types_offs = ops->index + (uint32_t) (4u * tb_union->n_cases);
   for (uint32_t c = 0; c < tb_union->n_cases; c++)
   {
-    uint32_t flags = 0u;
-    flags |= tb_union->cases[c].is_external ? DDS_OP_FLAG_EXT : 0u;
-    if ((ret = get_ops_union_case (&tb_union->cases[c].type, flags, tb_union->cases[c].disc_value, tb_union->member_offs, &inline_types_offs, ops)))
+    uint32_t case_flags = 0u;
+    case_flags |= tb_union->cases[c].is_external ? DDS_OP_FLAG_EXT : 0u;
+    if ((ret = get_ops_union_case (&tb_union->cases[c].type, case_flags, tb_union->cases[c].disc_value, tb_union->member_offs, &inline_types_offs, ops)))
       return ret;
   }
 
@@ -1377,7 +1380,7 @@ static dds_return_t typebuilder_get_ops (struct typebuilder_data *tbd, struct ty
 static dds_return_t resolve_ops_offsets_type (struct typebuilder_type *tb_type, struct typebuilder_ops *ops)
 {
   dds_return_t ret = DDS_RETCODE_OK;
-  uint16_t ref_op = 0, offs_base, offs_target = 0;
+  uint32_t ref_op = 0, offs_base = 0, offs_target = 0;
   bool update_offs = false;
   switch (tb_type->type_code)
   {
@@ -1415,14 +1418,14 @@ static dds_return_t resolve_ops_offsets_type (struct typebuilder_type *tb_type, 
   return ret;
 }
 
-static dds_return_t resolve_ops_offsets_struct (const struct typebuilder_struct *tb_struct, struct typebuilder_type *tb_base_type, uint16_t extensibility, uint16_t parent_insn_offs, struct typebuilder_ops *ops)
+static dds_return_t resolve_ops_offsets_struct (const struct typebuilder_struct *tb_struct, struct typebuilder_type *tb_base_type, uint16_t extensibility, uint32_t parent_insn_offs, struct typebuilder_ops *ops)
 {
   dds_return_t ret = DDS_RETCODE_OK;
   if (extensibility == DDS_XTypes_IS_MUTABLE)
   {
     if (tb_base_type)
     {
-      uint16_t plm_insn_idx = parent_insn_offs + 1;
+      uint32_t plm_insn_idx = parent_insn_offs + 1;
       assert (DDS_OP (ops->ops[plm_insn_idx]) == DDS_OP_PLM);
       assert (DDS_PLM_FLAGS (ops->ops[plm_insn_idx]) == DDS_OP_FLAG_BASE);
       or_op (ops, parent_insn_offs + 1, (uint16_t) (tb_base_type->args.external_type_args.external_type.type->insn_offs - plm_insn_idx));
@@ -1433,7 +1436,7 @@ static dds_return_t resolve_ops_offsets_struct (const struct typebuilder_struct 
     for (uint32_t m = 0; m < tb_struct->n_members; m++)
     {
       struct typebuilder_struct_member *mem = &tb_struct->members[m];
-      uint16_t plm_insn_idx = parent_insn_offs + mem->plm_insn_offs;
+      uint32_t plm_insn_idx = parent_insn_offs + mem->plm_insn_offs;
       assert (DDS_OP (ops->ops[plm_insn_idx]) == DDS_OP_PLM);
       assert (ops->ops[plm_insn_idx + 1] == mem->member_id);
       or_op (ops, plm_insn_idx, (uint16_t) (mem->insn_offs - mem->plm_insn_offs));
