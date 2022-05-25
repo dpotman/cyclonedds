@@ -752,8 +752,8 @@ static dds_return_t ddsi_type_get_typeinfo (struct ddsi_domaingv *gv, const stru
 {
   memset (type_info, 0, sizeof (*type_info));
   dds_return_t ret;
-  if ((ret = get_typeid_with_deps (gv, &type_info->x.minimal, type, DDS_XTypes_EK_MINIMAL))
-      || (ret = get_typeid_with_deps (gv, &type_info->x.complete, type, DDS_XTypes_EK_COMPLETE)))
+  if ((ret = get_typeid_with_deps (gv, &type_info->x.minimal, type, DDSI_TYPEID_KIND_MINIMAL))
+      || (ret = get_typeid_with_deps (gv, &type_info->x.complete, type, DDSI_TYPEID_KIND_COMPLETE)))
     ddsi_typeinfo_fini (type_info);
   return ret;
 }
@@ -815,7 +815,7 @@ static dds_return_t ddsi_type_get_typemap (struct ddsi_domaingv *gv, const struc
 
       type_map->x.identifier_object_pair_minimal._length++;
       type_map->x.identifier_object_pair_minimal._maximum++;
-      ddsi_xt_get_typeobject_kind_impl (&type->xt, &type_map->x.identifier_object_pair_minimal._buffer[n].type_object, DDS_XTypes_EK_MINIMAL);
+      ddsi_xt_get_typeobject_kind_impl (&type->xt, &type_map->x.identifier_object_pair_minimal._buffer[n].type_object, DDSI_TYPEID_KIND_MINIMAL);
       if ((ret = ddsi_typeobj_get_hash_id_impl (&type_map->x.identifier_object_pair_minimal._buffer[n].type_object, &type_map->x.identifier_object_pair_minimal._buffer[n].type_identifier)))
       {
         // FIXME: cleanup
@@ -825,7 +825,7 @@ static dds_return_t ddsi_type_get_typemap (struct ddsi_domaingv *gv, const struc
 
       type_map->x.identifier_object_pair_complete._length++;
       type_map->x.identifier_object_pair_complete._maximum++;
-      ddsi_xt_get_typeobject_kind_impl (&type->xt, &type_map->x.identifier_object_pair_complete._buffer[n].type_object, DDS_XTypes_EK_COMPLETE);
+      ddsi_xt_get_typeobject_kind_impl (&type->xt, &type_map->x.identifier_object_pair_complete._buffer[n].type_object, DDSI_TYPEID_KIND_COMPLETE);
       if ((ret = ddsi_typeobj_get_hash_id_impl (&type_map->x.identifier_object_pair_complete._buffer[n].type_object, &type_map->x.identifier_object_pair_complete._buffer[n].type_identifier)))
       {
         // FIXME: cleanup

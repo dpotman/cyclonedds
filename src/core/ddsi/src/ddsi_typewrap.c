@@ -2473,7 +2473,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
   assert (!xt_is_fully_descriptive (xt));
 
   memset (to, 0, sizeof (*to));
-  if (xt->kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDS_XTypes_EK_MINIMAL)
+  if (xt->kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDSI_TYPEID_KIND_MINIMAL)
   {
     to->_d = DDS_XTypes_EK_MINIMAL;
     struct DDS_XTypes_MinimalTypeObject *mto = &to->_u.minimal;
