@@ -620,6 +620,7 @@ CU_Test (ddsc_xtypes, invalid_top_level_local_non_hash, .init = xtypes_init, .fi
 static void mod_toplevel (dds_sequence_DDS_XTypes_TypeIdentifierTypeObjectPair *type_id_obj_seq, uint32_t kind)
 {
   assert (kind == DDS_XTypes_EK_MINIMAL);
+  (void) kind;
   assert (type_id_obj_seq->_buffer[0].type_object._u.minimal._d == DDS_XTypes_TK_STRUCTURE);
   type_id_obj_seq->_buffer[0].type_object._u.minimal._u.struct_type.member_seq._buffer[0].common.member_flags = 0x7f;
 }
@@ -627,6 +628,7 @@ static void mod_toplevel (dds_sequence_DDS_XTypes_TypeIdentifierTypeObjectPair *
 static void mod_inherit (dds_sequence_DDS_XTypes_TypeIdentifierTypeObjectPair *type_id_obj_seq, uint32_t kind)
 {
   assert (kind == DDS_XTypes_EK_MINIMAL);
+  (void) kind;
   assert (type_id_obj_seq->_buffer[0].type_object._u.minimal._d == DDS_XTypes_TK_STRUCTURE);
   ddsi_typeid_fini_impl (&type_id_obj_seq->_buffer[0].type_object._u.minimal._u.struct_type.header.base_type);
   ddsi_typeid_copy_impl (&type_id_obj_seq->_buffer[0].type_object._u.minimal._u.struct_type.header.base_type,
@@ -636,6 +638,7 @@ static void mod_inherit (dds_sequence_DDS_XTypes_TypeIdentifierTypeObjectPair *t
 static void mod_uniondisc (dds_sequence_DDS_XTypes_TypeIdentifierTypeObjectPair *type_id_obj_seq, uint32_t kind)
 {
   assert (kind == DDS_XTypes_EK_MINIMAL);
+  (void) kind;
   assert (type_id_obj_seq->_buffer[0].type_object._u.minimal._d == DDS_XTypes_TK_UNION);
   type_id_obj_seq->_buffer[0].type_object._u.minimal._u.union_type.discriminator.common.type_id._d = DDS_XTypes_TK_FLOAT32;
 }
