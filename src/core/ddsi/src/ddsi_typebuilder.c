@@ -30,6 +30,7 @@
 #define XCDR1_MAX_ALIGN 8
 #define XCDR2_MAX_ALIGN 4
 #define STRUCT_BASE_MEMBER_NAME "parent"
+#define KEY_NAME_SEP "."
 
 struct typebuilder_ops
 {
@@ -198,6 +199,7 @@ static dds_return_t resolve_ops_offsets_aggrtype (const struct typebuilder_aggre
 static dds_return_t get_keys_aggrtype (struct typebuilder_data *tbd, struct typebuilder_key_path *path, const struct typebuilder_aggregated_type *tb_aggrtype, bool parent_key);
 static dds_return_t set_implicit_keys_aggrtype (struct typebuilder_aggregated_type *tb_aggrtype, bool is_toplevel, bool parent_is_key);
 
+static struct typebuilder_data *typebuilder_data_new (struct ddsi_domaingv *gv, const struct ddsi_type *type) ddsrt_nonnull_all;
 static struct typebuilder_data *typebuilder_data_new (struct ddsi_domaingv *gv, const struct ddsi_type *type)
 {
   struct typebuilder_data *tbd = ddsrt_calloc (1, sizeof (*tbd));
@@ -215,8 +217,11 @@ static void typebuilder_type_fini (struct typebuilder_type *tb_type)
     case DDS_OP_VAL_ARR:
     case DDS_OP_VAL_BSQ:
     case DDS_OP_VAL_SEQ:
-      typebuilder_type_fini (tb_type->args.collection_args.element_type.type);
-      ddsrt_free (tb_type->args.collection_args.element_type.type);
+      if (tb_type->args.collection_args.element_type.type)
+      {
+        typebuilder_type_fini (tb_type->args.collection_args.element_type.type);
+        ddsrt_free (tb_type->args.collection_args.element_type.type);
+      }
       break;
     default:
       break;
@@ -225,19 +230,25 @@ static void typebuilder_type_fini (struct typebuilder_type *tb_type)
 
 static void typebuilder_struct_fini (struct typebuilder_struct *tb_struct)
 {
-  for (uint32_t n = 0; n < tb_struct->n_members; n++)
+  if (tb_struct->members)
   {
-    ddsrt_free (tb_struct->members[n].member_name);
-    typebuilder_type_fini (&tb_struct->members[n].type);
+    for (uint32_t n = 0; n < tb_struct->n_members; n++)
+    {
+      ddsrt_free (tb_struct->members[n].member_name);
+      typebuilder_type_fini (&tb_struct->members[n].type);
+    }
+    ddsrt_free (tb_struct->members);
   }
-  ddsrt_free (tb_struct->members);
 }
 
 static void typebuilder_union_fini (struct typebuilder_union *tb_union)
 {
-  for (uint32_t n = 0; n < tb_union->n_cases; n++)
-    typebuilder_type_fini (&tb_union->cases[n].type);
-  ddsrt_free (tb_union->cases);
+  if (tb_union->cases)
+  {
+    for (uint32_t n = 0; n < tb_union->n_cases; n++)
+      typebuilder_type_fini (&tb_union->cases[n].type);
+    ddsrt_free (tb_union->cases);
+  }
 }
 
 static void typebuilder_aggrtype_fini (struct typebuilder_aggregated_type *tb_aggrtype)
@@ -1733,15 +1744,18 @@ static dds_return_t typebuilder_get_keys (struct typebuilder_data *tbd, struct t
       for (uint32_t p = 0; p < key->path->n_parts; p++)
       {
         if (name_csr > 0 && key->path->parts[p].kind != KEY_PATH_PART_INHERIT_MUTABLE)
-          strcpy ((char *) (*key_desc)[k].m_name + name_csr++, ".");
+        {
+          (void) ddsrt_strlcpy ((char *) (*key_desc)[k].m_name + name_csr, KEY_NAME_SEP, (key->path->name_len + 1) - name_csr);
+          name_csr += strlen (KEY_NAME_SEP);
+        }
         if (key->path->parts[p].kind == KEY_PATH_PART_INHERIT)
         {
-          strcpy ((char *) (*key_desc)[k].m_name + name_csr, STRUCT_BASE_MEMBER_NAME);
+          (void) ddsrt_strlcpy ((char *) (*key_desc)[k].m_name + name_csr, STRUCT_BASE_MEMBER_NAME, (key->path->name_len + 1) - name_csr);
           name_csr += strlen (STRUCT_BASE_MEMBER_NAME);
         }
         else if (key->path->parts[p].kind == KEY_PATH_PART_REGULAR)
         {
-          strcpy ((char *) (*key_desc)[k].m_name + name_csr, key->path->parts[p].member->member_name);
+          (void) ddsrt_strlcpy ((char *) (*key_desc)[k].m_name + name_csr, key->path->parts[p].member->member_name, (key->path->name_len + 1) - name_csr);
           name_csr += strlen (key->path->parts[p].member->member_name);
         }
       }
@@ -1874,8 +1888,9 @@ err:
 
 dds_return_t ddsi_topic_desc_from_type (struct ddsi_domaingv *gv, dds_topic_descriptor_t **desc, const struct ddsi_type *type)
 {
-  assert (type);
+  assert (gv);
   assert (desc);
+  assert (type);
 
   dds_return_t ret;
   struct typebuilder_data *tbd = typebuilder_data_new (gv, type);
