@@ -257,12 +257,12 @@ module TypeBuilderTypes {
   };
 
   union t17 switch(en8) {
-    case EN8_1: t1 u1;
-    case EN8_2: t2 u2;
+    case EN8_1: t14 u1;
+    case EN8_2: t15 u2;
   };
 
-  // test union with enum discr
-  // test struct inheritance
-  // test hash member ids
+  struct t18 {
+    @hashid("test") long f1;
+  };
 
 };

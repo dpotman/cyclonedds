@@ -1297,8 +1297,11 @@ static dds_return_t get_ops_union (const struct typebuilder_union *tb_union, uin
   if ((ret = push_op_arg (ops, tb_union->n_cases)))
     return ret;
   uint16_t next_insn_idx = ops->index;
-  if ((ret = push_op_arg (ops, 4u)))
+  if ((ret = push_op_arg (ops, 4u + (tb_union->disc_type.type_code == DDS_OP_VAL_ENU ? 1 : 0))))
     return ret;
+  if (tb_union->disc_type.type_code == DDS_OP_VAL_ENU)
+    if ((ret = push_op_arg (ops, tb_union->disc_type.args.enum_args.max)))
+      return ret;
 
   uint16_t inline_types_offs = ops->index + (uint16_t) (4 * tb_union->n_cases);
   for (uint32_t c = 0; c < tb_union->n_cases; c++)
