@@ -93,7 +93,7 @@ CU_Theory((const dds_topic_descriptor_t *desc), ddsc_typebuilder, topic_desc, .i
 
   // generate a topic descriptor
   topic_type_ref (topic, &type);
-  ret = ddsi_topic_desc_from_type (gv_from_topic (topic), &generated_desc, type);
+  ret = ddsi_topic_descriptor_from_type (gv_from_topic (topic), &generated_desc, type);
   CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
 
   // check
@@ -131,7 +131,7 @@ CU_Theory((const dds_topic_descriptor_t *desc), ddsc_typebuilder, topic_desc, .i
   // FIXME: check type_information, type_mapping, restrict_data_representation
 
   // cleanup
-  ddsi_topic_desc_fini (generated_desc);
+  ddsi_topic_descriptor_fini (generated_desc);
   ddsrt_free (generated_desc);
   topic_type_unref (topic, type);
   printf ("\n");

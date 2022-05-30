@@ -352,7 +352,7 @@ void ddsi_tl_add_types (struct ddsi_domaingv *gv, const DDS_Builtin_TypeLookup_R
         if (ddsi_type_resolved (gv, type, true))
         {
           dds_topic_descriptor_t *desc;
-          if (ddsi_topic_desc_from_type (gv, &desc, type) != DDS_RETCODE_OK)
+          if (ddsi_topic_descriptor_from_type (gv, &desc, type) != DDS_RETCODE_OK)
           {
             GVTRACE (" failed to create type descriptor\n");
             continue;
@@ -367,7 +367,7 @@ void ddsi_tl_add_types (struct ddsi_domaingv *gv, const DDS_Builtin_TypeLookup_R
             continue;
           }
 
-          ddsi_topic_desc_fini (desc);
+          ddsi_topic_descriptor_fini (desc);
           ddsrt_free (desc);
 
           ddsrt_mutex_lock (&gv->sertypes_lock);

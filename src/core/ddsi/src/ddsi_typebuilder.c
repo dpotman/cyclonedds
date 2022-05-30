@@ -1892,7 +1892,7 @@ err:
   return ret;
 }
 
-dds_return_t ddsi_topic_desc_from_type (struct ddsi_domaingv *gv, dds_topic_descriptor_t **desc, const struct ddsi_type *type)
+dds_return_t ddsi_topic_descriptor_from_type (struct ddsi_domaingv *gv, dds_topic_descriptor_t **desc, const struct ddsi_type *type)
 {
   assert (gv);
   assert (desc);
@@ -1916,7 +1916,7 @@ err:
   return ret;
 }
 
-void ddsi_topic_desc_fini (dds_topic_descriptor_t *desc)
+void ddsi_topic_descriptor_fini (dds_topic_descriptor_t *desc)
 {
   ddsrt_free ((char *) desc->m_typename);
   ddsrt_free ((void *) desc->m_ops);
