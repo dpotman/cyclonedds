@@ -202,7 +202,9 @@ static dds_return_t set_implicit_keys_aggrtype (struct typebuilder_aggregated_ty
 static struct typebuilder_data *typebuilder_data_new (struct ddsi_domaingv *gv, const struct ddsi_type *type) ddsrt_nonnull_all;
 static struct typebuilder_data *typebuilder_data_new (struct ddsi_domaingv *gv, const struct ddsi_type *type)
 {
-  struct typebuilder_data *tbd = ddsrt_calloc (1, sizeof (*tbd));
+  struct typebuilder_data *tbd;
+  if (!(tbd = ddsrt_calloc (1, sizeof (*tbd))))
+    return NULL;
   tbd->gv = gv;
   tbd->type = type;
   ddsrt_circlist_init (&tbd->dep_types);
@@ -365,6 +367,7 @@ static const struct ddsi_type *type_unalias (const struct ddsi_type *t)
 
 static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t *size, uint32_t *align, struct typebuilder_type *tb_type, const struct ddsi_type *type, bool is_ext, bool use_ext_type)
 {
+  assert (tbd);
   dds_return_t ret = DDS_RETCODE_OK;
   if (is_ext)
     tbd->no_optimize = true;
@@ -601,6 +604,7 @@ static dds_return_t typebuilder_add_struct (struct typebuilder_data *tbd, struct
   dds_return_t ret = DDS_RETCODE_OK;
   uint32_t offs = 0, sz, align;
 
+  assert (tbd);
   if (!(tb_aggrtype->type_name = ddsrt_strdup (type->xt._u.structure.detail.type_name)))
   {
     ret = DDS_RETCODE_OUT_OF_RESOURCES;
@@ -709,6 +713,7 @@ static dds_return_t typebuilder_add_union (struct typebuilder_data *tbd, struct 
   dds_return_t ret = DDS_RETCODE_OK;
   uint32_t disc_sz, disc_align, member_sz = 0, member_align = 0;
 
+  assert (tbd);
   if (!(tb_aggrtype->type_name = ddsrt_strdup (type->xt._u.union_type.detail.type_name)))
     return DDS_RETCODE_OUT_OF_RESOURCES;
   tb_aggrtype->extensibility = get_extensibility (type->xt._u.union_type.flags);
@@ -799,6 +804,7 @@ err:
 
 static dds_return_t typebuilder_add_aggrtype (struct typebuilder_data *tbd, struct typebuilder_aggregated_type *tb_aggrtype, const struct ddsi_type *type)
 {
+  assert (tbd);
   dds_return_t ret = DDS_RETCODE_OK;
   assert (ddsi_type_resolved (tbd->gv, type, true));
   assert (type->xt.kind == DDSI_TYPEID_KIND_COMPLETE);
@@ -1893,7 +1899,12 @@ dds_return_t ddsi_topic_desc_from_type (struct ddsi_domaingv *gv, dds_topic_desc
   assert (type);
 
   dds_return_t ret;
-  struct typebuilder_data *tbd = typebuilder_data_new (gv, type);
+  struct typebuilder_data *tbd;
+  if (!(tbd = typebuilder_data_new (gv, type)))
+  {
+    ret = DDS_RETCODE_OUT_OF_RESOURCES;
+    goto err;
+  }
   if ((ret = typebuilder_add_aggrtype (tbd, &tbd->toplevel_type, type)))
     goto err;
   set_implicit_keys_aggrtype (&tbd->toplevel_type, true, false);

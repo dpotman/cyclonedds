@@ -84,13 +84,13 @@ module TypeBuilderTypes {
     case 24: @external sequence<sequence<long> > u24[3];
     case 25: @external sequence<sequence<bm16> > u25[3][4];
     case 26: @external sequence<td1> u26[3];
-    case 27: @external sequence<sequence<td2>, 2> u27[500][500][500];
+    case 27: @external sequence<sequence<td2>, 2> u27[500][50][5];
     case 28: sequence<sequence<bm16, 12>, 8> u28[3][4];
     case 29: sequence<sequence<tda1, 5> > u29[3][4];
-    case 30: sequence<tda2> u30[3000][4];
-    case 31: sequence<tda3> u31[3][4000];
-    case 32: tda4 u32[4000][5000];
-    case 33: sequence<td2> u33[5000];
+    case 30: sequence<tda2> u30[300][4];
+    case 31: sequence<tda3> u31[3][400];
+    case 32: tda4 u32[400][500];
+    case 33: sequence<td2> u33[500];
     case 34: temp u34;
     case 35: t4 u35;
   };
