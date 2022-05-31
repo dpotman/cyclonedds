@@ -145,6 +145,7 @@ struct dds_type_meta_ser
  */
 #define DDS_DATA_REPRESENTATION_RESTRICT_DEFAULT  (DDS_DATA_REPRESENTATION_FLAG_XCDR1 | DDS_DATA_REPRESENTATION_FLAG_XCDR2)
 
+#define dds_alignof(type_) offsetof (struct { char c; type_ d; }, d)
 
 /**
  * @brief Topic Descriptor

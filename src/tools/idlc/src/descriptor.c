@@ -46,15 +46,15 @@ struct alignment {
 
 static const struct alignment alignments[] = {
 #define ALIGNMENT_1BY (&alignments[0])
-  { 1, 0, "1u" },
+  { 1, 0, "dds_alignof (uint8_t)" },
 #define ALIGNMENT_2BY (&alignments[1])
-  { 2, 2, "2u" },
+  { 2, 2, "dds_alignof (uint16_t)" },
 #define ALIGNMENT_4BY (&alignments[2])
-  { 4, 4, "4u" },
+  { 4, 4, "dds_alignof (uint32_t)" },
 #define ALIGNMENT_PTR (&alignments[3])
-  { 0, 6, "sizeof (char *)" },
+  { 0, 6, "dds_alignof (char *)" },
 #define ALIGNMENT_8BY (&alignments[4])
-  { 8, 8, "8u" }
+  { 8, 8, "dds_alignof (uint64_t)" }
 };
 
 static const struct alignment *
@@ -2049,6 +2049,18 @@ static uint32_t add_to_key_size(uint32_t keysize, uint32_t field_size, bool dhea
   return sz;
 }
 
+static uint32_t get_alignment (uint32_t sz)
+{
+  switch (sz)
+  {
+    case 1: return dds_alignof (uint8_t); break;
+    case 2: return dds_alignof (uint16_t); break;
+    case 4: return dds_alignof (uint32_t); break;
+    case 8: return dds_alignof (uint64_t); break;
+    default: abort ();
+  }
+}
+
 static idl_retcode_t get_ctype_keys(const idl_pstate_t *pstate, struct descriptor *descriptor, struct constructed_type *ctype, struct constructed_type_key **keys, uint32_t *n_keys, bool parent_is_key, uint32_t base_type_ops_offs);
 
 static idl_retcode_t get_ctype_keys_adr(
@@ -2098,14 +2110,15 @@ static idl_retcode_t get_ctype_keys_adr(
       const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE(inst->data.opcode.code);
       switch (subtype) {
         case DDS_OP_VAL_BLN:
-        case DDS_OP_VAL_1BY: key->size = key->align = 1; break;
-        case DDS_OP_VAL_2BY: key->size = key->align = 2; break;
-        case DDS_OP_VAL_4BY: key->size = key->align = 4; break;
-        case DDS_OP_VAL_8BY: key->size = key->align = 8; break;
+        case DDS_OP_VAL_1BY: key->size = 1; key->align = get_alignment (1); break;
+        case DDS_OP_VAL_2BY: key->size = 2; key->align = get_alignment (2); break;
+        case DDS_OP_VAL_4BY: key->size = 4; key->align = get_alignment (4); break;
+        case DDS_OP_VAL_8BY: key->size = 8; key->align = get_alignment (8); break;
         case DDS_OP_VAL_ENU: case DDS_OP_VAL_BMK: {
           uint32_t sz = DDS_OP_TYPE_SZ(inst->data.opcode.code);
           assert (sz > 0 && sz <= (subtype == DDS_OP_VAL_ENU ? 4u : 8u));
-          key->size = key->align = sz;
+          key->size = sz;
+          key->align = get_alignment (sz);
           key->dheader = true;
           break;
         }
@@ -2127,14 +2140,15 @@ static idl_retcode_t get_ctype_keys_adr(
       const enum dds_stream_typecode type = DDS_OP_TYPE(inst->data.opcode.code);
       switch (type) {
         case DDS_OP_VAL_BLN:
-        case DDS_OP_VAL_1BY: key->size = key->align = 1; break;
-        case DDS_OP_VAL_2BY: key->size = key->align = 2; break;
-        case DDS_OP_VAL_4BY: key->size = key->align = 4; break;
-        case DDS_OP_VAL_8BY: key->size = key->align = 8; break;
+        case DDS_OP_VAL_1BY: key->size = 1; key->align = get_alignment (1); break;
+        case DDS_OP_VAL_2BY: key->size = 2; key->align = get_alignment (2); break;
+        case DDS_OP_VAL_4BY: key->size = 4; key->align = get_alignment (4); break;
+        case DDS_OP_VAL_8BY: key->size = 8; key->align = get_alignment (8); break;
         case DDS_OP_VAL_ENU: case DDS_OP_VAL_BMK: {
           uint32_t sz = DDS_OP_TYPE_SZ(inst->data.opcode.code);
           assert (sz > 0 && sz <= (type == DDS_OP_VAL_ENU ? 4u : 8u));
-          key->size = key->align = sz;
+          key->size = sz;
+          key->align = get_alignment (sz);
           break;
         }
         case DDS_OP_VAL_BST: {
@@ -2142,8 +2156,8 @@ static idl_retcode_t get_ctype_keys_adr(
           assert(ctype->instructions.table[offs + 2].type == SINGLE);
           /* string size if stored as bound + 1 */
           uint32_t str_sz = ctype->instructions.table[offs + 2].data.single;
-          /* use align and add size for 4 byte string-length field */
-          key->align = 4;
+          /* use alignment of the 4-byte string-length field */
+          key->align = get_alignment (4);
           key->size = 4 + str_sz;
           break;
         }
