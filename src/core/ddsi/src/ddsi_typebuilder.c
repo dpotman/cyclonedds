@@ -415,7 +415,7 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       tb_type->type_code = bounded ? DDS_OP_VAL_BST : DDS_OP_VAL_STR;
       tb_type->args.string_args.max_size = type->xt._u.str8.bound + 1;
       *align = ALGN (char, !bounded || is_ext);
-      if (bounded)
+      if (bounded && !is_ext)
         *size = type->xt._u.str8.bound * sizeof (char);
       else
         *size = sizeof (char *);
@@ -1901,10 +1901,7 @@ dds_return_t ddsi_topic_descriptor_from_type (struct ddsi_domaingv *gv, dds_topi
   dds_return_t ret;
   struct typebuilder_data *tbd;
   if (!(tbd = typebuilder_data_new (gv, type)))
-  {
-    ret = DDS_RETCODE_OUT_OF_RESOURCES;
-    goto err;
-  }
+    return DDS_RETCODE_OUT_OF_RESOURCES;
   if ((ret = typebuilder_add_aggrtype (tbd, &tbd->toplevel_type, type)))
     goto err;
   set_implicit_keys_aggrtype (&tbd->toplevel_type, true, false);
