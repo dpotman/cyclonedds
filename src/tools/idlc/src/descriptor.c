@@ -28,6 +28,7 @@
 #include "descriptor.h"
 #include "hashid.h"
 #include "descriptor_type_meta.h"
+#include "dds/ddsrt/align.h"
 #include "dds/ddsc/dds_opcodes.h"
 
 #define TYPE (16)
@@ -39,22 +40,21 @@
 static const uint16_t nop = UINT16_MAX;
 
 struct alignment {
-  int value;
   int ordering;
   const char *rendering;
 };
 
 static const struct alignment alignments[] = {
 #define ALIGNMENT_1BY (&alignments[0])
-  { 1, 0, "dds_alignof (uint8_t)" },
+  { 0, "dds_alignof (uint8_t)" },
 #define ALIGNMENT_2BY (&alignments[1])
-  { 2, 2, "dds_alignof (uint16_t)" },
+  { 2, "dds_alignof (uint16_t)" },
 #define ALIGNMENT_4BY (&alignments[2])
-  { 4, 4, "dds_alignof (uint32_t)" },
+  { 4, "dds_alignof (uint32_t)" },
 #define ALIGNMENT_PTR (&alignments[3])
-  { 0, 6, "dds_alignof (char *)" },
+  { 6, "dds_alignof (void *)" },
 #define ALIGNMENT_8BY (&alignments[4])
-  { 8, 8, "dds_alignof (uint64_t)" }
+  { 8, "dds_alignof (uint64_t)" }
 };
 
 static const struct alignment *
@@ -2053,10 +2053,10 @@ static uint32_t get_alignment (uint32_t sz)
 {
   switch (sz)
   {
-    case 1: return dds_alignof (uint8_t); break;
-    case 2: return dds_alignof (uint16_t); break;
-    case 4: return dds_alignof (uint32_t); break;
-    case 8: return dds_alignof (uint64_t); break;
+    case 1: return dds_alignof (uint8_t);
+    case 2: return dds_alignof (uint16_t);
+    case 4: return dds_alignof (uint32_t);
+    case 8: return dds_alignof (uint64_t);
     default: abort ();
   }
 }

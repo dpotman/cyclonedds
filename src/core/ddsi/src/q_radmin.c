@@ -22,6 +22,7 @@
 #define USE_VALGRIND 0
 #endif
 
+#include "dds/ddsrt/align.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsrt/threads.h"
 #include "dds/ddsrt/sync.h"
@@ -305,8 +306,8 @@ static void nn_rbuf_release (struct nn_rbuf *rbuf);
 
 static uint32_t align_rmsg (uint32_t x)
 {
-  x += (uint32_t) ALIGNOF_RMSG - 1;
-  x -= x % (uint32_t) ALIGNOF_RMSG;
+  x += (uint32_t) dds_alignof(struct nn_rmsg) - 1;
+  x -= x % (uint32_t) dds_alignof(struct nn_rmsg);
   return x;
 }
 
@@ -622,7 +623,7 @@ void nn_rmsg_commit (struct nn_rmsg *rmsg)
   ASSERT_RBUFPOOL_OWNER (chunk->rbuf->rbufpool);
   ASSERT_RMSG_UNCOMMITTED (rmsg);
   assert (chunk->u.size <= chunk->rbuf->max_rmsg_size);
-  assert ((chunk->u.size % ALIGNOF_RMSG) == 0);
+  assert ((chunk->u.size % dds_alignof(struct nn_rmsg)) == 0);
   assert (ddsrt_atomic_ld32 (&rmsg->refcount) >= RMSG_REFCOUNT_UNCOMMITTED_BIAS);
   assert (ddsrt_atomic_ld32 (&rmsg->chunk.rbuf->n_live_rmsg_chunks) > 0);
   assert (ddsrt_atomic_ld32 (&chunk->rbuf->n_live_rmsg_chunks) > 0);
@@ -684,7 +685,7 @@ void *nn_rmsg_alloc (struct nn_rmsg *rmsg, uint32_t size)
   RMSGTRACE ("rmsg_alloc(%p, %"PRIu32" => %"PRIu32")\n", (void *) rmsg, size, size8P);
   ASSERT_RBUFPOOL_OWNER (rbuf->rbufpool);
   ASSERT_RMSG_UNCOMMITTED (rmsg);
-  assert ((chunk->u.size % ALIGNOF_RMSG) == 0);
+  assert ((chunk->u.size % dds_alignof(struct nn_rmsg)) == 0);
   assert (size8P <= rbuf->max_rmsg_size);
 
   if (chunk->u.size + size8P > rbuf->max_rmsg_size)
