@@ -257,7 +257,8 @@ stash_opcode(
       break;
   }
 
-  descriptor->alignment = max_alignment(descriptor->alignment, alignment);
+  if (!(code & DDS_OP_FLAG_EXT))
+    descriptor->alignment = max_alignment(descriptor->alignment, alignment);
   return stash_instruction(pstate, instructions, index, &inst);
 }
 
