@@ -25,7 +25,6 @@
 #include "dds/ddsi/ddsi_typelib.h"
 #include "dds/ddsi/ddsi_typebuilder.h"
 
-#define alignof(type_) offsetof (struct { char c; type_ d; }, d)
 #define OPS_CHUNK_SZ 100u
 #define XCDR1_MAX_ALIGN 8
 #define XCDR2_MAX_ALIGN 4
@@ -357,7 +356,7 @@ static struct typebuilder_aggregated_type *typebuilder_find_aggrtype (struct typ
   return tb_aggrtype;
 }
 
-#define ALGN(type,ext) (uint32_t) ((ext) ? alignof (type *) : alignof (type))
+#define ALGN(type,ext) (uint32_t) ((ext) ? dds_alignof (void *) : dds_alignof (type))
 #define SZ(type,ext) (uint32_t) ((ext) ? sizeof (type *) : sizeof (type))
 
 static const struct ddsi_type *type_unalias (const struct ddsi_type *t)
@@ -414,7 +413,7 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       bool bounded = (type->xt._u.str8.bound > 0);
       tb_type->type_code = bounded ? DDS_OP_VAL_BST : DDS_OP_VAL_STR;
       tb_type->args.string_args.max_size = type->xt._u.str8.bound + 1;
-      *align = ALGN (char, !bounded || is_ext);
+      *align = ALGN (uint8_t, !bounded || is_ext);
       if (bounded && !is_ext)
         *size = type->xt._u.str8.bound * sizeof (char);
       else
@@ -520,7 +519,7 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
         typebuilder_type_fini (tb_type);
         goto err;
       }
-      *align = is_ext ? alignof (void *) : tb_type->args.collection_args.elem_align;
+      *align = is_ext ? dds_alignof (void *) : tb_type->args.collection_args.elem_align;
       *size = is_ext ? sizeof (void *) : bound * tb_type->args.collection_args.elem_sz;
       break;
     }
@@ -557,7 +556,7 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
         }
       }
       tb_type->args.external_type_args.external_type.type = aggrtype;
-      *align = is_ext ? alignof (void *) : aggrtype->align;
+      *align = is_ext ? dds_alignof (void *) : aggrtype->align;
       *size = is_ext ? sizeof (void *) : aggrtype->size;
       if (type->xt._d == DDS_XTypes_TK_UNION)
       {
