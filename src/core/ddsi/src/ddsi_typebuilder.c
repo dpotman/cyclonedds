@@ -183,7 +183,6 @@ struct typebuilder_data
   struct typebuilder_dep_types dep_types;
   uint32_t n_keys;
   struct typebuilder_key *keys;
-  bool no_optimize;
   bool contains_union;
   bool fixed_key_xcdr1;
   bool fixed_key_xcdr2;
@@ -360,8 +359,6 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
 {
   assert (tbd);
   dds_return_t ret = DDS_RETCODE_OK;
-  if (is_ext)
-    tbd->no_optimize = true;
   switch (type->xt._d)
   {
     case DDS_XTypes_TK_BOOLEAN:
@@ -411,7 +408,6 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       else
         *size = sizeof (char *);
       tbd->fixed_size = false;
-      tbd->no_optimize = true;
       break;
     }
     case DDS_XTypes_TK_ENUM: {
@@ -427,8 +423,6 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       tb_type->args.enum_args.bit_bound = type->xt._u.enum_type.bit_bound;
       *align = ALGN (uint32_t, is_ext);
       *size = SZ (uint32_t, is_ext);
-      if (tb_type->args.enum_args.bit_bound <= 16 || tb_type->args.enum_args.bit_bound > 32)
-        tbd->no_optimize = true;
       break;
     }
     case DDS_XTypes_TK_BITMASK: {
@@ -480,7 +474,6 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       *align = ALGN (dds_sequence_t, is_ext);
       *size = SZ (dds_sequence_t, is_ext);
       tbd->fixed_size = false;
-      tbd->no_optimize = true;
       break;
     }
     case DDS_XTypes_TK_ARRAY: {
@@ -550,10 +543,7 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       *align = is_ext ? dds_alignof (void *) : aggrtype->align;
       *size = is_ext ? sizeof (void *) : aggrtype->size;
       if (type->xt._d == DDS_XTypes_TK_UNION)
-      {
-        tbd->no_optimize = true;
         tbd->contains_union = true;
-      }
       break;
     }
     case DDS_XTypes_TK_FLOAT128:
@@ -787,7 +777,6 @@ static dds_return_t typebuilder_add_union (struct typebuilder_data *tbd, struct 
   align_to (&tb_aggrtype->detail._union.member_offs, member_align);
 
   tbd->contains_union = true;
-  tbd->no_optimize = true;
 err:
   return ret;
 }
@@ -1796,8 +1785,6 @@ static dds_return_t set_implicit_keys_aggrtype (struct typebuilder_aggregated_ty
 static uint32_t get_descriptor_flagset (const struct typebuilder_data *tbd)
 {
   uint32_t flags = 0u;
-  if (tbd->no_optimize)
-    flags |= DDS_TOPIC_NO_OPTIMIZE;
   if (tbd->contains_union)
     flags |= DDS_TOPIC_CONTAINS_UNION;
   if (tbd->fixed_key_xcdr1)
