@@ -15,7 +15,6 @@
 #include "dds/features.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsrt/string.h"
-#include "dds/ddsrt/circlist.h"
 #include "dds/ddsi/ddsi_cdrstream.h"
 #include "dds/ddsi/ddsi_serdata.h"
 #include "dds/ddsi/ddsi_serdata_default.h"
@@ -24,6 +23,7 @@
 #include "dds/ddsi/ddsi_xt_typemap.h"
 #include "dds/ddsi/ddsi_typelib.h"
 #include "dds/ddsi/ddsi_typebuilder.h"
+#include "dds/ddsi/ddsi_list_tmpl.h"
 
 #define OPS_CHUNK_SZ 100u
 #define XCDR1_MAX_ALIGN 8
@@ -147,12 +147,6 @@ struct typebuilder_aggregated_type
   } detail;
 };
 
-struct typebuilder_data_dep
-{
-  struct ddsrt_circlist_elem e;
-  struct typebuilder_aggregated_type type;
-};
-
 typedef enum key_path_part_kind {
   KEY_PATH_PART_REGULAR,
   KEY_PATH_PART_INHERIT,
@@ -177,12 +171,16 @@ struct typebuilder_key
   struct typebuilder_key_path *path;
 };
 
+#define NOARG
+DDSI_LIST_TYPES_TMPL(typebuilder_dep_types, struct typebuilder_aggregated_type *, NOARG, 32)
+#undef NOARG
+
 struct typebuilder_data
 {
   struct ddsi_domaingv *gv;
   const struct ddsi_type *type;
   struct typebuilder_aggregated_type toplevel_type;
-  struct ddsrt_circlist dep_types;
+  struct typebuilder_dep_types dep_types;
   uint32_t n_keys;
   struct typebuilder_key *keys;
   bool no_optimize;
@@ -191,6 +189,9 @@ struct typebuilder_data
   bool fixed_key_xcdr2;
   bool fixed_size;
 };
+
+DDSI_LIST_DECLS_TMPL(static, typebuilder_dep_types, struct typebuilder_aggregated_type *, ddsrt_attribute_unused)
+DDSI_LIST_CODE_TMPL(static, typebuilder_dep_types, struct typebuilder_aggregated_type *, NULL, ddsrt_malloc, ddsrt_free)
 
 static dds_return_t typebuilder_add_aggrtype (struct typebuilder_data *tbd, struct typebuilder_aggregated_type *tb_aggrtype, const struct ddsi_type *type);
 static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t *size, uint32_t *align, struct typebuilder_type *tb_type, const struct ddsi_type *type, bool is_ext, bool use_ext_type);
@@ -206,7 +207,7 @@ static struct typebuilder_data *typebuilder_data_new (struct ddsi_domaingv *gv, 
     return NULL;
   tbd->gv = gv;
   tbd->type = type;
-  ddsrt_circlist_init (&tbd->dep_types);
+  typebuilder_dep_types_init (&tbd->dep_types);
   tbd->fixed_size = true;
   return tbd;
 }
@@ -282,17 +283,13 @@ static void typebuilder_data_free (struct typebuilder_data *tbd)
 {
   typebuilder_aggrtype_fini (&tbd->toplevel_type);
 
-  if (!ddsrt_circlist_isempty (&tbd->dep_types))
+  struct typebuilder_dep_types_iter it;
+  for (struct typebuilder_aggregated_type *tb_aggrtype = typebuilder_dep_types_iter_first (&tbd->dep_types, &it); tb_aggrtype; tb_aggrtype = typebuilder_dep_types_iter_next (&it))
   {
-    struct ddsrt_circlist_elem *elem0 = ddsrt_circlist_oldest (&tbd->dep_types), *elem = elem0;
-    do
-    {
-      struct typebuilder_data_dep *dep = DDSRT_FROM_CIRCLIST (struct typebuilder_data_dep, e, elem);
-      typebuilder_aggrtype_fini (&dep->type);
-      elem = elem->next;
-      ddsrt_free (dep);
-    } while (elem != elem0);
+    typebuilder_aggrtype_fini (tb_aggrtype);
+    ddsrt_free (tb_aggrtype);
   }
+  typebuilder_dep_types_free (&tbd->dep_types);
 
   for (uint32_t n = 0; n < tbd->n_keys; n++)
   {
@@ -340,16 +337,11 @@ static struct typebuilder_aggregated_type *typebuilder_find_aggrtype (struct typ
     tb_aggrtype = &tbd->toplevel_type;
   else
   {
-    if (!ddsrt_circlist_isempty (&tbd->dep_types))
+    struct typebuilder_dep_types_iter it;
+    for (tb_aggrtype = typebuilder_dep_types_iter_first (&tbd->dep_types, &it); tb_aggrtype; tb_aggrtype = typebuilder_dep_types_iter_next (&it))
     {
-      struct ddsrt_circlist_elem *elem0 = ddsrt_circlist_oldest (&tbd->dep_types), *elem = elem0;
-      do
-      {
-        struct typebuilder_data_dep *dep = DDSRT_FROM_CIRCLIST (struct typebuilder_data_dep, e, elem);
-        if (!ddsi_typeid_compare (&type->xt.id, &dep->type.id))
-          tb_aggrtype = &dep->type;
-        elem = elem->next;
-      } while (!tb_aggrtype && elem != elem0);
+      if (!ddsi_typeid_compare (&type->xt.id, &tb_aggrtype->id))
+        break;
     }
   }
 
@@ -540,17 +532,16 @@ static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t
       struct typebuilder_aggregated_type *aggrtype;
       if ((aggrtype = typebuilder_find_aggrtype (tbd, type)) == NULL)
       {
-        struct typebuilder_data_dep *dep;
-        if (!(dep = ddsrt_calloc (1, sizeof (*dep))))
+        if (!(aggrtype = ddsrt_calloc (1, sizeof (*aggrtype))))
         {
           typebuilder_type_fini (tb_type);
           ret = DDS_RETCODE_OUT_OF_RESOURCES;
           goto err;
         }
-        aggrtype = &dep->type;
-        ddsrt_circlist_append (&tbd->dep_types, &dep->e);
+        typebuilder_dep_types_append (&tbd->dep_types, aggrtype);
         if ((ret = typebuilder_add_aggrtype (tbd, aggrtype, type)))
         {
+          ddsrt_free (aggrtype);
           typebuilder_type_fini (tb_type);
           return ret;
         }
@@ -1379,16 +1370,9 @@ static dds_return_t typebuilder_get_ops (struct typebuilder_data *tbd, struct ty
   if ((ret = get_ops_aggrtype (&tbd->toplevel_type, ops, false)))
     return ret;
 
-  if (!ddsrt_circlist_isempty (&tbd->dep_types))
-  {
-    struct ddsrt_circlist_elem *elem0 = ddsrt_circlist_oldest (&tbd->dep_types), *elem = elem0;
-    do
-    {
-      struct typebuilder_data_dep *dep = DDSRT_FROM_CIRCLIST (struct typebuilder_data_dep, e, elem);
-      ret = get_ops_aggrtype (&dep->type, ops, false);
-      elem = elem->next;
-    } while (!ret && elem != elem0);
-  }
+  struct typebuilder_dep_types_iter it;
+  for (struct typebuilder_aggregated_type *tb_aggrtype = typebuilder_dep_types_iter_first (&tbd->dep_types, &it); !ret && tb_aggrtype; tb_aggrtype = typebuilder_dep_types_iter_next (&it))
+    ret = get_ops_aggrtype (tb_aggrtype, ops, false);
 
   return ret;
 }
