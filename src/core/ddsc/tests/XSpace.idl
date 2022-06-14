@@ -95,4 +95,15 @@ module XSpace {
       dep_test_nested f1;
     };
 
+    union to_unionmembers switch (long) {
+      case 1: long u1;
+      default: short u2;
+    };
+
+    typedef long td_long[1000000000];
+    typedef td_long tdd_long;
+    struct to_arraybound {
+      tdd_long f1[1];
+    };
+
 };
