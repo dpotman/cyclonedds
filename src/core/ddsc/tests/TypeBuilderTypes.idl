@@ -46,8 +46,8 @@ module TypeBuilderTypes {
   };
 
   struct t4 {
-    sequence<long> f1;
-    sequence<string> f2;
+    //sequence<long> f1;
+    //sequence<string> f2;
     sequence<t1> f3;
   };
 

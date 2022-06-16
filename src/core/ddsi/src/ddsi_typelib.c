@@ -176,7 +176,7 @@ bool ddsi_typeinfo_valid (const ddsi_typeinfo_t *typeinfo)
   return true;
 }
 
-static const struct DDS_XTypes_TypeObject * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const struct DDS_XTypes_TypeIdentifier *type_id)
+const struct DDS_XTypes_TypeObject * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const struct DDS_XTypes_TypeIdentifier *type_id)
 {
   assert (type_id);
   assert (tmap);
@@ -703,6 +703,10 @@ static dds_return_t get_typeid_with_deps (struct ddsi_domaingv *gv, DDS_XTypes_T
   ddsi_xt_get_typeobject_kind_impl (&type->xt, &to, kind);
   if ((ret = ddsi_typeobj_get_hash_id (&to, &ti)))
     goto err;
+#ifndef NDEBUG
+  struct ddsi_type *tmp_type = ddsi_type_lookup (gv, &ti);
+  assert (tmp_type);
+#endif
   if ((ret = get_typeid_with_size (&typeid_with_deps->typeid_with_size, &ti.x, &to)))
     goto err;
   memset (&tmpl, 0, sizeof (tmpl));
@@ -750,6 +754,7 @@ err:
 
 static dds_return_t ddsi_type_get_typeinfo (struct ddsi_domaingv *gv, const struct ddsi_type *type, struct ddsi_typeinfo *type_info)
 {
+  assert (ddsi_typeid_is_complete (&type->xt.id));
   memset (type_info, 0, sizeof (*type_info));
   dds_return_t ret;
   if ((ret = get_typeid_with_deps (gv, &type_info->x.minimal, type, DDSI_TYPEID_KIND_MINIMAL))
@@ -776,6 +781,25 @@ err_typeinfo:
   return ret;
 }
 
+static void typemap_add_type (struct ddsi_typemap *type_map, const struct ddsi_type *type)
+{
+  uint32_t n = type_map->x.identifier_complete_minimal._length;
+  type_map->x.identifier_complete_minimal._length++;
+  type_map->x.identifier_complete_minimal._maximum++;
+
+  type_map->x.identifier_object_pair_minimal._length++;
+  type_map->x.identifier_object_pair_minimal._maximum++;
+  ddsi_xt_get_typeobject_kind_impl (&type->xt, &type_map->x.identifier_object_pair_minimal._buffer[n].type_object, DDSI_TYPEID_KIND_MINIMAL);
+  ddsi_typeobj_get_hash_id_impl (&type_map->x.identifier_object_pair_minimal._buffer[n].type_object, &type_map->x.identifier_object_pair_minimal._buffer[n].type_identifier);
+  ddsi_typeid_copy_impl (&type_map->x.identifier_complete_minimal._buffer[n].type_identifier2, &type_map->x.identifier_object_pair_minimal._buffer[n].type_identifier);
+
+  type_map->x.identifier_object_pair_complete._length++;
+  type_map->x.identifier_object_pair_complete._maximum++;
+  ddsi_xt_get_typeobject_kind_impl (&type->xt, &type_map->x.identifier_object_pair_complete._buffer[n].type_object, DDSI_TYPEID_KIND_COMPLETE);
+  ddsi_typeobj_get_hash_id_impl (&type_map->x.identifier_object_pair_complete._buffer[n].type_object, &type_map->x.identifier_object_pair_complete._buffer[n].type_identifier);
+  ddsi_typeid_copy_impl (&type_map->x.identifier_complete_minimal._buffer[n].type_identifier1, &type_map->x.identifier_object_pair_complete._buffer[n].type_identifier);
+}
+
 static dds_return_t ddsi_type_get_typemap (struct ddsi_domaingv *gv, const struct ddsi_type *type, struct ddsi_typemap *type_map)
 {
   dds_return_t ret = DDS_RETCODE_OK;
@@ -785,45 +809,40 @@ static dds_return_t ddsi_type_get_typemap (struct ddsi_domaingv *gv, const struc
   memset (&tmpl, 0, sizeof (tmpl));
   ddsi_typeid_copy (&tmpl.src_type_id, &type->xt.id);
 
-  uint32_t n_deps = 0, n = 0;
+  uint32_t n_deps = 0;
   while ((dep = ddsrt_avl_lookup_succ (&ddsi_typedeps_treedef, &gv->typedeps, dep)) && !ddsi_typeid_compare (&type->xt.id, &dep->src_type_id))
     n_deps += ddsi_typeid_is_hash (&dep->dep_type_id) ? 1 : 0;
 
+  if (!(type_map->x.identifier_complete_minimal._buffer = ddsrt_calloc (1 + n_deps, sizeof (*type_map->x.identifier_complete_minimal._buffer)))
+      || !(type_map->x.identifier_object_pair_minimal._buffer = ddsrt_calloc (1 + n_deps, sizeof (*type_map->x.identifier_object_pair_minimal._buffer)))
+      || !(type_map->x.identifier_object_pair_complete._buffer = ddsrt_calloc (1 + n_deps, sizeof (*type_map->x.identifier_object_pair_complete._buffer))))
+  {
+    ret = DDS_RETCODE_OUT_OF_RESOURCES;
+    goto err;
+  }
+
+  type_map->x.identifier_complete_minimal._release = true;
+  type_map->x.identifier_object_pair_minimal._release = true;
+  type_map->x.identifier_object_pair_complete._release = true;
+
+  // add top-level type to typemap
+  typemap_add_type (type_map, type);
+
+  // add dependent types
+  struct ddsi_type *dep_type;
   if (n_deps > 0)
   {
-    if (!(type_map->x.identifier_complete_minimal._buffer = ddsrt_calloc (n_deps, sizeof (*type_map->x.identifier_complete_minimal._buffer)))
-        || !(type_map->x.identifier_object_pair_minimal._buffer = ddsrt_calloc (n_deps, sizeof (*type_map->x.identifier_object_pair_minimal._buffer)))
-        || !(type_map->x.identifier_object_pair_complete._buffer = ddsrt_calloc (n_deps, sizeof (*type_map->x.identifier_object_pair_complete._buffer))))
-    {
-      ret = DDS_RETCODE_OUT_OF_RESOURCES;
-      goto err;
-    }
-
-    type_map->x.identifier_complete_minimal._release = true;
-    type_map->x.identifier_object_pair_minimal._release = true;
-    type_map->x.identifier_object_pair_complete._release = true;
-
     dep = &tmpl;
     while ((dep = ddsrt_avl_lookup_succ (&ddsi_typedeps_treedef, &gv->typedeps, dep)) && !ddsi_typeid_compare (&type->xt.id, &dep->src_type_id))
     {
       if (!ddsi_typeid_is_hash (&dep->dep_type_id))
         continue;
-
-      type_map->x.identifier_complete_minimal._length++;
-      type_map->x.identifier_complete_minimal._maximum++;
-
-      type_map->x.identifier_object_pair_minimal._length++;
-      type_map->x.identifier_object_pair_minimal._maximum++;
-      ddsi_xt_get_typeobject_kind_impl (&type->xt, &type_map->x.identifier_object_pair_minimal._buffer[n].type_object, DDSI_TYPEID_KIND_MINIMAL);
-      ddsi_typeobj_get_hash_id_impl (&type_map->x.identifier_object_pair_minimal._buffer[n].type_object, &type_map->x.identifier_object_pair_minimal._buffer[n].type_identifier);
-      ddsi_typeid_copy_impl (&type_map->x.identifier_complete_minimal._buffer[n].type_identifier2, &type_map->x.identifier_object_pair_minimal._buffer[n].type_identifier);
-
-      type_map->x.identifier_object_pair_complete._length++;
-      type_map->x.identifier_object_pair_complete._maximum++;
-      ddsi_xt_get_typeobject_kind_impl (&type->xt, &type_map->x.identifier_object_pair_complete._buffer[n].type_object, DDSI_TYPEID_KIND_COMPLETE);
-      ddsi_typeobj_get_hash_id_impl (&type_map->x.identifier_object_pair_complete._buffer[n].type_object, &type_map->x.identifier_object_pair_complete._buffer[n].type_identifier);
-      ddsi_typeid_copy_impl (&type_map->x.identifier_complete_minimal._buffer[n].type_identifier1, &type_map->x.identifier_object_pair_complete._buffer[n].type_identifier);
-      n++;
+      if (!(dep_type = ddsi_type_lookup (gv, &dep->dep_type_id)))
+      {
+        ret = DDS_RETCODE_ERROR;
+        goto err;
+      }
+      typemap_add_type (type_map, dep_type);
     }
   }
 

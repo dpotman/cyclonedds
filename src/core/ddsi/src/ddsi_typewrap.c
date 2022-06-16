@@ -2527,6 +2527,112 @@ ddsi_typeid_kind_t ddsi_typeid_kind (const ddsi_typeid_t *type_id)
   return ddsi_typeid_is_minimal (type_id) ? DDSI_TYPEID_KIND_MINIMAL : DDSI_TYPEID_KIND_COMPLETE;
 }
 
+static void ddsi_xt_get_fully_descriptive_type_id (const struct xt_type *xt, struct DDS_XTypes_TypeIdentifier *ti, ddsi_typeid_kind_t kind)
+{
+  assert (xt);
+  assert (ti);
+  assert (xt->kind == DDSI_TYPEID_KIND_FULLY_DESCRIPTIVE);
+
+  memset (ti, 0, sizeof (*ti));
+  // (kind == DDSI_TYPEID_KIND_MINIMAL)
+  switch (xt->_d)
+  {
+    case DDS_XTypes_TK_STRING8:
+    case DDS_XTypes_TK_STRING16:
+      ddsi_typeid_copy_to_impl (ti, &xt->id);
+      break;
+
+    case DDS_XTypes_TK_SEQUENCE:
+      if (xt->_u.seq.bound <= 255)
+      {
+        ti->_d = DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL;
+        ti->_u.seq_sdefn.bound = xt->_u.seq.bound;
+        ti->_u.seq_sdefn.header.element_flags = xt->_u.seq.c.element_flags;
+
+        // FIXME: use generic get_type_id function?
+        if (xt->_u.seq.c.element_type->xt.kind == DDSI_TYPEID_KIND_FULLY_DESCRIPTIVE)
+        {
+          ti->_u.seq_sdefn.header.equiv_kind = DDS_XTypes_EK_BOTH;
+          ddsi_xt_get_fully_descriptive_type_id (&xt->_u.seq.c.element_type.xt, &ti->_u.seq_sdefn.element_identifier, kind);
+        }
+        else
+        {
+          ti->_u.seq_sdefn.header.equiv_kind = (kind == DDSI_TYPEID_KIND_MINIMAL) ? DDS_XTypes_EK_MINIMAL : DDS_XTypes_EK_COMPLETE;
+          // FIXME: get hash id
+        }
+      }
+      else
+      {
+      }
+      break;
+
+    case DDS_XTypes_TK_ARRAY:
+      break;
+
+    case DDS_XTypes_TK_MAP:
+      break;
+
+      // case DDS_XTypes_TI_PLAIN_SEQUENCE_SMALL:
+      //   xt->_d = DDS_XTypes_TK_SEQUENCE;
+      //   ddsi_type_register_dep (gv, &xt->id, &xt->_u.seq.c.element_type, ti->_u.seq_sdefn.element_identifier);
+      //   xt->_u.seq.bound = (DDS_XTypes_LBound) ti->_u.seq_sdefn.bound;
+      //   xt_collection_common_init (&xt->_u.seq.c, &ti->_u.seq_sdefn.header);
+      //   break;
+      // case DDS_XTypes_TI_PLAIN_SEQUENCE_LARGE:
+      //   xt->_d = DDS_XTypes_TK_SEQUENCE;
+      //   ddsi_type_register_dep (gv, &xt->id, &xt->_u.seq.c.element_type, ti->_u.seq_ldefn.element_identifier);
+      //   xt->_u.seq.bound = ti->_u.seq_ldefn.bound;
+      //   xt_collection_common_init (&xt->_u.seq.c, &ti->_u.seq_ldefn.header);
+      //   break;
+      // case DDS_XTypes_TI_PLAIN_ARRAY_SMALL:
+      //   xt->_d = DDS_XTypes_TK_ARRAY;
+      //   ddsi_type_register_dep (gv, &xt->id, &xt->_u.array.c.element_type, ti->_u.array_sdefn.element_identifier);
+      //   xt_collection_common_init (&xt->_u.array.c, &ti->_u.array_sdefn.header);
+      //   xt_sbounds_to_lbounds (&xt->_u.array.bounds, &ti->_u.array_sdefn.array_bound_seq);
+      //   break;
+      // case DDS_XTypes_TI_PLAIN_ARRAY_LARGE:
+      //   xt->_d = DDS_XTypes_TK_ARRAY;
+      //   ddsi_type_register_dep (gv, &xt->id, &xt->_u.array.c.element_type, ti->_u.array_ldefn.element_identifier);
+      //   xt_collection_common_init (&xt->_u.array.c, &ti->_u.array_ldefn.header);
+      //   xt_lbounds_dup (&xt->_u.array.bounds, &ti->_u.array_ldefn.array_bound_seq);
+      //   break;
+      // case DDS_XTypes_TI_PLAIN_MAP_SMALL:
+      //   xt->_d = DDS_XTypes_TK_MAP;
+      //   ddsi_type_register_dep (gv, &xt->id, &xt->_u.map.c.element_type, ti->_u.map_sdefn.element_identifier);
+      //   xt->_u.map.bound = (DDS_XTypes_LBound) ti->_u.map_sdefn.bound;
+      //   xt_collection_common_init (&xt->_u.map.c, &ti->_u.map_sdefn.header);
+      //   ddsi_type_register_dep (gv, &xt->id, &xt->_u.map.key_type, ti->_u.map_sdefn.key_identifier);
+      //   break;
+      // case DDS_XTypes_TI_PLAIN_MAP_LARGE:
+      //   xt->_d = DDS_XTypes_TK_MAP;
+      //   ddsi_type_register_dep (gv, &xt->id, &xt->_u.map.c.element_type, ti->_u.map_ldefn.element_identifier);
+      //   xt->_u.map.bound = (DDS_XTypes_LBound) ti->_u.map_ldefn.bound;
+      //   xt_collection_common_init (&xt->_u.map.c, &ti->_u.map_ldefn.header);
+      //   ddsi_type_register_dep (gv, &xt->id, &xt->_u.map.key_type, ti->_u.map_ldefn.key_identifier);
+      //   break;
+
+
+
+
+
+  }
+}
+
+static void ddsi_xt_get_typeid_kind_impl (const struct xt_type *xt, struct DDS_XTypes_TypeIdentifier *ti, ddsi_typeid_kind_t kind)
+{
+  if (xt->kind == DDSI_TYPEID_KIND_FULLY_DESCRIPTIVE)
+  {
+    ddsi_xt_get_fully_descriptive_type_id (ti, xt);
+  }
+  else
+  {
+    struct DDS_XTypes_TypeObject to;
+    ddsi_xt_get_typeobject_kind_impl (xt, &to, kind);
+    ddsi_typeobj_get_hash_id_impl (&to, ti);
+    ddsi_typeobj_fini_impl (&to);
+  }
+}
+
 void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to, ddsi_typeid_kind_t kind)
 {
   assert (xt);
@@ -2535,7 +2641,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
   assert (!xt_is_fully_descriptive (xt));
 
   memset (to, 0, sizeof (*to));
-  if (xt->kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDSI_TYPEID_KIND_MINIMAL)
+  if (kind == DDSI_TYPEID_KIND_MINIMAL)
   {
     to->_d = DDS_XTypes_EK_MINIMAL;
     struct DDS_XTypes_MinimalTypeObject *mto = &to->_u.minimal;
@@ -2545,7 +2651,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
       case DDS_XTypes_TK_ALIAS:
       {
         struct DDS_XTypes_MinimalAliasType *malias = &mto->_u.alias_type;
-        ddsi_typeid_copy_to_impl (&malias->body.common.related_type, &xt->_u.alias.related_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.alias.related_type->xt, &malias->body.common.related_type, DDSI_TYPEID_KIND_MINIMAL);
         malias->body.common.related_flags = xt->_u.alias.related_flags;
         break;
       }
@@ -2557,7 +2663,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         struct DDS_XTypes_MinimalStructType *mstruct = &mto->_u.struct_type;
         mstruct->struct_flags = xt->_u.structure.flags;
         if (xt->_u.structure.base_type)
-          ddsi_typeid_copy_to_impl (&mstruct->header.base_type, &xt->_u.structure.base_type->xt.id);
+          ddsi_xt_get_typeid_kind_impl (&xt->_u.structure.base_type->xt, &mstruct->header.base_type, DDSI_TYPEID_KIND_MINIMAL);
         mstruct->member_seq._buffer = ddsrt_malloc (xt->_u.structure.members.length * sizeof (*mstruct->member_seq._buffer));
         mstruct->member_seq._length = xt->_u.structure.members.length;
         mstruct->member_seq._release = true;
@@ -2565,7 +2671,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         {
           mstruct->member_seq._buffer[n].common.member_id = xt->_u.structure.members.seq[n].id;
           mstruct->member_seq._buffer[n].common.member_flags = xt->_u.structure.members.seq[n].flags;
-          ddsi_typeid_copy_to_impl (&mstruct->member_seq._buffer[n].common.member_type_id, &xt->_u.structure.members.seq[n].type->xt.id);
+          ddsi_xt_get_typeid_kind_impl (&xt->_u.structure.members.seq[n].type->xt, &mstruct->member_seq._buffer[n].common.member_type_id, DDSI_TYPEID_KIND_MINIMAL);
           get_minimal_member_detail (&mstruct->member_seq._buffer[n].detail, &xt->_u.structure.members.seq[n].detail);
         }
         break;
@@ -2574,7 +2680,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
       {
         struct DDS_XTypes_MinimalUnionType *munion = &mto->_u.union_type;
         munion->union_flags = xt->_u.union_type.flags;
-        ddsi_typeid_copy_to_impl (&munion->discriminator.common.type_id, &xt->_u.union_type.disc_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.union_type.disc_type->xt, &munion->discriminator.common.type_id, DDSI_TYPEID_KIND_MINIMAL);
         munion->discriminator.common.member_flags = xt->_u.union_type.disc_flags;
         munion->member_seq._buffer = ddsrt_malloc (xt->_u.union_type.members.length * sizeof (*munion->member_seq._buffer));
         munion->member_seq._length = munion->member_seq._maximum = xt->_u.union_type.members.length;
@@ -2583,7 +2689,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         {
           munion->member_seq._buffer[n].common.member_id = xt->_u.union_type.members.seq[n].id;
           munion->member_seq._buffer[n].common.member_flags = xt->_u.union_type.members.seq[n].flags;
-          ddsi_typeid_copy_to_impl (&munion->member_seq._buffer[n].common.type_id, &xt->_u.union_type.members.seq[n].type->xt.id);
+          ddsi_xt_get_typeid_kind_impl (&xt->_u.union_type.members.seq[n].type->xt, &munion->member_seq._buffer[n].common.type_id, DDSI_TYPEID_KIND_MINIMAL);
           munion->member_seq._buffer[n].common.label_seq._length = xt->_u.union_type.members.seq[n].label_seq._length;
           munion->member_seq._buffer[n].common.label_seq._buffer = ddsrt_memdup (xt->_u.union_type.members.seq[n].label_seq._buffer,
             xt->_u.union_type.members.seq[n].label_seq._length * sizeof (*xt->_u.union_type.members.seq[n].label_seq._buffer));
@@ -2609,19 +2715,20 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         break;
       }
       case DDS_XTypes_TK_SEQUENCE:
-        ddsi_typeid_copy_to_impl (&mto->_u.sequence_type.element.common.type, &xt->_u.seq.c.element_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.seq.c.element_type->xt, &mto->_u.sequence_type.element.common.type, DDSI_TYPEID_KIND_MINIMAL);
+        mto->_u.sequence_type.collection_flag = xt->_u.seq.c.flags;
         mto->_u.sequence_type.element.common.element_flags = xt->_u.seq.c.element_flags;
         mto->_u.sequence_type.header.common.bound = xt->_u.seq.bound;
         break;
       case DDS_XTypes_TK_ARRAY:
-        ddsi_typeid_copy_to_impl (&mto->_u.array_type.element.common.type, &xt->_u.array.c.element_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.array.c.element_type->xt, &mto->_u.array_type.element.common.type, DDSI_TYPEID_KIND_MINIMAL);
         mto->_u.array_type.element.common.element_flags = xt->_u.array.c.element_flags;
         xt_lbounds_dup (&mto->_u.array_type.header.common.bound_seq, &xt->_u.array.bounds);
         break;
       case DDS_XTypes_TK_MAP:
-        ddsi_typeid_copy_to_impl (&mto->_u.map_type.element.common.type, &xt->_u.map.c.element_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.map.c.element_type->xt, &mto->_u.map_type.element.common.type, DDSI_TYPEID_KIND_MINIMAL);
         mto->_u.array_type.element.common.element_flags = xt->_u.map.c.element_flags;
-        ddsi_typeid_copy_to_impl (&mto->_u.map_type.key.common.type, &xt->_u.map.key_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.map.key_type->xt, &mto->_u.map_type.key.common.type, DDSI_TYPEID_KIND_MINIMAL);
         mto->_u.map_type.header.common.bound = xt->_u.map.bound;
         break;
       case DDS_XTypes_TK_ENUM:
@@ -2674,7 +2781,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         struct DDS_XTypes_CompleteAliasType *calias = &cto->_u.alias_type;
         calias->alias_flags = xt->_u.alias.flags;
         get_type_detail (&calias->header.detail, &xt->_u.alias.detail);
-        ddsi_typeid_copy_to_impl (&calias->body.common.related_type, &xt->_u.alias.related_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.alias.related_type->xt, &calias->body.common.related_type, DDSI_TYPEID_KIND_COMPLETE);
         calias->body.common.related_flags = xt->_u.alias.related_flags;
         break;
       }
@@ -2686,7 +2793,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         struct DDS_XTypes_CompleteStructType *cstruct = &cto->_u.struct_type;
         cstruct->struct_flags = xt->_u.structure.flags;
         if (xt->_u.structure.base_type)
-          ddsi_typeid_copy_to_impl (&cstruct->header.base_type, &xt->_u.structure.base_type->xt.id);
+          ddsi_xt_get_typeid_kind_impl (&xt->_u.structure.base_type->xt, &cstruct->header.base_type, DDSI_TYPEID_KIND_COMPLETE);
         else
           cstruct->header.base_type._d = 0;
 
@@ -2698,7 +2805,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         {
           cstruct->member_seq._buffer[n].common.member_id = xt->_u.structure.members.seq[n].id;
           cstruct->member_seq._buffer[n].common.member_flags = xt->_u.structure.members.seq[n].flags;
-          ddsi_typeid_copy_to_impl (&cstruct->member_seq._buffer[n].common.member_type_id, &xt->_u.structure.members.seq[n].type->xt.id);
+          ddsi_xt_get_typeid_kind_impl (&xt->_u.structure.members.seq[n].type->xt, &cstruct->member_seq._buffer[n].common.member_type_id, DDSI_TYPEID_KIND_COMPLETE);
           get_member_detail (&cstruct->member_seq._buffer[n].detail, &xt->_u.structure.members.seq[n].detail);
         }
         break;
@@ -2708,7 +2815,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         struct DDS_XTypes_CompleteUnionType *cunion = &cto->_u.union_type;
         cunion->union_flags = xt->_u.union_type.flags;
         get_type_detail (&cunion->header.detail, &xt->_u.union_type.detail);
-        ddsi_typeid_copy_to_impl (&cunion->discriminator.common.type_id, &xt->_u.union_type.disc_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.union_type.disc_type->xt, &cunion->discriminator.common.type_id, DDSI_TYPEID_KIND_COMPLETE);
         cunion->discriminator.common.member_flags = xt->_u.union_type.disc_flags;
         cunion->member_seq._buffer = ddsrt_malloc (xt->_u.union_type.members.length * sizeof (*cunion->member_seq._buffer));
         cunion->member_seq._length = cunion->member_seq._maximum = xt->_u.union_type.members.length;
@@ -2717,7 +2824,7 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         {
           cunion->member_seq._buffer[n].common.member_id = xt->_u.union_type.members.seq[n].id;
           cunion->member_seq._buffer[n].common.member_flags = xt->_u.union_type.members.seq[n].flags;
-          ddsi_typeid_copy_to_impl (&cunion->member_seq._buffer[n].common.type_id, &xt->_u.union_type.members.seq[n].type->xt.id);
+          ddsi_xt_get_typeid_kind_impl (&xt->_u.union_type.members.seq[n].type->xt, &cunion->member_seq._buffer[n].common.type_id, DDSI_TYPEID_KIND_COMPLETE);
           cunion->member_seq._buffer[n].common.label_seq._length = xt->_u.union_type.members.seq[n].label_seq._length;
           cunion->member_seq._buffer[n].common.label_seq._buffer = ddsrt_memdup (xt->_u.union_type.members.seq[n].label_seq._buffer,
             xt->_u.union_type.members.seq[n].label_seq._length * sizeof (*xt->_u.union_type.members.seq[n].label_seq._buffer));
@@ -2745,19 +2852,21 @@ void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTyp
         break;
       }
       case DDS_XTypes_TK_SEQUENCE:
-        ddsi_typeid_copy_to_impl (&cto->_u.sequence_type.element.common.type, &xt->_u.seq.c.element_type->xt.id);
-        cto->_u.sequence_type.element.common.element_flags = xt->_u.seq.c.element_flags;
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.seq.c.element_type->xt, &cto->_u.sequence_type.element.common.type, DDSI_TYPEID_KIND_COMPLETE);
+        cto->_u.sequence_type.collection_flag = xt->_u.seq.c.flags;
         cto->_u.sequence_type.header.common.bound = xt->_u.seq.bound;
+        get_type_detail (cto->_u.sequence_type.header.detail, &xt->_u.seq.c.detail);
+        cto->_u.sequence_type.element.common.element_flags = xt->_u.seq.c.element_flags;
         break;
       case DDS_XTypes_TK_ARRAY:
-        ddsi_typeid_copy_to_impl (&cto->_u.array_type.element.common.type, &xt->_u.array.c.element_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.array.c.element_type->xt, &cto->_u.array_type.element.common.type, DDSI_TYPEID_KIND_COMPLETE);
         cto->_u.array_type.element.common.element_flags = xt->_u.array.c.element_flags;
         xt_lbounds_dup (&cto->_u.array_type.header.common.bound_seq, &xt->_u.array.bounds);
         break;
       case DDS_XTypes_TK_MAP:
-        ddsi_typeid_copy_to_impl (&cto->_u.map_type.element.common.type, &xt->_u.map.c.element_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.map.c.element_type->xt, &cto->_u.map_type.element.common.type, DDSI_TYPEID_KIND_COMPLETE);
         cto->_u.array_type.element.common.element_flags = xt->_u.map.c.element_flags;
-        ddsi_typeid_copy_to_impl (&cto->_u.map_type.key.common.type, &xt->_u.map.key_type->xt.id);
+        ddsi_xt_get_typeid_kind_impl (&xt->_u.map.key_type->xt, &cto->_u.map_type.key.common.type, DDSI_TYPEID_KIND_COMPLETE);
         cto->_u.map_type.header.common.bound = xt->_u.map.bound;
         break;
       case DDS_XTypes_TK_ENUM:
