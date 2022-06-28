@@ -132,10 +132,10 @@ static bool tmap_equal (ddsi_typemap_t *a, ddsi_typemap_t *b)
 
 #define D(n) TypeBuilderTypes_ ## n ## _desc
 CU_TheoryDataPoints (ddsc_typebuilder, topic_desc) = {
-  // CU_DataPoints (const dds_topic_descriptor_t *, &D(t1), &D(t2), &D(t3), &D(t4), &D(t5), &D(t6), &D(t7), &D(t8),
-  //                                                &D(t9), &D(t10), &D(t11), &D(t12), &D(t13), &D(t14), &D(t15), &D(t16),
-  //                                                &D(t17), &D(t18) ),
-  CU_DataPoints (const dds_topic_descriptor_t *, &D(t4) ),
+  CU_DataPoints (const dds_topic_descriptor_t *, &D(t1), &D(t2), &D(t3), &D(t4), &D(t5), &D(t6), &D(t7), &D(t8),
+                                                 &D(t9), &D(t10), &D(t11), &D(t12), &D(t13), &D(t14), &D(t15), &D(t16),
+                                                 &D(t17), &D(t18) ),
+  // CU_DataPoints (const dds_topic_descriptor_t *, &D(t2) ),
 };
 #undef D
 
@@ -197,7 +197,11 @@ CU_Theory((const dds_topic_descriptor_t *desc), ddsc_typebuilder, topic_desc, .i
   ddsi_typeinfo_t *tinfo = ddsi_typeinfo_deser (&tinfo_ser);
   const struct ddsi_sertype_cdr_data gen_tinfo_ser = { .sz = generated_desc->type_information.sz, .data = generated_desc->type_information.data };
   ddsi_typeinfo_t *gen_tinfo = ddsi_typeinfo_deser (&gen_tinfo_ser);
-  CU_ASSERT_FATAL (ddsi_typeinfo_equal (tinfo, gen_tinfo));
+  CU_ASSERT_FATAL (ddsi_typeinfo_equal (tinfo, gen_tinfo, DDSI_TYPE_INCLUDE_DEPS));
+  ddsi_typeinfo_fini (tinfo);
+  ddsrt_free (tinfo);
+  ddsi_typeinfo_fini (gen_tinfo);
+  ddsrt_free (gen_tinfo);
 
   printf ("typeinfo: %u (%u)\n", generated_desc->type_mapping.sz, desc->type_mapping.sz);
   const struct ddsi_sertype_cdr_data tmap_ser = { .sz = desc->type_mapping.sz, .data = desc->type_mapping.data };
