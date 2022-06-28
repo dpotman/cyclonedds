@@ -469,7 +469,7 @@ static dds_return_t type_add_deps (struct ddsi_domaingv *gv, struct ddsi_type *t
     struct ddsi_type *dst_dep_type = NULL;
     ddsi_type_register_dep_impl (gv, &type->xt.id, &dst_dep_type, dep_type_id, true);
     assert (dst_dep_type);
-    if (!type_map || ddsi_type_resolved (gv, dst_dep_type, DDSI_TYPE_IGNORE_DEPS))
+    if (!type_map || ddsi_type_resolved_locked (gv, dst_dep_type, DDSI_TYPE_IGNORE_DEPS))
       continue;
 
     const struct DDS_XTypes_TypeObject *dep_type_obj = ddsi_typemap_typeobj (type_map, dep_type_id);
@@ -703,6 +703,10 @@ static dds_return_t get_typeid_with_deps (struct ddsi_domaingv *gv, DDS_XTypes_T
   ddsi_xt_get_typeobject_kind_impl (&type->xt, &to, kind);
   if ((ret = ddsi_typeobj_get_hash_id (&to, &ti)))
     goto err;
+#ifndef NDEBUG
+  struct ddsi_type *tmp_type = ddsi_type_lookup_locked (gv, &ti);
+  assert (tmp_type);
+#endif
   if ((ret = get_typeid_with_size (&typeid_with_deps->typeid_with_size, &ti.x, &to)))
     goto err;
   memset (&tmpl, 0, sizeof (tmpl));
@@ -861,7 +865,7 @@ err_typemap:
 
 struct ddsi_typeobj *ddsi_type_get_typeobj (struct ddsi_domaingv *gv, const struct ddsi_type *type)
 {
-  if (!ddsi_type_resolved (gv, type, DDSI_TYPE_IGNORE_DEPS))
+  if (!ddsi_type_resolved_locked (gv, type, DDSI_TYPE_IGNORE_DEPS))
     return NULL;
 
   ddsi_typeobj_t *to = ddsrt_malloc (sizeof (*to));
@@ -1014,7 +1018,7 @@ static void ddsi_type_get_gpe_matches_impl (struct ddsi_domaingv *gv, const stru
 
 void ddsi_type_get_gpe_matches (struct ddsi_domaingv *gv, const struct ddsi_type *type, struct generic_proxy_endpoint ***gpe_match_upd, uint32_t *n_match_upd)
 {
-  if (ddsi_type_resolved (gv, type, DDSI_TYPE_INCLUDE_DEPS))
+  if (ddsi_type_resolved_locked (gv, type, DDSI_TYPE_INCLUDE_DEPS))
     ddsi_type_get_gpe_matches_impl (gv, type, gpe_match_upd, n_match_upd);
   struct ddsi_type_dep tmpl, *reverse_dep = &tmpl;
   memset (&tmpl, 0, sizeof (tmpl));
@@ -1044,6 +1048,14 @@ bool ddsi_type_resolved (struct ddsi_domaingv *gv, const struct ddsi_type *type,
     ddsi_typeid_fini (&tmpl.src_type_id);
   }
   return resolved;
+}
+
+bool ddsi_type_resolved (struct ddsi_domaingv *gv, const struct ddsi_type *type, ddsi_type_include_deps_t resolved_kind)
+{
+  ddsrt_mutex_lock (&gv->typelib_lock);
+  bool ret = ddsi_type_resolved_locked (gv, type, resolved_kind);
+  ddsrt_mutex_unlock (&gv->typelib_lock);
+  return ret;
 }
 
 bool ddsi_is_assignable_from (struct ddsi_domaingv *gv, const struct ddsi_type_pair *rd_type_pair, uint32_t rd_resolved, const struct ddsi_type_pair *wr_type_pair, uint32_t wr_resolved, const dds_type_consistency_enforcement_qospolicy_t *tce)
@@ -1145,7 +1157,7 @@ dds_return_t ddsi_wait_for_type_resolved (struct ddsi_domaingv *gv, const ddsi_t
     goto err_unlock;
   }
 
-  if (ddsi_type_resolved (gv, type, resolved_kind))
+  if (ddsi_type_resolved_locked (gv, type, resolved_kind))
   {
     if (type_obj)
       *type_obj = ddsi_type_get_typeobj (gv, type);
@@ -1172,7 +1184,7 @@ dds_return_t ddsi_wait_for_type_resolved (struct ddsi_domaingv *gv, const ddsi_t
   const dds_time_t tnow = dds_time ();
   const dds_time_t abstimeout = (DDS_INFINITY - timeout <= tnow) ? DDS_NEVER : (tnow + timeout);
   ddsrt_mutex_lock (&gv->typelib_lock);
-  while (!ddsi_type_resolved (gv, type, resolved_kind))
+  while (!ddsi_type_resolved_locked (gv, type, resolved_kind))
   {
     if (!ddsrt_cond_waituntil (&gv->typelib_resolved_cond, &gv->typelib_lock, abstimeout))
     {

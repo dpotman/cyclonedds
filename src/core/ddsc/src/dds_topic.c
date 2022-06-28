@@ -1157,7 +1157,7 @@ dds_return_t dds_create_topic_descriptor (dds_find_scope_t scope, dds_entity_t p
   if ((ret = ddsi_wait_for_type_resolved (gv, type_id, timeout, NULL, DDSI_TYPE_INCLUDE_DEPS, scope == DDS_FIND_SCOPE_GLOBAL ? DDSI_TYPE_SEND_REQUEST : DDSI_TYPE_NO_REQUEST)))
     goto err;
 
-  struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
+  struct ddsi_type *type = ddsi_type_lookup (gv, type_id);
   assert (type && ddsi_type_resolved (gv, type, DDSI_TYPE_INCLUDE_DEPS));
   ret = ddsi_topic_descriptor_from_type (gv, descriptor, type);
 

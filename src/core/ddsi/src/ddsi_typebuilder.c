@@ -16,6 +16,7 @@
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsrt/string.h"
 #include "dds/ddsi/ddsi_cdrstream.h"
+#include "dds/ddsi/ddsi_domaingv.h"
 #include "dds/ddsi/ddsi_serdata.h"
 #include "dds/ddsi/ddsi_serdata_default.h"
 #include "dds/ddsi/ddsi_sertype.h"
@@ -818,7 +819,7 @@ static dds_return_t typebuilder_add_aggrtype (struct typebuilder_data *tbd, stru
 {
   assert (tbd);
   dds_return_t ret = DDS_RETCODE_OK;
-  assert (ddsi_type_resolved (tbd->gv, type, DDSI_TYPE_INCLUDE_DEPS));
+  assert (ddsi_type_resolved_locked (tbd->gv, type, DDSI_TYPE_INCLUDE_DEPS));
   assert (type->xt.kind == DDSI_TYPEID_KIND_COMPLETE);
   ddsi_typeid_copy (&tb_aggrtype->id, &type->xt.id);
   tb_aggrtype->kind = type->xt._d;
@@ -1787,7 +1788,7 @@ err:
   return ret;
 }
 
-dds_return_t ddsi_topic_descriptor_from_type (struct ddsi_domaingv *gv, dds_topic_descriptor_t *desc, const struct ddsi_type *type)
+dds_return_t ddsi_topic_descriptor_from_type_locked (struct ddsi_domaingv *gv, dds_topic_descriptor_t *desc, const struct ddsi_type *type)
 {
   assert (gv);
   assert (desc);
@@ -1805,6 +1806,14 @@ dds_return_t ddsi_topic_descriptor_from_type (struct ddsi_domaingv *gv, dds_topi
 
 err:
   typebuilder_data_free (tbd);
+  return ret;
+}
+
+dds_return_t ddsi_topic_descriptor_from_type (struct ddsi_domaingv *gv, dds_topic_descriptor_t *desc, const struct ddsi_type *type)
+{
+  ddsrt_mutex_lock (&gv->typelib_lock);
+  dds_return_t ret = ddsi_topic_descriptor_from_type_locked (gv, desc, type);
+  ddsrt_mutex_unlock (&gv->typelib_lock);
   return ret;
 }
 
