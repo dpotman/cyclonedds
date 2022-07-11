@@ -2288,33 +2288,38 @@ static bool xt_is_assignable_from_struct (struct ddsi_domaingv *gv, const struct
         if (m2_k && m2t->_d == DDS_XTypes_TK_UNION)
         {
           uint32_t ki1_max = m1t->_u.union_type.members.length, ki2_max = m2t->_u.union_type.members.length;
-          for (uint32_t ki1 = 0; ki1 < ki1_max; ki1++)
+          for (uint32_t ki2 = 0; ki2 < ki2_max; ki2++)
           {
-            struct xt_union_member *km1 = &m1t->_u.union_type.members.seq[i1];
-            for (uint32_t ki2 = ki1; ki2 < ki2_max + ki1; ki2++)
+            struct xt_union_member *km2 = &m2t->_u.union_type.members.seq[i2], *def_m1 = NULL, *sel_m1 = NULL;
+            for (uint32_t ki1 = ki2; ki1 < ki1_max + ki2; ki1++)
             {
-              struct xt_union_member *km2 = &m2t->_u.union_type.members.seq[ki2 % ki2_max];
-              if (xt_union_label_selects (&km1->label_seq, &km2->label_seq))
+              struct xt_union_member *km1 = &m1t->_u.union_type.members.seq[ki1 % ki1_max];
+              if (xt_union_label_selects (&km2->label_seq, &km1->label_seq))
+                sel_m1 = km1;
+              if (km1->flags & DDS_XTypes_IS_DEFAULT)
+                def_m1 = km1;
+            }
+            if (sel_m1 || def_m1)
+            {
+              struct xt_union_member *km1 = sel_m1 ? sel_m1 : def_m1;
+              const struct xt_type *km1_t = ddsi_xt_unalias (&km1->type->xt),
+                *km2_t = ddsi_xt_unalias (&km2->type->xt);
+              if (ddsi_xt_is_unresolved (km1_t) || ddsi_xt_is_unresolved (km2_t))
               {
-                const struct xt_type *km1_t = ddsi_xt_unalias (&km1->type->xt),
-                  *km2_t = ddsi_xt_unalias (&km2->type->xt);
-                if (ddsi_xt_is_unresolved (km1_t) || ddsi_xt_is_unresolved (km2_t))
-                {
-                  struct ddsi_typeid_str tidstr;
-                  GVWARNING ("assignability check: union member %"PRIu32" type %s unresolved in xt_is_assignable_from_struct\n",
-                      (ddsi_xt_is_unresolved (km1_t) ? km1 : km2)->id, ddsi_make_typeid_str (&tidstr, &(ddsi_xt_is_unresolved (km1_t) ? km1_t : km2_t)->id));
-                  goto struct_failed;
-                }
-                struct xt_type *km1_kh = xt_type_keyholder (gv, km1_t),
-                  *km2_kh = xt_type_keyholder (gv, km2_t);
-                bool kh_assignable = ddsi_xt_is_assignable_from (gv, km1_kh, km2_kh, tce);
-                ddsi_xt_type_fini (gv, km1_kh, true);
-                ddsrt_free (km1_kh);
-                ddsi_xt_type_fini (gv, km2_kh, true);
-                ddsrt_free (km2_kh);
-                if (!kh_assignable)
-                  goto struct_failed;
+                struct ddsi_typeid_str tidstr;
+                GVWARNING ("assignability check: union member %"PRIu32" type %s unresolved in xt_is_assignable_from_struct\n",
+                    (ddsi_xt_is_unresolved (km1_t) ? km1 : km2)->id, ddsi_make_typeid_str (&tidstr, &(ddsi_xt_is_unresolved (km1_t) ? km1_t : km2_t)->id));
+                goto struct_failed;
               }
+              struct xt_type *km1_kh = xt_type_keyholder (gv, km1_t),
+                *km2_kh = xt_type_keyholder (gv, km2_t);
+              bool kh_assignable = ddsi_xt_is_assignable_from (gv, km1_kh, km2_kh, tce);
+              ddsi_xt_type_fini (gv, km1_kh, true);
+              ddsrt_free (km1_kh);
+              ddsi_xt_type_fini (gv, km2_kh, true);
+              ddsrt_free (km2_kh);
+              if (!kh_assignable)
+                goto struct_failed;
             }
           }
         }
