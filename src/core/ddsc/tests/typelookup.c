@@ -30,6 +30,7 @@
 #include "dds/ddsrt/time.h"
 #include "dds/ddsrt/heap.h"
 #include "dds/ddsrt/string.h"
+#include "dds/ddsrt/atomics.h"
 #include "test_common.h"
 #include "XSpace.h"
 
@@ -391,11 +392,74 @@ CU_Test(ddsc_typelookup, api_resolve_invalid, .init = typelookup_init, .fini = t
   memset (type_id, 0xff, 8);
   CU_ASSERT_EQUAL_FATAL (dds_entity_pin (g_participant2, &e), 0);
   struct ddsi_type *type;
-  ret = ddsi_wait_for_type_resolved (&e->m_domain->gv, type_id, DDS_SECS (3), &type, DDSI_TYPE_INCLUDE_DEPS, DDSI_TYPE_SEND_REQUEST);
+  ret = ddsi_wait_for_type_resolved (&e->m_domain->gv, dds_entity_is_closed_wrapper, e, type_id, DDS_SECS (3), &type, DDSI_TYPE_INCLUDE_DEPS, DDSI_TYPE_SEND_REQUEST);
   dds_entity_unpin (e);
   CU_ASSERT_NOT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
 
   dds_delete_qos (qos);
+  endpoint_info_free (writer_ep);
+  ddsi_typeid_fini (type_id);
+  dds_free (type_id);
+  dds_free (type_name);
+}
+
+
+typedef struct wait_for_type_args {
+  dds_entity_t entity;
+  ddsi_typeid_t *type_id;
+  ddsrt_atomic_uint32_t pinned;
+} wait_for_type_args_t;
+
+static uint32_t wait_for_type_thread (void *varg)
+{
+  dds_return_t ret;
+  wait_for_type_args_t *args = (wait_for_type_args_t *) varg;
+  struct dds_entity *e;
+  CU_ASSERT_EQUAL_FATAL (dds_entity_pin (args->entity, &e), 0);
+  ddsrt_atomic_st32 (&args->pinned, 1);
+  struct ddsi_type *type;
+  ret = ddsi_wait_for_type_resolved (&e->m_domain->gv, dds_entity_is_closed_wrapper, e, args->type_id, DDS_SECS (5), &type, DDSI_TYPE_INCLUDE_DEPS, DDSI_TYPE_NO_REQUEST);
+  dds_entity_unpin (e);
+  return (uint32_t) ret;
+}
+
+CU_Test(ddsc_typelookup, wait_entity_delete, .init = typelookup_init, .fini = typelookup_fini)
+{
+  char name[100];
+  dds_return_t ret;
+
+  create_unique_topic_name ("ddsc_typelookup", name, sizeof name);
+  dds_entity_t topic = dds_create_topic (g_participant1, &Space_Type1_desc, name, NULL, NULL);
+  CU_ASSERT_FATAL (topic > 0);
+
+  dds_entity_t writer = dds_create_writer (g_participant1, topic, NULL, NULL);
+  CU_ASSERT_FATAL (writer > 0);
+  ddsi_typeid_t *type_id;
+  char *type_name;
+  get_type (writer, &type_id, &type_name, true);
+
+  /* wait for DCPSPublication to be received */
+  endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, type_id, name, DDSI_TYPEID_KIND_COMPLETE);
+  CU_ASSERT_FATAL (writer_ep != NULL);
+  assert (writer_ep); // clang static analyzer
+
+  ddsrt_thread_t tid;
+  ddsrt_threadattr_t tattr;
+  ddsrt_threadattr_init (&tattr);
+  uint32_t retval;
+  wait_for_type_args_t args = { .entity = g_participant2, .type_id = type_id };
+  ddsrt_atomic_st32 (&args.pinned, 0);
+  ret = ddsrt_thread_create (&tid, "wait_entity_delete", &tattr, wait_for_type_thread, &args);
+  CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
+  while (!ddsrt_atomic_ld32 (&args.pinned));
+
+  const dds_time_t tstart = dds_time ();
+  dds_delete (g_participant2);
+  ret = ddsrt_thread_join (tid, &retval);
+  CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
+  CU_ASSERT_EQUAL_FATAL (retval, (uint32_t) DDS_RETCODE_TIMEOUT);
+  CU_ASSERT_FATAL (dds_time () < tstart + DDS_SECS (1));
+
   endpoint_info_free (writer_ep);
   ddsi_typeid_fini (type_id);
   dds_free (type_id);

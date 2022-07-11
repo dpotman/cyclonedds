@@ -1145,20 +1145,20 @@ static dds_return_t check_type_resolved_impl_locked (struct ddsi_domaingv *gv, c
   return ret;
 }
 
-static dds_return_t wait_for_type_resolved_impl_locked (struct ddsi_domaingv *gv, dds_duration_t timeout, const struct ddsi_type *type, ddsi_type_include_deps_t resolved_kind)
+static dds_return_t wait_for_type_resolved_impl_locked (struct ddsi_domaingv *gv, ddsi_is_entity_closed_fn entity_closed, const void *entity, dds_duration_t timeout, const struct ddsi_type *type, ddsi_type_include_deps_t resolved_kind)
 {
   const dds_time_t tnow = dds_time ();
   const dds_time_t abstimeout = (DDS_INFINITY - timeout <= tnow) ? DDS_NEVER : (tnow + timeout);
   while (!ddsi_type_resolved_locked (gv, type, resolved_kind))
   {
-    if (!ddsrt_cond_waituntil (&gv->typelib_resolved_cond, &gv->typelib_lock, abstimeout))
+    if (entity_closed (entity) || !ddsrt_cond_waituntil (&gv->typelib_resolved_cond, &gv->typelib_lock, abstimeout))
       return DDS_RETCODE_TIMEOUT;
   }
   ddsi_type_ref_locked (gv, NULL, type);
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_wait_for_type_resolved (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id, dds_duration_t timeout, struct ddsi_type **type, ddsi_type_include_deps_t resolved_kind, ddsi_type_request_t request)
+dds_return_t ddsi_wait_for_type_resolved (struct ddsi_domaingv *gv, ddsi_is_entity_closed_fn entity_closed, const void *entity, const ddsi_typeid_t *type_id, dds_duration_t timeout, struct ddsi_type **type, ddsi_type_include_deps_t resolved_kind, ddsi_type_request_t request)
 {
   dds_return_t ret;
   bool resolved;
@@ -1179,10 +1179,17 @@ dds_return_t ddsi_wait_for_type_resolved (struct ddsi_domaingv *gv, const ddsi_t
     return DDS_RETCODE_PRECONDITION_NOT_MET;
 
   ddsrt_mutex_lock (&gv->typelib_lock);
-  ret = wait_for_type_resolved_impl_locked (gv, timeout, *type, resolved_kind);
+  ret = wait_for_type_resolved_impl_locked (gv, entity_closed, entity, timeout, *type, resolved_kind);
   ddsrt_mutex_unlock (&gv->typelib_lock);
 
   return ret;
+}
+
+void ddsi_type_resolved_interrupt (struct ddsi_domaingv *gv)
+{
+  ddsrt_mutex_lock (&gv->typelib_lock);
+  ddsrt_cond_broadcast (&gv->typelib_resolved_cond);
+  ddsrt_mutex_unlock (&gv->typelib_lock);
 }
 
 #endif /* DDS_HAS_TYPE_DISCOVERY */

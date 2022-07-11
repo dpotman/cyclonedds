@@ -58,6 +58,8 @@ struct ddsi_typeid_str {
   char str[50];
 };
 
+typedef bool (*ddsi_is_entity_closed_fn) (const void *entity);
+
 DDS_EXPORT char *ddsi_make_typeid_str (struct ddsi_typeid_str *buf, const ddsi_typeid_t *type_id);
 
 DDS_EXPORT bool ddsi_typeinfo_equal (const ddsi_typeinfo_t *a, const ddsi_typeinfo_t *b, ddsi_type_include_deps_t deps);
@@ -88,6 +90,7 @@ DDS_EXPORT void ddsi_type_unref_sertype (struct ddsi_domaingv *gv, const struct 
 DDS_EXPORT void ddsi_type_unref_locked (struct ddsi_domaingv *gv, struct ddsi_type *type);
 DDS_EXPORT bool ddsi_type_resolved_locked (struct ddsi_domaingv *gv, const struct ddsi_type *type, ddsi_type_include_deps_t resolved_kind);
 DDS_EXPORT bool ddsi_type_resolved (struct ddsi_domaingv *gv, const struct ddsi_type *type, ddsi_type_include_deps_t resolved_kind);
+DDS_EXPORT void ddsi_type_resolved_interrupt (struct ddsi_domaingv *gv);
 
 /**
  * @brief Waits for the provided type to be resolved
@@ -95,7 +98,7 @@ DDS_EXPORT bool ddsi_type_resolved (struct ddsi_domaingv *gv, const struct ddsi_
  * In case the type is succesfully resolved (or was already resolved), this
  * function increases the refcount for this type. Caller should do the unref.
  */
-DDS_EXPORT dds_return_t ddsi_wait_for_type_resolved (struct ddsi_domaingv *gv, const ddsi_typeid_t *type_id, dds_duration_t timeout, struct ddsi_type **type, ddsi_type_include_deps_t resolved_kind, ddsi_type_request_t request);
+DDS_EXPORT dds_return_t ddsi_wait_for_type_resolved (struct ddsi_domaingv *gv, ddsi_is_entity_closed_fn entity_closed, const void *entity, const ddsi_typeid_t *type_id, dds_duration_t timeout, struct ddsi_type **type, ddsi_type_include_deps_t resolved_kind, ddsi_type_request_t request);
 
 DDS_EXPORT bool ddsi_is_assignable_from (struct ddsi_domaingv *gv, const struct ddsi_type_pair *rd_type_pair, uint32_t rd_resolved, const struct ddsi_type_pair *wr_type_pair, uint32_t wr_resolved, const dds_type_consistency_enforcement_qospolicy_t *tce);
 DDS_EXPORT const ddsi_typeid_t *ddsi_type_pair_minimal_id (const struct ddsi_type_pair *type_pair);

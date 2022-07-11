@@ -93,9 +93,8 @@ static int compare_instance_handle (const void *va, const void *vb)
 const ddsrt_avl_treedef_t dds_entity_children_td = DDSRT_AVL_TREEDEF_INITIALIZER (offsetof (struct dds_entity, m_avlnode_child), offsetof (struct dds_entity, m_iid), compare_instance_handle, 0);
 
 static void dds_entity_observers_signal_delete (dds_entity *observed);
-
+static dds_return_t dds_delete_impl_pinned (dds_entity *e, enum delete_impl_state delstate);
 static dds_return_t dds_delete_impl (dds_entity_t entity, enum delete_impl_state delstate);
-static dds_return_t really_delete_pinned_closed_locked (struct dds_entity *e, enum delete_impl_state delstate);
 
 static bool entity_is_builtin_topic (const struct dds_entity *entity)
 {
@@ -415,8 +414,10 @@ static dds_return_t dds_delete_impl (dds_entity_t entity, enum delete_impl_state
   }
 }
 
-dds_return_t dds_delete_impl_pinned (dds_entity *e, enum delete_impl_state delstate)
+static dds_return_t dds_delete_impl_pinned (dds_entity *e, enum delete_impl_state delstate)
 {
+  dds_return_t ret;
+
   /* Any number of threads pinning it, possibly in delete, or having pinned it and
      trying to acquire m_mutex */
 
@@ -426,16 +427,8 @@ dds_return_t dds_delete_impl_pinned (dds_entity *e, enum delete_impl_state delst
 #endif
 
   /* If another thread was racing us in delete, it will have set the CLOSING flag
-     while holding m_mutex and we had better bail out. */
-  assert (dds_handle_is_closed (&e->m_hdllink));
-  return really_delete_pinned_closed_locked (e, delstate);
-}
-
-static dds_return_t really_delete_pinned_closed_locked (struct dds_entity *e, enum delete_impl_state delstate)
-{
-  dds_return_t ret;
-
-  /* No threads pinning it anymore, no need to worry about other threads deleting
+     while holding m_mutex and we had better bail out.
+     No threads pinning it anymore, no need to worry about other threads deleting
      it, but there can still be plenty of threads that have it pinned and are
      trying to acquire m_mutex to do their thing (including creating children,
      attaching to waitsets, &c.) */
@@ -447,6 +440,14 @@ static dds_return_t really_delete_pinned_closed_locked (struct dds_entity *e, en
      reused quickly, it needs an update) */
   dds_entity_deriver_interrupt (e);
   ddsrt_mutex_unlock (&e->m_mutex);
+
+#ifdef DDS_HAS_TYPE_DISCOVERY
+  /* Trigger the type-resolved condition variable to interrupt waiting for
+     types to  be resolved, so that ddsi_wait_for_type_resolved can test the
+     flag of the pinned entity */
+  if (e->m_domain)
+    ddsi_type_resolved_interrupt (&e->m_domain->gv);
+#endif
 
   /* - Wait for listeners currently in-progress to complete their thing
      - Reset all listeners so no new listener invocations will occur
@@ -1609,4 +1610,10 @@ dds_return_t dds_return_loan (dds_entity_t entity, void **buf, int32_t bufsz)
   }
   dds_entity_unpin (p_entity);
   return ret;
+}
+
+bool dds_entity_is_closed_wrapper (const void *entity)
+{
+  const dds_entity *e = (const dds_entity *) entity;
+  return dds_handle_is_closed (&e->m_hdllink);
 }

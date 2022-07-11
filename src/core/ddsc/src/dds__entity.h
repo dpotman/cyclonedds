@@ -173,8 +173,6 @@ enum delete_impl_state {
   DIS_IMPLICIT     /* called from child; delete if implicit w/o children */
 };
 
-DDS_EXPORT dds_return_t dds_delete_impl_pinned (dds_entity *e, enum delete_impl_state delstate);
-
 DDS_EXPORT dds_return_t
 dds_entity_pin (
   dds_entity_t hdl,
@@ -224,6 +222,10 @@ DDS_EXPORT dds_return_t
 dds_generic_unimplemented_operation(
         dds_entity_t handle,
         dds_entity_kind_t kind);
+
+DDS_EXPORT bool
+dds_entity_is_closed_wrapper(
+        const void *entity);
 
 #if defined (__cplusplus)
 }

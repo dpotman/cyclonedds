@@ -888,7 +888,7 @@ static dds_entity_t find_remote_topic_impl (dds_participant *pp_topic, const cha
 
   const struct ddsi_typeid *tpd_type_id = ddsi_type_pair_complete_id (tpd->type_pair);
   assert (!type_info || !ddsi_typeid_compare (tpd_type_id, type_id));
-  if ((ret = ddsi_wait_for_type_resolved (gv, tpd_type_id, timeout, &resolved_type, DDSI_TYPE_INCLUDE_DEPS, DDSI_TYPE_SEND_REQUEST)) != DDS_RETCODE_OK)
+  if ((ret = ddsi_wait_for_type_resolved (gv, dds_entity_is_closed_wrapper, &pp_topic->m_entity, tpd_type_id, timeout, &resolved_type, DDSI_TYPE_INCLUDE_DEPS, DDSI_TYPE_SEND_REQUEST)) != DDS_RETCODE_OK)
     return ret;
   assert (!ddsi_type_compare (tpd->type_pair->complete, resolved_type));
   assert (ddsi_type_resolved (gv, tpd->type_pair->complete, DDSI_TYPE_INCLUDE_DEPS));
@@ -1161,7 +1161,7 @@ dds_return_t dds_create_topic_descriptor (dds_find_scope_t scope, dds_entity_t p
 
   struct ddsi_domaingv * gv = &e->m_domain->gv;
   struct ddsi_type *type;
-  if ((ret = ddsi_wait_for_type_resolved (gv, ddsi_typeinfo_complete_typeid (type_info), timeout, &type, DDSI_TYPE_INCLUDE_DEPS, scope == DDS_FIND_SCOPE_GLOBAL ? DDSI_TYPE_SEND_REQUEST : DDSI_TYPE_NO_REQUEST)))
+  if ((ret = ddsi_wait_for_type_resolved (gv, dds_entity_is_closed_wrapper, e, ddsi_typeinfo_complete_typeid (type_info), timeout, &type, DDSI_TYPE_INCLUDE_DEPS, scope == DDS_FIND_SCOPE_GLOBAL ? DDSI_TYPE_SEND_REQUEST : DDSI_TYPE_NO_REQUEST)))
     goto err;
   assert (type && ddsi_type_resolved (gv, type, DDSI_TYPE_INCLUDE_DEPS));
   ret = ddsi_topic_descriptor_from_type (gv, *descriptor, type);
