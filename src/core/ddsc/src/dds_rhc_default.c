@@ -25,6 +25,7 @@
 
 #include "dds__entity.h"
 #include "dds__reader.h"
+#include "dds__loan.h"
 #include "dds/ddsc/dds_rhc.h"
 #include "dds__rhc_default.h"
 #include "dds/ddsi/ddsi_tkmap.h"
@@ -2007,6 +2008,7 @@ static int32_t read_w_qminv_inst (struct dds_rhc_default * const __restrict rhc,
   dds_sample_info_t si;
   dds_return_t rc = DDS_RETCODE_OK;
   int32_t n = 0;
+  bool use_loans = (loan_out != NULL && loan_pool != NULL);
   get_trigger_info_pre (&pre, inst);
   init_trigger_info_qcond (&trig_qc);
 
@@ -2101,6 +2103,7 @@ static int32_t take_w_qminv_inst (struct dds_rhc_default * const __restrict rhc,
   dds_sample_info_t si;
   dds_return_t rc = DDS_RETCODE_OK;
   int32_t n = 0;
+  bool use_loans = (loan_out != NULL && loan_pool != NULL);
   get_trigger_info_pre (&pre, inst);
   init_trigger_info_qcond (&trig_qc);
 
@@ -2137,7 +2140,7 @@ static int32_t take_w_qminv_inst (struct dds_rhc_default * const __restrict rhc,
             inst->latest = psample;
           psample->next = sample1;
         }
-        free_sample (rhc, inst, sample);
+        free_sample (rhc, inst, sample);  //CHECK???
         if (++n == max_samples)
           break;
       }
