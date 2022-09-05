@@ -28,13 +28,6 @@ extern "C" {
 }
 #endif  // DDS_HAS_SHM
 
-#if !DDS_HAS_DDSI_SERTYPE
-#define ddsi_sertype ddsi_sertopic
-#define ddsi_sertype_ops ddsi_sertopic_ops
-#define sertype_rmw sertopic_rmw
-#define sertype_rmw_ops sertopic_rmw_ops
-#endif
-
 namespace rmw_cyclonedds_cpp
 {
 class BaseCDRWriter;

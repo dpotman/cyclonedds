@@ -97,10 +97,6 @@ using namespace std::literals::chrono_literals;
 #define RMW_SUPPORT_SECURITY 0
 #endif
 
-#if !DDS_HAS_DDSI_SERTYPE
-#define ddsi_sertype_unref(x) ddsi_sertopic_unref(x)
-#endif
-
 /* Set to > 0 for printing warnings to stderr for each messages that was taken more than this many
    ms after writing */
 #define REPORT_LATE_MESSAGES 0
@@ -1765,12 +1761,7 @@ static dds_entity_t create_topic(
   struct ddsi_sertype ** stact)
 {
   dds_entity_t tp;
-#if DDS_HAS_DDSI_SERTYPE
   tp = dds_create_topic_sertype(pp, name, &sertype, nullptr, nullptr, nullptr);
-#else
-  static_cast<void>(name);
-  tp = dds_create_topic_generic(pp, &sertype, nullptr, nullptr, nullptr);
-#endif
   if (tp < 0) {
     ddsi_sertype_unref(sertype);
   } else {

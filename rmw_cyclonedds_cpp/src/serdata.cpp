@@ -297,13 +297,8 @@ struct ddsi_serdata * serdata_rmw_from_serialized_message(
 static struct ddsi_serdata * serdata_rmw_to_untyped(const struct ddsi_serdata * dcmn)
 {
   auto d = static_cast<const serdata_rmw *>(dcmn);
-#if DDS_HAS_DDSI_SERTYPE
   auto d1 = new serdata_rmw(d->type, SDK_KEY);
   d1->type = nullptr;
-#else
-  auto d1 = new serdata_rmw(d->topic, SDK_KEY);
-  d1->topic = nullptr;
-#endif
   return d1;
 }
 
@@ -339,11 +334,7 @@ static bool serdata_rmw_to_sample(
     static_cast<void>(bufptr);    // unused
     static_cast<void>(buflim);    // unused
     auto d = static_cast<const serdata_rmw *>(dcmn);
-#if DDS_HAS_DDSI_SERTYPE
     const struct sertype_rmw * type = static_cast<const struct sertype_rmw *>(d->type);
-#else
-    const struct sertopic_rmw * type = static_cast<const struct sertopic_rmw *>(d->topic);
-#endif
     assert(bufptr == NULL);
     assert(buflim == NULL);
     if (d->kind != SDK_DATA) {
@@ -500,11 +491,7 @@ static const struct ddsi_serdata_ops serdata_rmw_ops = {
 static void sertype_rmw_free(struct ddsi_sertype * tpcmn)
 {
   struct sertype_rmw * tp = static_cast<struct sertype_rmw *>(tpcmn);
-#if DDS_HAS_DDSI_SERTYPE
   ddsi_sertype_fini(tpcmn);
-#else
-  ddsi_sertopic_fini(tpcmn);
-#endif
   if (tp->type_support.type_support_) {
     if (using_introspection_c_typesupport(tp->type_support.typesupport_identifier_)) {
       delete static_cast<TypeSupport_c *>(tp->type_support.type_support_);
@@ -629,17 +616,14 @@ bool sertype_serialize_into(
 }
 
 static const struct ddsi_sertype_ops sertype_rmw_ops = {
-#if DDS_HAS_DDSI_SERTYPE
   ddsi_sertype_v0,
   nullptr,
-#endif
   sertype_rmw_free,
   sertype_rmw_zero_samples,
   sertype_rmw_realloc_samples,
   sertype_rmw_free_samples,
   sertype_rmw_equal,
   sertype_rmw_hash
-#if DDS_HAS_DDSI_SERTYPE
   /* not yet providing type discovery, assignability checking */
   , nullptr,
   nullptr,
@@ -647,7 +631,6 @@ static const struct ddsi_sertype_ops sertype_rmw_ops = {
   nullptr,
   sertype_get_serialized_size,
   sertype_serialize_into
-#endif
 };
 
 template<typename MembersType>
