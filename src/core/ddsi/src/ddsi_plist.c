@@ -1990,7 +1990,7 @@ static const struct piddesc piddesc_eclipse[] = {
     { .desc = { XE2, XSTOP } }, 0 },
   { PID_PAD, PDF_QOS, QP_VIRTUAL_INTERFACES, "CYCLONE_VIRTUAL_INTERFACE",
     offsetof(struct ddsi_plist, qos.virtual_interfaces), membersize(struct ddsi_plist, qos.virtual_interfaces),
-    {.desc = { XQ, XS, XSTOP, XSTOP } }, 0 },
+    {.desc = { XQ, XS, XSTOP } }, 0 },
 #ifdef DDS_HAS_TOPIC_DISCOVERY
   PP  (CYCLONE_TOPIC_GUID,               topic_guid, XG),
 #endif
@@ -2099,11 +2099,11 @@ static const struct piddesc_index piddesc_vendor_index[] = {
    initialized by ddsi_plist_init_tables; will assert when
    table too small or too large */
 #ifdef DDS_HAS_TYPE_DISCOVERY
-static const struct piddesc *piddesc_unalias[21 + SECURITY_PROC_ARRAY_SIZE];
-static const struct piddesc *piddesc_fini[21 + SECURITY_PROC_ARRAY_SIZE];
-#else
 static const struct piddesc *piddesc_unalias[20 + SECURITY_PROC_ARRAY_SIZE];
 static const struct piddesc *piddesc_fini[20 + SECURITY_PROC_ARRAY_SIZE];
+#else
+static const struct piddesc *piddesc_unalias[19 + SECURITY_PROC_ARRAY_SIZE];
+static const struct piddesc *piddesc_fini[19 + SECURITY_PROC_ARRAY_SIZE];
 #endif
 static uint64_t plist_fini_mask, qos_fini_mask;
 static ddsrt_once_t table_init_control = DDSRT_ONCE_INIT;

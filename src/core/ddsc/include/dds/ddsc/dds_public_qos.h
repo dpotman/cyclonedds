@@ -577,6 +577,7 @@ dds_qset_virtual_interfaces (
  */
 
 /**
+ * @ingroup qos_getters
  * @brief Get the userdata from a qos structure
  *
  * @param[in] qos - Pointer to a dds_qos_t structure storing the policy
@@ -1031,7 +1032,6 @@ DDS_EXPORT bool dds_qget_entity_name (const dds_qos_t * __restrict qos, char **n
 DDS_EXPORT bool
 dds_qget_virtual_interfaces (
   const dds_qos_t * __restrict qos,
-  uint32_t n_in,
   uint32_t *n_out,
   char ***values);
 

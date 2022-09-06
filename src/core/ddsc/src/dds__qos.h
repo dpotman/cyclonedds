@@ -18,8 +18,6 @@
 extern "C" {
 #endif
 
-struct dds_topic;
-
 #define DDS_TOPIC_QOS_MASK                                              \
   (QP_TOPIC_DATA | QP_DURABILITY | QP_DURABILITY_SERVICE |              \
    QP_DEADLINE | QP_LATENCY_BUDGET | QP_OWNERSHIP | QP_LIVELINESS |     \
