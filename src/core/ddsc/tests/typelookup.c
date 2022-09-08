@@ -78,7 +78,7 @@ static void typelookup_fini (void)
   dds_delete (g_domain1);
 }
 
-static void get_type (dds_entity_t entity, ddsi_typeid_t **type_id, char **type_name, ddsi_typeid_kind_t kind)
+static void get_type (dds_entity_t entity, ddsi_typeid_t **type_id, char **type_name, ddsi_typeid_equiv_kind_t ek)
 {
   struct dds_entity *e;
   CU_ASSERT_EQUAL_FATAL (dds_entity_pin (entity, &e), 0);
@@ -92,7 +92,7 @@ static void get_type (dds_entity_t entity, ddsi_typeid_t **type_id, char **type_
     CU_ASSERT_FATAL (gpe != NULL);
     CU_ASSERT_FATAL (gpe->c.type_pair != NULL);
     assert (gpe->c.type_pair);
-    if (kind == DDSI_TYPEID_KIND_COMPLETE)
+    if (ek == DDSI_TYPEID_EK_COMPLETE)
     {
       CU_ASSERT_FATAL (gpe->c.type_pair->complete != NULL);
       *type_id = ddsi_typeid_dup (ddsi_type_pair_complete_id (gpe->c.type_pair));
@@ -109,7 +109,7 @@ static void get_type (dds_entity_t entity, ddsi_typeid_t **type_id, char **type_
     struct ddsi_reader *rd = (struct ddsi_reader *) ec;
     CU_ASSERT_FATAL (rd->c.type_pair != NULL);
     assert (rd->c.type_pair);
-    if (kind == DDSI_TYPEID_KIND_COMPLETE)
+    if (ek == DDSI_TYPEID_EK_COMPLETE)
     {
       CU_ASSERT_FATAL (rd->c.type_pair->complete != NULL);
       *type_id = ddsi_typeid_dup (ddsi_type_pair_complete_id (rd->c.type_pair));
@@ -126,7 +126,7 @@ static void get_type (dds_entity_t entity, ddsi_typeid_t **type_id, char **type_
     struct ddsi_writer *wr = (struct ddsi_writer *) ec;
     CU_ASSERT_FATAL (wr->c.type_pair != NULL);
     assert (wr->c.type_pair);
-    if (kind == DDSI_TYPEID_KIND_COMPLETE)
+    if (ek == DDSI_TYPEID_EK_COMPLETE)
     {
       CU_ASSERT_FATAL (wr->c.type_pair->complete != NULL);
       *type_id = ddsi_typeid_dup (ddsi_type_pair_complete_id (wr->c.type_pair));
@@ -157,13 +157,17 @@ typedef struct endpoint_info {
   char *type_name;
 } endpoint_info_t;
 
-static endpoint_info_t * find_typeid_match (dds_entity_t participant, dds_entity_t topic, ddsi_typeid_t *type_id, const char * match_topic, ddsi_typeid_kind_t kind)
+static endpoint_info_t * find_typeid_match (dds_entity_t participant, dds_entity_t topic, ddsi_typeid_t *type_id, const char * match_topic, ddsi_typeid_equiv_kind_t ek)
 {
   endpoint_info_t *result = NULL;
   dds_time_t t_start = dds_time ();
   dds_duration_t timeout = DDS_SECS (5);
   dds_entity_t reader = dds_create_reader (participant, topic, NULL, NULL);
   CU_ASSERT_FATAL (reader > 0);
+
+  struct ddsi_typeid_str tidstr;
+  printf (" find_type: %s\n", ddsi_make_typeid_str (&tidstr, type_id));
+
   do
   {
     void *ptrs[100] = { 0 };
@@ -179,8 +183,7 @@ static endpoint_info_t * find_typeid_match (dds_entity_t participant, dds_entity
         CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
         if (t != NULL)
         {
-          struct ddsi_typeid_str tidstr;
-          ddsi_typeid_t *tid = ddsi_typeinfo_typeid (t, kind);
+          ddsi_typeid_t *tid = ddsi_typeinfo_typeid (t, ek);
           print_ep (&data->key);
           printf (" type: %s", ddsi_make_typeid_str (&tidstr, tid));
           if (!ddsi_typeid_compare (tid, type_id) && !strcmp (data->topic_name, match_topic))
@@ -192,6 +195,8 @@ static endpoint_info_t * find_typeid_match (dds_entity_t participant, dds_entity
             result->topic_name = ddsrt_strdup (data->topic_name);
             result->type_name = ddsrt_strdup (data->type_name);
           }
+          else
+            printf(" no-match");
           ddsi_typeid_fini (tid);
           ddsrt_free (tid);
           printf("\n");
@@ -269,12 +274,12 @@ CU_Test(ddsc_typelookup, get_typeobj, .init = typelookup_init, .fini = typelooku
   dds_delete_qos (qos);
   ddsi_typeid_t *wr_type_id, *rd_type_id;
   char *wr_type_name, *rd_type_name;
-  get_type (writer, &wr_type_id, &wr_type_name, false);
-  get_type (reader, &rd_type_id, &rd_type_name, false);
+  get_type (writer, &wr_type_id, &wr_type_name, DDSI_TYPEID_EK_MINIMAL);
+  get_type (reader, &rd_type_id, &rd_type_name, DDSI_TYPEID_EK_MINIMAL);
 
   /* check that reader and writer (with correct type id) are discovered in domain 2 */
-  endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, wr_type_id, topic_name_wr, DDSI_TYPEID_KIND_MINIMAL);
-  endpoint_info_t *reader_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSSUBSCRIPTION, rd_type_id, topic_name_rd, DDSI_TYPEID_KIND_MINIMAL);
+  endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, wr_type_id, topic_name_wr, DDSI_TYPEID_EK_MINIMAL);
+  endpoint_info_t *reader_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSSUBSCRIPTION, rd_type_id, topic_name_rd, DDSI_TYPEID_EK_MINIMAL);
   CU_ASSERT_FATAL (writer_ep != NULL);
   CU_ASSERT_FATAL (reader_ep != NULL);
   assert (writer_ep && reader_ep); // clang static analyzer
@@ -326,10 +331,10 @@ CU_Test(ddsc_typelookup, api_resolve, .init = typelookup_init, .fini = typelooku
   CU_ASSERT_FATAL (writer > 0);
   ddsi_typeid_t *type_id;
   char *type_name;
-  get_type (writer, &type_id, &type_name, true);
+  get_type (writer, &type_id, &type_name, DDSI_TYPEID_EK_COMPLETE);
 
   /* wait for DCPSPublication to be received */
-  endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, type_id, name, DDSI_TYPEID_KIND_COMPLETE);
+  endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, type_id, name, DDSI_TYPEID_EK_COMPLETE);
   CU_ASSERT_FATAL (writer_ep != NULL);
   assert (writer_ep); // clang static analyzer
 
@@ -384,10 +389,10 @@ CU_Test(ddsc_typelookup, api_resolve_invalid, .init = typelookup_init, .fini = t
   CU_ASSERT_FATAL (writer > 0);
   ddsi_typeid_t *type_id;
   char *type_name;
-  get_type (writer, &type_id, &type_name, true);
+  get_type (writer, &type_id, &type_name, DDSI_TYPEID_EK_COMPLETE);
 
   /* wait for DCPSPublication to be received */
-  endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, type_id, name, DDSI_TYPEID_KIND_COMPLETE);
+  endpoint_info_t *writer_ep = find_typeid_match (g_participant2, DDS_BUILTIN_TOPIC_DCPSPUBLICATION, type_id, name, DDSI_TYPEID_EK_COMPLETE);
   CU_ASSERT_FATAL (writer_ep != NULL);
   assert (writer_ep); // clang static analyzer
 

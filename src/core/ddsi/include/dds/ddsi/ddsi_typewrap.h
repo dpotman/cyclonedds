@@ -41,9 +41,17 @@ typedef struct ddsi_typeinfo ddsi_typeinfo_t;
 typedef struct ddsi_typeobj ddsi_typeobj_t;
 typedef struct ddsi_typemap ddsi_typemap_t;
 
+typedef enum ddsi_typeid_equiv_kind {
+  DDSI_TYPEID_EK_BOTH,
+  DDSI_TYPEID_EK_MINIMAL,
+  DDSI_TYPEID_EK_COMPLETE
+} ddsi_typeid_equiv_kind_t;
+
 typedef enum ddsi_typeid_kind {
-  DDSI_TYPEID_KIND_MINIMAL,
-  DDSI_TYPEID_KIND_COMPLETE,
+  DDSI_TYPEID_KIND_HASH_MINIMAL,
+  DDSI_TYPEID_KIND_HASH_COMPLETE,
+  DDSI_TYPEID_KIND_SCC_MINIMAL,
+  DDSI_TYPEID_KIND_SCC_COMPLETE,
   DDSI_TYPEID_KIND_PLAIN_COLLECTION_MINIMAL,
   DDSI_TYPEID_KIND_PLAIN_COLLECTION_COMPLETE,
   DDSI_TYPEID_KIND_FULLY_DESCRIPTIVE
@@ -59,9 +67,12 @@ DDS_EXPORT void ddsi_typeid_copy (ddsi_typeid_t *dst, const ddsi_typeid_t *src);
 DDS_EXPORT ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src);
 DDS_EXPORT void ddsi_typeid_ser (const ddsi_typeid_t *type_id, unsigned char **buf, uint32_t *sz);
 DDS_EXPORT bool ddsi_typeid_is_none (const ddsi_typeid_t *type_id);
-DDS_EXPORT bool ddsi_typeid_is_hash (const ddsi_typeid_t *type_id);
-DDS_EXPORT bool ddsi_typeid_is_minimal (const ddsi_typeid_t *type_id);
-DDS_EXPORT bool ddsi_typeid_is_complete (const ddsi_typeid_t *type_id);
+DDS_EXPORT bool ddsi_typeid_is_scc (const ddsi_typeid_t *type_id);
+DDS_EXPORT bool ddsi_typeid_is_scc_minimal (const ddsi_typeid_t *type_id);
+DDS_EXPORT bool ddsi_typeid_is_scc_complete (const ddsi_typeid_t *type_id);
+DDS_EXPORT bool ddsi_typeid_is_direct_hash (const ddsi_typeid_t *type_id);
+DDS_EXPORT bool ddsi_typeid_is_hash_minimal (const ddsi_typeid_t *type_id);
+DDS_EXPORT bool ddsi_typeid_is_hash_complete (const ddsi_typeid_t *type_id);
 DDS_EXPORT bool ddsi_typeid_is_fully_descriptive (const ddsi_typeid_t *type_id);
 DDS_EXPORT void ddsi_typeid_get_equivalence_hash (const ddsi_typeid_t *type_id, DDS_XTypes_EquivalenceHash *hash);
 DDS_EXPORT ddsi_typeid_kind_t ddsi_typeid_kind (const ddsi_typeid_t *type);
@@ -76,7 +87,7 @@ void ddsi_typeobj_fini (ddsi_typeobj_t *typeobj);
 
 dds_return_t ddsi_xt_type_init (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_typeobj_t *to);
 dds_return_t ddsi_xt_type_add_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const struct DDS_XTypes_TypeObject *to);
-void ddsi_xt_get_typeobject_kind_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to, ddsi_typeid_kind_t kind);
+void ddsi_xt_get_typeobject_ek_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to, ddsi_typeid_equiv_kind_t ek);
 void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to);
 void ddsi_xt_type_fini (struct ddsi_domaingv *gv, struct xt_type *xt, bool include_typeid);
 bool ddsi_xt_is_assignable_from (struct ddsi_domaingv *gv, const struct xt_type *rd_xt, const struct xt_type *wr_xt, const dds_type_consistency_enforcement_qospolicy_t *tce);
@@ -87,6 +98,7 @@ bool ddsi_xt_is_resolved (const struct xt_type *t);
 #else /* DDS_HAS_TYPE_DISCOVERY */
 
 typedef void ddsi_typeid_t;
+typedef int ddsi_typeid_equiv_kind_t;
 typedef int ddsi_typeid_kind_t;
 typedef void ddsi_typemap_t;
 typedef void ddsi_typeinfo_t;

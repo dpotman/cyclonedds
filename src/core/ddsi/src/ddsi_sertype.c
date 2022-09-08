@@ -296,7 +296,7 @@ extern inline void ddsi_sertype_free_samples (const struct ddsi_sertype *tp, voi
 extern inline void ddsi_sertype_zero_sample (const struct ddsi_sertype *tp, void *sample);
 extern inline void *ddsi_sertype_alloc_sample (const struct ddsi_sertype *tp);
 extern inline void ddsi_sertype_free_sample (const struct ddsi_sertype *tp, void *sample, dds_free_op_t op);
-extern inline ddsi_typeid_t * ddsi_sertype_typeid (const struct ddsi_sertype *tp, ddsi_typeid_kind_t kind);
+extern inline ddsi_typeid_t * ddsi_sertype_typeid (const struct ddsi_sertype *tp, ddsi_typeid_equiv_kind_t ek);
 extern inline ddsi_typemap_t * ddsi_sertype_typemap (const struct ddsi_sertype *tp);
 extern inline ddsi_typeinfo_t * ddsi_sertype_typeinfo (const struct ddsi_sertype *tp);
 extern inline struct ddsi_sertype * ddsi_sertype_derive_sertype (const struct ddsi_sertype *base_sertype, dds_data_representation_id_t data_representation, dds_type_consistency_enforcement_qospolicy_t tce_qos);

@@ -45,7 +45,7 @@ static void topic_type_ref (dds_entity_t topic, struct ddsi_type **type)
   dds_return_t ret = dds_topic_pin (topic, &t);
   CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
   struct ddsi_sertype *sertype = t->m_stype;
-  ret = ddsi_type_ref_local (&t->m_entity.m_domain->gv, type, sertype, DDSI_TYPEID_KIND_COMPLETE);
+  ret = ddsi_type_ref_local (&t->m_entity.m_domain->gv, type, sertype, DDSI_TYPEID_EK_COMPLETE);
   CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
   dds_topic_unpin (t);
 }

@@ -82,7 +82,7 @@ static int32_t tl_request_get_deps (struct ddsi_domaingv * const gv, struct ddsr
     assert (dep_type);
     if (!ddsi_type_resolved_locked (gv, dep_type, DDSI_TYPE_IGNORE_DEPS))
     {
-      assert (ddsi_typeid_is_hash (&dep_type->xt.id));
+      assert (ddsi_typeid_is_direct_hash (&dep_type->xt.id));
       ddsrt_hh_add (deps, &dep_type->xt.id);
       cnt++;
       dep_type->state = DDSI_TYPE_REQUESTED;
@@ -102,7 +102,7 @@ static uint32_t deps_typeid_hash (const void *type_id)
 {
   uint32_t hash32;
   DDS_XTypes_EquivalenceHash hash;
-  assert (ddsi_typeid_is_hash (type_id));
+  assert (ddsi_typeid_is_direct_hash (type_id));
   ddsi_typeid_get_equivalence_hash (type_id, &hash);
   memcpy (&hash32, hash, sizeof (hash32));
   return hash32;
@@ -166,7 +166,7 @@ err:
 bool ddsi_tl_request_type (struct ddsi_domaingv * const gv, const ddsi_typeid_t *type_id, const ddsi_guid_t *proxypp_guid, ddsi_type_include_deps_t deps)
 {
   struct ddsi_typeid_str tidstr;
-  assert (ddsi_typeid_is_hash (type_id));
+  assert (ddsi_typeid_is_direct_hash (type_id));
   ddsrt_mutex_lock (&gv->typelib_lock);
   struct ddsi_type *type = ddsi_type_lookup_locked (gv, type_id);
   GVTRACE ("tl-req ");
@@ -295,7 +295,7 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
   {
     struct ddsi_typeid_str tidstr;
     struct DDS_XTypes_TypeIdentifier *type_id = &req.data._u.getTypes.type_ids._buffer[n];
-    if (!ddsi_typeid_is_hash_impl (type_id))
+    if (!ddsi_typeid_is_direct_hash_impl (type_id))
     {
       GVTRACE (" non-hash id %s", ddsi_make_typeid_str_impl (&tidstr, type_id));
       continue;
@@ -356,7 +356,8 @@ void ddsi_tl_add_types (struct ddsi_domaingv *gv, const DDS_Builtin_TypeLookup_R
 
     if (ddsi_type_add_typeobj (gv, type, &r.type_object) == DDS_RETCODE_OK)
     {
-      if (ddsi_typeid_is_minimal_impl (&r.type_identifier))
+      // FIXME: SCC
+      if (ddsi_typeid_is_hash_minimal_impl (&r.type_identifier))
       {
         GVTRACE (" resolved minimal type %s\n", ddsi_make_typeid_str_impl (&str, &r.type_identifier));
         ddsi_type_get_gpe_matches (gv, type, gpe_match_upd, n_match_upd);

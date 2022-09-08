@@ -75,8 +75,8 @@ static int proxy_endpoint_common_init (struct ddsi_entity_common *e, struct ddsi
       ret = DDS_RETCODE_OUT_OF_RESOURCES;
       goto err;
     }
-    if ((ret = ddsi_type_ref_proxy (proxypp->e.gv, &c->type_pair->minimal, plist->qos.type_information, DDSI_TYPEID_KIND_MINIMAL, guid))
-        || (ret = ddsi_type_ref_proxy (proxypp->e.gv, &c->type_pair->complete, plist->qos.type_information, DDSI_TYPEID_KIND_COMPLETE, guid)))
+    if ((ret = ddsi_type_ref_proxy (proxypp->e.gv, &c->type_pair->minimal, plist->qos.type_information, DDSI_TYPEID_EK_MINIMAL, guid))
+        || (ret = ddsi_type_ref_proxy (proxypp->e.gv, &c->type_pair->complete, plist->qos.type_information, DDSI_TYPEID_EK_COMPLETE, guid)))
       goto err;
   }
   else

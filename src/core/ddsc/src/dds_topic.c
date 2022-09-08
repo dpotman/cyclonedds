@@ -80,7 +80,7 @@ static dds_return_t dds_topic_status_validate (uint32_t mask)
 static struct ktopic_type_guid * topic_guid_map_refc_impl (const struct dds_ktopic * ktp, const struct ddsi_sertype *sertype, bool unref)
 {
   struct ktopic_type_guid *m = NULL;
-  ddsi_typeid_t *type_id = ddsi_sertype_typeid (sertype, DDSI_TYPEID_KIND_COMPLETE);
+  ddsi_typeid_t *type_id = ddsi_sertype_typeid (sertype, DDSI_TYPEID_EK_COMPLETE);
   if (ddsi_typeid_is_none (type_id))
     goto no_typeid;
   struct ktopic_type_guid templ = { .type_id = type_id };
@@ -354,7 +354,7 @@ static bool register_topic_type_for_discovery (struct ddsi_domaingv * const gv, 
   /* Create or reference a ktopic-sertype meta-data entry. The hash table has the
      complete xtypes type-id as key; for both local and discovered topic with type information,
      both minimal and complete type identifiers are always set */
-  ddsi_typeid_t *type_id = ddsi_sertype_typeid (sertype, DDSI_TYPEID_KIND_COMPLETE);
+  ddsi_typeid_t *type_id = ddsi_sertype_typeid (sertype, DDSI_TYPEID_EK_COMPLETE);
   if (ddsi_typeid_is_none (type_id))
     goto free_typeid;
 
@@ -551,8 +551,8 @@ dds_entity_t dds_create_topic_impl (
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
   struct ddsi_type *type;
-  if ((rc = ddsi_type_ref_local (gv, &type, sertype_registered, DDSI_TYPEID_KIND_MINIMAL)) != DDS_RETCODE_OK
-      || ddsi_type_ref_local (gv, NULL, sertype_registered, DDSI_TYPEID_KIND_COMPLETE) != DDS_RETCODE_OK)
+  if ((rc = ddsi_type_ref_local (gv, &type, sertype_registered, DDSI_TYPEID_EK_MINIMAL)) != DDS_RETCODE_OK
+      || ddsi_type_ref_local (gv, NULL, sertype_registered, DDSI_TYPEID_EK_COMPLETE) != DDS_RETCODE_OK)
   {
     if (rc == DDS_RETCODE_OK)
       ddsi_type_unref (gv, type);

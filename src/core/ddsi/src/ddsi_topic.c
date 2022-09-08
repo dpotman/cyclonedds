@@ -276,7 +276,8 @@ static void set_ddsi_topic_definition_hash (struct ddsi_topic_definition *tpd)
 static struct ddsi_topic_definition * ref_topic_definition_locked (struct ddsi_domaingv *gv, const struct ddsi_sertype *sertype, const ddsi_typeid_t *type_id, struct dds_qos *qos, bool *is_new)
 {
   const ddsi_typeid_t *type_id_minimal = NULL, *type_id_complete = NULL;
-  if (ddsi_typeid_is_minimal (type_id))
+  // FIXME: SCC
+  if (ddsi_typeid_is_hash_minimal (type_id))
     type_id_minimal = type_id;
   else
     type_id_complete = type_id;
@@ -356,17 +357,17 @@ static struct ddsi_topic_definition * new_topic_definition (struct ddsi_domaingv
   {
     /* This shouldn't fail, because the sertype used here is already in the typelib
        as the types are referenced from dds_create_topic_impl */
-    ret = ddsi_type_ref_local (gv, &tpd->type_pair->minimal, type, DDSI_TYPEID_KIND_MINIMAL);
+    ret = ddsi_type_ref_local (gv, &tpd->type_pair->minimal, type, DDSI_TYPEID_EK_MINIMAL);
     assert (ret == DDS_RETCODE_OK);
-    ret = ddsi_type_ref_local (gv, &tpd->type_pair->complete, type, DDSI_TYPEID_KIND_COMPLETE);
+    ret = ddsi_type_ref_local (gv, &tpd->type_pair->complete, type, DDSI_TYPEID_EK_COMPLETE);
     assert (ret == DDS_RETCODE_OK);
     (void) ret;
   }
   else
   {
     assert (qos->present & QP_TYPE_INFORMATION);
-    if ((ret = ddsi_type_ref_proxy (gv, &tpd->type_pair->minimal, qos->type_information, DDSI_TYPEID_KIND_MINIMAL, NULL)) != DDS_RETCODE_OK
-        || ddsi_type_ref_proxy (gv, &tpd->type_pair->complete, qos->type_information, DDSI_TYPEID_KIND_COMPLETE, NULL) != DDS_RETCODE_OK)
+    if ((ret = ddsi_type_ref_proxy (gv, &tpd->type_pair->minimal, qos->type_information, DDSI_TYPEID_EK_MINIMAL, NULL)) != DDS_RETCODE_OK
+        || ddsi_type_ref_proxy (gv, &tpd->type_pair->complete, qos->type_information, DDSI_TYPEID_EK_COMPLETE, NULL) != DDS_RETCODE_OK)
     {
       if (ret == DDS_RETCODE_OK)
         ddsi_type_unref (gv, tpd->type_pair->minimal);

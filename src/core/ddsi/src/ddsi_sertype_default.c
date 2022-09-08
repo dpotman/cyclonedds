@@ -68,15 +68,15 @@ static bool sertype_default_equal (const struct ddsi_sertype *acmn, const struct
 
 #ifdef DDS_HAS_TYPE_DISCOVERY
 
-static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn, ddsi_typeid_kind_t kind)
+static ddsi_typeid_t * sertype_default_typeid (const struct ddsi_sertype *tpcmn, ddsi_typeid_equiv_kind_t ek)
 {
   assert (tpcmn);
-  assert (kind == DDSI_TYPEID_KIND_MINIMAL || kind == DDSI_TYPEID_KIND_COMPLETE);
+  assert (ek == DDSI_TYPEID_EK_MINIMAL || ek == DDSI_TYPEID_EK_COMPLETE);
   const struct ddsi_sertype_default *tp = (struct ddsi_sertype_default *) tpcmn;
   ddsi_typeinfo_t *type_info = ddsi_typeinfo_deser (&tp->type.typeinfo_ser);
   if (type_info == NULL)
     return NULL;
-  ddsi_typeid_t *type_id = ddsi_typeinfo_typeid (type_info, kind);
+  ddsi_typeid_t *type_id = ddsi_typeinfo_typeid (type_info, ek);
   ddsi_typeinfo_fini (type_info);
   ddsrt_free (type_info);
   return type_id;

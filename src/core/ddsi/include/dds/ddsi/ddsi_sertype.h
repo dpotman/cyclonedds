@@ -110,7 +110,7 @@ typedef void (*ddsi_sertype_realloc_samples_t) (void **ptrs, const struct ddsi_s
 typedef void (*ddsi_sertype_free_samples_t) (const struct ddsi_sertype *d, void **ptrs, size_t count, dds_free_op_t op);
 
 /* Gets the type identifier of the requested kind (minimal or complete) for this sertype */
-typedef ddsi_typeid_t * (*ddsi_sertype_typeid_t) (const struct ddsi_sertype *tp, ddsi_typeid_kind_t kind);
+typedef ddsi_typeid_t * (*ddsi_sertype_typeid_t) (const struct ddsi_sertype *tp, ddsi_typeid_equiv_kind_t ek);
 
 /* Compute the serialized size based on the sertype information and the sample */
 // Note: size_t maximum is reserved as error value
@@ -222,11 +222,11 @@ DDS_INLINE_EXPORT inline void *ddsi_sertype_alloc_sample (const struct ddsi_sert
 DDS_INLINE_EXPORT inline void ddsi_sertype_free_sample (const struct ddsi_sertype *tp, void *sample, dds_free_op_t op) {
   ddsi_sertype_free_samples (tp, &sample, 1, op);
 }
-DDS_INLINE_EXPORT inline ddsi_typeid_t * ddsi_sertype_typeid (const struct ddsi_sertype *tp, ddsi_typeid_kind_t kind)
+DDS_INLINE_EXPORT inline ddsi_typeid_t * ddsi_sertype_typeid (const struct ddsi_sertype *tp, ddsi_typeid_equiv_kind_t ek)
 {
   if (!tp->ops->type_id)
     return NULL;
-  return tp->ops->type_id (tp, kind);
+  return tp->ops->type_id (tp, ek);
 }
 DDS_INLINE_EXPORT inline ddsi_typemap_t * ddsi_sertype_typemap (const struct ddsi_sertype *tp)
 {

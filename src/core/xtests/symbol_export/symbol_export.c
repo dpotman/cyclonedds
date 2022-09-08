@@ -619,9 +619,9 @@ int main (int argc, char **argv)
   ddsi_typeid_dup (ptr);
   ddsi_typeid_ser (ptr, ptr, ptr);
   ddsi_typeid_is_none (ptr);
-  ddsi_typeid_is_hash (ptr);
-  ddsi_typeid_is_minimal (ptr);
-  ddsi_typeid_is_complete (ptr);
+  ddsi_typeid_is_direct_hash (ptr);
+  ddsi_typeid_is_hash_minimal (ptr);
+  ddsi_typeid_is_hash_complete (ptr);
   ddsi_typeid_is_fully_descriptive (ptr);
   ddsi_typeid_get_equivalence_hash (ptr, ptr);
   ddsi_typeid_kind (ptr);

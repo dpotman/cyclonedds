@@ -213,6 +213,7 @@ struct xt_bitmask {
 struct xt_type
 {
   ddsi_typeid_t id;
+  ddsi_typeid_equiv_kind_t ek;
   ddsi_typeid_kind_t kind;
   struct DDS_XTypes_StronglyConnectedComponentId sc_component_id;
 
@@ -307,9 +308,13 @@ dds_return_t ddsi_type_ref_id_locked_impl (struct ddsi_domaingv *gv, struct ddsi
 struct ddsi_type * ddsi_type_lookup_locked_impl (struct ddsi_domaingv *gv, const struct DDS_XTypes_TypeIdentifier *type_id);
 const struct DDS_XTypes_TypeObject * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const struct DDS_XTypes_TypeIdentifier *type_id);
 
-bool ddsi_typeid_is_hash_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
-bool ddsi_typeid_is_minimal_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
-bool ddsi_typeid_is_complete_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+bool ddsi_typeid_is_scc_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+bool ddsi_typeid_is_scc_minimal_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+bool ddsi_typeid_is_scc_complete_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+bool ddsi_typeid_is_direct_hash_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+bool ddsi_typeid_is_hash_minimal_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+bool ddsi_typeid_is_hash_complete_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+
 void ddsi_typeobj_fini_impl (struct DDS_XTypes_TypeObject *typeobj);
 dds_return_t ddsi_xt_type_init_impl (struct ddsi_domaingv *gv, struct xt_type *xt, const struct DDS_XTypes_TypeIdentifier *ti, const struct DDS_XTypes_TypeObject *to);
 

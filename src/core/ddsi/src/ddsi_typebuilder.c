@@ -1839,7 +1839,7 @@ dds_return_t ddsi_topic_descriptor_from_type (struct ddsi_domaingv *gv, dds_topi
      of this function should have a reference to the top-level ddsi_type, we can access
      the type and its dependencies without taking the typelib lock */
   if (!ddsi_type_resolved_locked (tbd->gv, type, DDSI_TYPE_INCLUDE_DEPS)
-      || type->xt.kind != DDSI_TYPEID_KIND_COMPLETE)
+      || type->xt.kind != DDSI_TYPEID_KIND_HASH_COMPLETE) // FIXME: SCC?
   {
     ret = DDS_RETCODE_BAD_PARAMETER;
     goto err;

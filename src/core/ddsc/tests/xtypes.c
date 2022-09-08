@@ -815,6 +815,7 @@ CU_TheoryDataPoints (ddsc_xtypes, invalid_type_object_local) = {
 };
 #undef D
 
+
 CU_Theory ((const char *test_descr, const dds_topic_descriptor_t *topic_desc, typeobj_modify mod, bool matching_typeinfo), ddsc_xtypes, invalid_type_object_local, .init = xtypes_init, .fini = xtypes_fini)
 {
   char topic_name[100];

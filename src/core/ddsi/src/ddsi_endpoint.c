@@ -423,9 +423,9 @@ static void endpoint_common_init (struct ddsi_entity_common *e, struct ddsi_endp
      from the topic's sertype using the same type descriptor). The topic's sertype is already
      referenced (and therefore validated and in the type-lib) during topic creation. */
   dds_return_t ret;
-  ret = ddsi_type_ref_local (pp->e.gv, &c->type_pair->minimal, sertype, DDSI_TYPEID_KIND_MINIMAL);
+  ret = ddsi_type_ref_local (pp->e.gv, &c->type_pair->minimal, sertype, DDSI_TYPEID_EK_MINIMAL);
   assert (ret == DDS_RETCODE_OK);
-  ret = ddsi_type_ref_local (pp->e.gv, &c->type_pair->complete, sertype, DDSI_TYPEID_KIND_COMPLETE);
+  ret = ddsi_type_ref_local (pp->e.gv, &c->type_pair->complete, sertype, DDSI_TYPEID_EK_COMPLETE);
   assert (ret == DDS_RETCODE_OK);
   (void) ret;
 #endif
