@@ -26,7 +26,7 @@ extern "C" {
 #endif
 
 #define PTYPEIDFMT "[%s %02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x]"
-#define PHASH(x, n) ((x)._d == DDS_XTypes_EK_MINIMAL || (x)._d == DDS_XTypes_EK_COMPLETE ? (x)._u.equivalence_hash[(n)] : 0)
+#define PHASH(x, n) ((x)._d == DDS_XTypes_EK_MINIMAL || (x)._d == DDS_XTypes_EK_COMPLETE ? (x)._u.equivalence_hash[(n)] : ((x)._d == DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT ? (x)._u.sc_component_id.sc_component_id._u.hash[(n)] : 0))
 #define PTYPEID(x) (ddsi_typekind_descr((x)._d)), PHASH((x), 0), PHASH(x, 1), PHASH((x), 2), PHASH((x), 3), PHASH((x), 4), PHASH((x), 5), PHASH((x), 6), PHASH((x), 7), PHASH((x), 8), PHASH((x), 9), PHASH((x), 10), PHASH((x), 11), PHASH((x), 12), PHASH((x), 13)
 
 #define NOARG
@@ -215,7 +215,6 @@ struct xt_type
   ddsi_typeid_t id;
   ddsi_typeid_equiv_kind_t ek;
   ddsi_typeid_kind_t kind;
-  struct DDS_XTypes_StronglyConnectedComponentId sc_component_id;
 
   uint8_t _d;
   union {
@@ -304,16 +303,22 @@ bool ddsi_typeid_is_none_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 void ddsi_typeid_fini_impl (struct DDS_XTypes_TypeIdentifier *type_id);
 
 void ddsi_xt_get_typeobject_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to);
-dds_return_t ddsi_type_ref_id_locked_impl (struct ddsi_domaingv *gv, struct ddsi_type **type, const struct DDS_XTypes_TypeIdentifier *type_id);
 struct ddsi_type * ddsi_type_lookup_locked_impl (struct ddsi_domaingv *gv, const struct DDS_XTypes_TypeIdentifier *type_id);
 const struct DDS_XTypes_TypeObject * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const struct DDS_XTypes_TypeIdentifier *type_id);
 
 bool ddsi_typeid_is_scc_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 bool ddsi_typeid_is_scc_minimal_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 bool ddsi_typeid_is_scc_complete_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+bool ddsi_typeid_is_scc_id_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 bool ddsi_typeid_is_direct_hash_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 bool ddsi_typeid_is_hash_minimal_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 bool ddsi_typeid_is_hash_complete_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+
+int32_t ddsi_typeid_get_scc_index_impl (const struct DDS_XTypes_TypeIdentifier *type_id) ddsrt_nonnull_all;
+void ddsi_typeid_set_scc_index_impl (struct DDS_XTypes_TypeIdentifier *type_id, int32_t index) ddsrt_nonnull_all;
+int32_t ddsi_typeid_get_scc_length_impl (const struct DDS_XTypes_TypeIdentifier *type_id) ddsrt_nonnull_all;
+struct DDS_XTypes_TypeIdentifier *ddsi_typeid_get_scc_id_impl (const struct DDS_XTypes_TypeIdentifier *type_id) ddsrt_nonnull_all;
+bool ddsi_typeid_scc_hash_equal_impl (const struct DDS_XTypes_TypeIdentifier *type_id_a, const struct DDS_XTypes_TypeIdentifier *type_id_b) ddsrt_nonnull_all;
 
 void ddsi_typeobj_fini_impl (struct DDS_XTypes_TypeObject *typeobj);
 dds_return_t ddsi_xt_type_init_impl (struct ddsi_domaingv *gv, struct xt_type *xt, const struct DDS_XTypes_TypeIdentifier *ti, const struct DDS_XTypes_TypeObject *to);

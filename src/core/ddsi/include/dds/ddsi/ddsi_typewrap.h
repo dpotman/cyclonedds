@@ -78,6 +78,12 @@ DDS_EXPORT void ddsi_typeid_get_equivalence_hash (const ddsi_typeid_t *type_id, 
 DDS_EXPORT ddsi_typeid_kind_t ddsi_typeid_kind (const ddsi_typeid_t *type);
 DDS_EXPORT void ddsi_typeid_fini (ddsi_typeid_t *type_id);
 
+int32_t ddsi_typeid_get_scc_index (const ddsi_typeid_t *type_id) ddsrt_nonnull_all;
+void ddsi_typeid_set_scc_index (ddsi_typeid_t *type_id, int32_t index) ddsrt_nonnull_all;
+int32_t ddsi_typeid_get_scc_length (const ddsi_typeid_t *type_id) ddsrt_nonnull_all;
+ddsi_typeid_t *ddsi_typeid_get_scc_id (const ddsi_typeid_t *type_id) ddsrt_nonnull_all;
+bool ddsi_typeid_scc_hash_equal (const ddsi_typeid_t *type_id_a, const ddsi_typeid_t *type_id_b) ddsrt_nonnull_all;
+
 bool ddsi_type_id_with_deps_equal (const struct DDS_XTypes_TypeIdentifierWithDependencies *a, const struct DDS_XTypes_TypeIdentifierWithDependencies *b, ddsi_type_include_deps_t deps);
 const char * ddsi_typekind_descr (unsigned char disc);
 
