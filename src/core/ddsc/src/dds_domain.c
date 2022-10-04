@@ -441,6 +441,8 @@ dds_return_t dds_get_typeobj (dds_entity_t entity, const dds_typeid_t *type_id, 
   if ((ret = dds_entity_pin (entity, &e)) < 0)
     return ret;
 
+  // FIXME: handle SCC (part) identifier
+
   if (e->m_domain == NULL)
     ret = DDS_RETCODE_ILLEGAL_OPERATION;
   else

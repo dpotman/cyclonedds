@@ -35,6 +35,7 @@ extern "C" {
 #define DDS_XTypes_TRY_CONSTRUCT_TRIM (DDS_XTypes_TRY_CONSTRUCT1 | DDS_XTypes_TRY_CONSTRUCT2)
 
 struct xt_type;
+struct scc_part_list;
 
 typedef struct ddsi_typeid ddsi_typeid_t;
 typedef struct ddsi_typeinfo ddsi_typeinfo_t;
@@ -93,8 +94,9 @@ void ddsi_typeobj_fini (ddsi_typeobj_t *typeobj);
 
 dds_return_t ddsi_xt_type_init (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_typeobj_t *to);
 dds_return_t ddsi_xt_type_add_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const struct DDS_XTypes_TypeObject *to);
-void ddsi_xt_get_typeobject_ek_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to, ddsi_typeid_equiv_kind_t ek);
-void ddsi_xt_get_typeobject (const struct xt_type *xt, ddsi_typeobj_t *to);
+ddsi_typeid_t *ddsi_xt_resolve_minimal_scc (struct ddsi_domaingv *gv, const struct xt_type *xt);
+void ddsi_xt_get_typeobject_ek_impl (struct ddsi_domaingv *gv, const struct xt_type *xt, struct DDS_XTypes_TypeObject *to, ddsi_typeid_equiv_kind_t ek, const struct scc_part_list *scc_parts, DDS_XTypes_EquivalenceHash *scc_hash, ddsi_typeid_t **scc_id);
+void ddsi_xt_get_typeobject (struct ddsi_domaingv *gv, const struct xt_type *xt, ddsi_typeobj_t *to);
 void ddsi_xt_type_fini (struct ddsi_domaingv *gv, struct xt_type *xt, bool include_typeid);
 bool ddsi_xt_is_assignable_from (struct ddsi_domaingv *gv, const struct xt_type *rd_xt, const struct xt_type *wr_xt, const dds_type_consistency_enforcement_qospolicy_t *tce);
 dds_return_t ddsi_xt_validate (struct ddsi_domaingv *gv, const struct xt_type *t);

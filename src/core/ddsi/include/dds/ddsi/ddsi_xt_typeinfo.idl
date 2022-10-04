@@ -1021,6 +1021,12 @@ module DDS { module XTypes {
     // Ordered by fully qualified typename lexicographic order
     typedef TypeObjectSeq        StronglyConnectedComponent;
 
+    // Add a non-nested final struct to get serializer ops for StronglyConnectedComponent
+    @extensibility(FINAL) @nested(FALSE)
+    struct StronglyConnectionComponentType {
+        StronglyConnectedComponent scc;
+    };
+
     @extensibility(FINAL)  @nested
     struct TypeIdentifierTypeObjectPair {
         TypeIdentifier  type_identifier;

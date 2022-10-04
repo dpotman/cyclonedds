@@ -306,7 +306,8 @@ void ddsi_tl_handle_request (struct ddsi_domaingv *gv, struct ddsi_serdata *d)
     {
       types._buffer = ddsrt_realloc (types._buffer, (types._length + 1) * sizeof (*types._buffer));
       ddsi_typeid_copy_impl (&types._buffer[types._length].type_identifier, type_id);
-      ddsi_xt_get_typeobject_impl (&type->xt, &types._buffer[types._length].type_object);
+      // FIXME: SCC
+      ddsi_xt_get_typeobject_impl (gv, &type->xt, &types._buffer[types._length].type_object);
       types._length++;
     }
   }

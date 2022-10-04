@@ -215,6 +215,7 @@ struct xt_type
   ddsi_typeid_t id;
   ddsi_typeid_equiv_kind_t ek;
   ddsi_typeid_kind_t kind;
+  ddsi_typeid_t *scc_min_id;
 
   uint8_t _d;
   union {
@@ -302,7 +303,7 @@ ddsi_typeid_t * ddsi_typeid_dup_from_impl (const struct DDS_XTypes_TypeIdentifie
 bool ddsi_typeid_is_none_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 void ddsi_typeid_fini_impl (struct DDS_XTypes_TypeIdentifier *type_id);
 
-void ddsi_xt_get_typeobject_impl (const struct xt_type *xt, struct DDS_XTypes_TypeObject *to);
+void ddsi_xt_get_typeobject_impl (struct ddsi_domaingv *gv, const struct xt_type *xt, struct DDS_XTypes_TypeObject *to);
 struct ddsi_type * ddsi_type_lookup_locked_impl (struct ddsi_domaingv *gv, const struct DDS_XTypes_TypeIdentifier *type_id);
 const struct DDS_XTypes_TypeObject * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const struct DDS_XTypes_TypeIdentifier *type_id);
 
