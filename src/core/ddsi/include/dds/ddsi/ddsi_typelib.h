@@ -32,6 +32,7 @@ extern "C" {
 extern const ddsrt_avl_treedef_t ddsi_typelib_treedef;
 extern const ddsrt_avl_treedef_t ddsi_typedeps_treedef;
 extern const ddsrt_avl_treedef_t ddsi_typedeps_reverse_treedef;
+extern const ddsrt_avl_treedef_t scc_typecache_treedef;
 
 struct ddsi_generic_proxy_endpoint;
 struct ddsi_domaingv;
@@ -74,7 +75,7 @@ bool ddsi_typeinfo_valid (const ddsi_typeinfo_t *typeinfo);
 DDS_EXPORT ddsi_typemap_t *ddsi_typemap_deser (const struct ddsi_sertype_cdr_data *ser);
 DDS_EXPORT void ddsi_typemap_fini (ddsi_typemap_t *typemap);
 
-void ddsi_type_register_dep (struct ddsi_domaingv *gv, const ddsi_typeid_t *src_type_id, struct ddsi_type **dst_dep_type, const struct DDS_XTypes_TypeIdentifier *dep_type_id) ddsrt_nonnull_all;
+void ddsi_type_register_dep (struct ddsi_domaingv *gv, const ddsi_typeid_t *src_type_id, struct ddsi_type **dst_dep_type, const struct DDS_XTypes_TypeIdentifier *dep_type_id, ddsrt_avl_tree_t *scc_typecache) ddsrt_nonnull_all;
 void ddsi_type_ref_locked (struct ddsi_domaingv *gv, const ddsi_typeid_t *ref_src_id, struct ddsi_type **type, const struct ddsi_type *ref_dst) ddsrt_nonnull((1,4));
 dds_return_t ddsi_type_ref_local (struct ddsi_domaingv *gv, struct ddsi_type **type, const struct ddsi_sertype *sertype, ddsi_typeid_equiv_kind_t ek) ddsrt_nonnull((1,3));
 dds_return_t ddsi_type_ref_proxy (struct ddsi_domaingv *gv, struct ddsi_type **type, const ddsi_typeinfo_t *type_info, ddsi_typeid_equiv_kind_t ek, const ddsi_guid_t *proxy_guid) ddsrt_nonnull((1,3));

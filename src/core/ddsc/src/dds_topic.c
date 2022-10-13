@@ -403,7 +403,10 @@ static uint32_t ktopic_type_guid_hash (const void *ktp_guid)
   uint32_t hash32;
   struct ktopic_type_guid *x = (struct ktopic_type_guid *) ktp_guid;
   DDS_XTypes_EquivalenceHash hash;
-  ddsi_typeid_get_equivalence_hash (x->type_id, &hash);
+  if (ddsi_typeid_is_scc (x->type_id))
+    ddsi_typeid_get_scc_hash (x->type_id, &hash);
+  else
+    ddsi_typeid_get_equivalence_hash (x->type_id, &hash);
   memcpy (&hash32, hash, sizeof (hash32));
   return hash32;
 }

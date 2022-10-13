@@ -69,6 +69,7 @@ DDS_EXPORT ddsi_typeid_t * ddsi_typeid_dup (const ddsi_typeid_t *src);
 DDS_EXPORT void ddsi_typeid_ser (const ddsi_typeid_t *type_id, unsigned char **buf, uint32_t *sz);
 DDS_EXPORT bool ddsi_typeid_is_none (const ddsi_typeid_t *type_id);
 DDS_EXPORT bool ddsi_typeid_is_scc (const ddsi_typeid_t *type_id);
+DDS_EXPORT bool ddsi_typeid_is_scc_part (const ddsi_typeid_t *type_id);
 DDS_EXPORT bool ddsi_typeid_is_scc_minimal (const ddsi_typeid_t *type_id);
 DDS_EXPORT bool ddsi_typeid_is_scc_complete (const ddsi_typeid_t *type_id);
 DDS_EXPORT bool ddsi_typeid_is_direct_hash (const ddsi_typeid_t *type_id);
@@ -79,6 +80,7 @@ DDS_EXPORT void ddsi_typeid_get_equivalence_hash (const ddsi_typeid_t *type_id, 
 DDS_EXPORT ddsi_typeid_kind_t ddsi_typeid_kind (const ddsi_typeid_t *type);
 DDS_EXPORT void ddsi_typeid_fini (ddsi_typeid_t *type_id);
 
+void ddsi_typeid_get_scc_hash (const ddsi_typeid_t *type_id, DDS_XTypes_EquivalenceHash *hash);
 int32_t ddsi_typeid_get_scc_index (const ddsi_typeid_t *type_id) ddsrt_nonnull_all;
 void ddsi_typeid_set_scc_index (ddsi_typeid_t *type_id, int32_t index) ddsrt_nonnull_all;
 int32_t ddsi_typeid_get_scc_length (const ddsi_typeid_t *type_id) ddsrt_nonnull_all;
@@ -92,8 +94,9 @@ dds_return_t ddsi_typeobj_get_hash_id (const struct DDS_XTypes_TypeObject *type_
 void ddsi_typeobj_get_hash_id_impl (const struct DDS_XTypes_TypeObject *type_obj, struct DDS_XTypes_TypeIdentifier *type_id);
 void ddsi_typeobj_fini (ddsi_typeobj_t *typeobj);
 
-dds_return_t ddsi_xt_type_init (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_typeobj_t *to);
-dds_return_t ddsi_xt_type_add_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const struct DDS_XTypes_TypeObject *to);
+dds_return_t ddsi_xt_type_init (struct ddsi_domaingv *gv, struct xt_type *xt, const ddsi_typeid_t *ti, const ddsi_typeobj_t *to, ddsrt_avl_tree_t *scc_typecache);
+dds_return_t ddsi_xt_type_add_typeobj (struct ddsi_domaingv *gv, struct xt_type *xt, const struct DDS_XTypes_TypeObject *to, ddsrt_avl_tree_t *scc_typecache);
+ddsi_typeid_t *ddsi_xt_resolve_minimal (struct ddsi_domaingv *gv, const struct xt_type *xt);
 ddsi_typeid_t *ddsi_xt_resolve_minimal_scc (struct ddsi_domaingv *gv, const struct xt_type *xt);
 void ddsi_xt_get_typeobject_ek_impl (struct ddsi_domaingv *gv, const struct xt_type *xt, struct DDS_XTypes_TypeObject *to, ddsi_typeid_equiv_kind_t ek, const struct scc_part_list *scc_parts, DDS_XTypes_EquivalenceHash *scc_hash, ddsi_typeid_t **scc_id);
 void ddsi_xt_get_typeobject (struct ddsi_domaingv *gv, const struct xt_type *xt, ddsi_typeobj_t *to);

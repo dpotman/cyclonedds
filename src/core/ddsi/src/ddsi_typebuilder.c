@@ -154,6 +154,7 @@ struct typebuilder_aggregated_type
   uint32_t align;             // max alignment for this aggregated type
   uint32_t insn_offs;         // index in ops array of first instruction for this type
   bool has_explicit_key;      // has the @key annotation set on one or more members
+  bool offsets_resolved;      // indicates if the offset for refs to other types have been resolved (to stop recursion for scc)
   union {
     struct typebuilder_struct _struct;
     struct typebuilder_union _union;
@@ -207,7 +208,7 @@ DDSI_LIST_CODE_TMPL(static, typebuilder_dep_types, struct typebuilder_aggregated
 
 static dds_return_t typebuilder_add_aggrtype (struct typebuilder_data *tbd, struct typebuilder_aggregated_type *tb_aggrtype, const struct ddsi_type *type);
 static dds_return_t typebuilder_add_type (struct typebuilder_data *tbd, uint32_t *size, uint32_t *align, struct typebuilder_type *tb_type, const struct ddsi_type *type, bool is_ext, bool use_ext_type);
-static dds_return_t resolve_ops_offsets_aggrtype (const struct typebuilder_aggregated_type *tb_aggrtype, struct typebuilder_ops *ops);
+static dds_return_t resolve_ops_offsets_aggrtype (struct typebuilder_aggregated_type *tb_aggrtype, struct typebuilder_ops *ops);
 static dds_return_t get_keys_aggrtype (struct typebuilder_data *tbd, struct typebuilder_key_path *path, const struct typebuilder_aggregated_type *tb_aggrtype, bool parent_key);
 static dds_return_t set_implicit_keys_aggrtype (struct typebuilder_aggregated_type *tb_aggrtype, bool is_toplevel, bool parent_is_key);
 
@@ -1372,9 +1373,13 @@ static dds_return_t resolve_ops_offsets_union (const struct typebuilder_union *t
   return ret;
 }
 
-static dds_return_t resolve_ops_offsets_aggrtype (const struct typebuilder_aggregated_type *tb_aggrtype, struct typebuilder_ops *ops)
+static dds_return_t resolve_ops_offsets_aggrtype (struct typebuilder_aggregated_type *tb_aggrtype, struct typebuilder_ops *ops)
 {
   dds_return_t ret = DDS_RETCODE_UNSUPPORTED;
+  if (tb_aggrtype->offsets_resolved)
+    return DDS_RETCODE_OK;
+  tb_aggrtype->offsets_resolved = true;
+
   if (tb_aggrtype->base_type && tb_aggrtype->extensibility != DDS_XTypes_IS_MUTABLE) // for mutable types, offset to base is set in PLM list item
   {
     if ((ret = resolve_ops_offsets_type (tb_aggrtype->base_type, ops)))
@@ -1392,10 +1397,11 @@ static dds_return_t resolve_ops_offsets_aggrtype (const struct typebuilder_aggre
     default:
       abort ();
   }
+
   return ret;
 }
 
-static dds_return_t typebuilder_resolve_ops_offsets (const struct typebuilder_data *tbd, struct typebuilder_ops *ops)
+static dds_return_t typebuilder_resolve_ops_offsets (struct typebuilder_data *tbd, struct typebuilder_ops *ops)
 {
   return resolve_ops_offsets_aggrtype (&tbd->toplevel_type, ops);
 }
@@ -1839,7 +1845,7 @@ dds_return_t ddsi_topic_descriptor_from_type (struct ddsi_domaingv *gv, dds_topi
      of this function should have a reference to the top-level ddsi_type, we can access
      the type and its dependencies without taking the typelib lock */
   if (!ddsi_type_resolved_locked (tbd->gv, type, DDSI_TYPE_INCLUDE_DEPS)
-      || type->xt.kind != DDSI_TYPEID_KIND_HASH_COMPLETE) // FIXME: SCC?
+      || (type->xt.kind != DDSI_TYPEID_KIND_HASH_COMPLETE && type->xt.kind != DDSI_TYPEID_KIND_SCC_COMPLETE))
   {
     ret = DDS_RETCODE_BAD_PARAMETER;
     goto err;

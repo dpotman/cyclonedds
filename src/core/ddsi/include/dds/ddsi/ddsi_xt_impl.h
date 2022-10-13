@@ -212,12 +212,20 @@ struct xt_bitmask {
 
 struct xt_type
 {
+  /* The (XTypes) type identifier for this type. In case of an SCC part, this
+     identifier has the discriminant value DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT,
+     and the actual type of the part is set in xt_type._d */
   ddsi_typeid_t id;
+
   ddsi_typeid_equiv_kind_t ek;
   ddsi_typeid_kind_t kind;
-  ddsi_typeid_t *scc_min_id;
 
+  /* Discriminant for this xt wrapper. In case of an SCC part this is set to the
+     actual type for the part (the discriminant of the type object associated with
+     the SCC part). For the SCC-identifier (scc_index 0), the discriminant is set
+     to DDS_XTypes_TI_STRONGLY_CONNECTED_COMPONENT. */
   uint8_t _d;
+
   union {
     // case TK_NONE:
     // case TK_BOOLEAN:
@@ -259,6 +267,11 @@ struct xt_type
     struct xt_enum enum_type;
     // case TK_BITMASK:
     struct xt_bitmask bitmask;
+
+    /* case TI_STRONGLY_CONNECTED_COMPONENT: not applicable, as this stores
+       the actual type of the SCC part. The SCC-part type-id is set in the
+       id field, and for the SCC-identifier (scc_index 0) there is not type
+       meta-data other than stored in the type_id. */
   } _u;
 };
 
@@ -280,6 +293,12 @@ struct ddsi_type {
   seqno_t request_seqno;                        /* sequence number of the last type lookup request message */
   struct ddsi_type_proxy_guid_list proxy_guids; /* administration for proxy endpoints (not proxy topics) that are using this type */
   uint32_t refc;                                /* refcount for this record */
+};
+
+struct scc_typecache {
+  ddsrt_avl_node_t avl_node;
+  ddsi_typeid_t type_id;
+  struct ddsi_type *type;
 };
 
 /* The xt_type member must be at offset 0 so that the type identifier field
@@ -308,6 +327,7 @@ struct ddsi_type * ddsi_type_lookup_locked_impl (struct ddsi_domaingv *gv, const
 const struct DDS_XTypes_TypeObject * ddsi_typemap_typeobj (const ddsi_typemap_t *tmap, const struct DDS_XTypes_TypeIdentifier *type_id);
 
 bool ddsi_typeid_is_scc_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
+bool ddsi_typeid_is_scc_part_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 bool ddsi_typeid_is_scc_minimal_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 bool ddsi_typeid_is_scc_complete_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
 bool ddsi_typeid_is_scc_id_impl (const struct DDS_XTypes_TypeIdentifier *type_id);
@@ -322,7 +342,10 @@ struct DDS_XTypes_TypeIdentifier *ddsi_typeid_get_scc_id_impl (const struct DDS_
 bool ddsi_typeid_scc_hash_equal_impl (const struct DDS_XTypes_TypeIdentifier *type_id_a, const struct DDS_XTypes_TypeIdentifier *type_id_b) ddsrt_nonnull_all;
 
 void ddsi_typeobj_fini_impl (struct DDS_XTypes_TypeObject *typeobj);
-dds_return_t ddsi_xt_type_init_impl (struct ddsi_domaingv *gv, struct xt_type *xt, const struct DDS_XTypes_TypeIdentifier *ti, const struct DDS_XTypes_TypeObject *to);
+dds_return_t ddsi_xt_type_init_impl (struct ddsi_domaingv *gv, struct xt_type *xt, const struct DDS_XTypes_TypeIdentifier *ti, const struct DDS_XTypes_TypeObject *to, ddsrt_avl_tree_t *scc_typecache);
+
+dds_return_t ddsi_type_new (struct ddsi_domaingv *gv, struct ddsi_type **type, const struct DDS_XTypes_TypeIdentifier *type_id, const struct DDS_XTypes_TypeObject *type_obj, ddsrt_avl_tree_t *scc_typecache);
+dds_return_t ddsi_type_new_scc (struct ddsi_domaingv *gv, const struct DDS_XTypes_TypeIdentifier *type_id, const DDS_XTypes_StronglyConnectedComponent *scc);
 
 #if defined (__cplusplus)
 }
