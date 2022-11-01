@@ -458,6 +458,7 @@ int main (int argc, char **argv)
   dds_stream_extract_key_from_key (ptr, ptr2, ptr3);
   dds_stream_extract_keyBE_from_data (ptr, ptr2, ptr3);
   dds_stream_extract_keyBE_from_key (ptr, ptr2, ptr3);
+  dds_cdrstream_desc_from_topic_desc (ptr, ptr2);
 
 #ifdef DDS_HAS_SECURITY
   // dds_security_timed_cb.h

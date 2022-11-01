@@ -30,6 +30,7 @@
 #include "dds/ddsi/ddsi_xt_typemap.h"
 #include "dds/ddsi/ddsi_typelookup.h"
 #include "dds/ddsi/ddsi_typelib.h"
+#include "dds/ddsi/ddsi_serdata_cdr.h"
 #include "dds/ddsc/dds_public_impl.h"
 
 DDSI_LIST_DECLS_TMPL(static, ddsi_type_proxy_guid_list, ddsi_guid_t, ddsrt_attribute_unused)
@@ -84,7 +85,7 @@ ddsi_typeinfo_t * ddsi_typeinfo_dup (const ddsi_typeinfo_t *src)
   return dst;
 }
 
-ddsi_typeinfo_t *ddsi_typeinfo_deser (const struct ddsi_sertype_cdr_data *ser)
+ddsi_typeinfo_t *ddsi_typeinfo_deser (const struct ddsi_cdrstream_cdr_data *ser)
 {
   unsigned char *data;
   uint32_t srcoff = 0;
@@ -200,7 +201,7 @@ const struct DDS_XTypes_TypeObject * ddsi_typemap_typeobj (const ddsi_typemap_t 
   return NULL;
 }
 
-ddsi_typemap_t *ddsi_typemap_deser (const struct ddsi_sertype_cdr_data *ser)
+ddsi_typemap_t *ddsi_typemap_deser (const struct ddsi_cdrstream_cdr_data *ser)
 {
   unsigned char *data;
   uint32_t srcoff = 0;
@@ -660,27 +661,16 @@ err:
   return ret;
 }
 
-static dds_return_t xcdr2_ser (const void *obj, const dds_topic_descriptor_t *desc, dds_ostream_t *os)
+static dds_return_t xcdr2_ser (const void *obj, const dds_topic_descriptor_t *topic_desc, dds_ostream_t *os)
 {
-  // create sertype from descriptor
-  struct ddsi_sertype_default sertype;
-  memset (&sertype, 0, sizeof (sertype));
-  sertype.type = (struct ddsi_sertype_default_desc) {
-    .size = desc->m_size,
-    .align = desc->m_align,
-    .flagset = desc->m_flagset,
-    .keys.nkeys = 0,
-    .keys.keys = NULL,
-    .ops.nops = dds_stream_countops (desc->m_ops, desc->m_nkeys, desc->m_keys),
-    .ops.ops = (uint32_t *) desc->m_ops
-  };
+  struct ddsi_cdrstream_desc desc;
+  dds_cdrstream_desc_from_topic_desc (&desc, topic_desc);
 
-  // serialize as XCDR2 LE
   os->m_buffer = NULL;
   os->m_index = 0;
   os->m_size = 0;
   os->m_xcdr_version = CDR_ENC_VERSION_2;
-  if (!dds_stream_write_sampleLE ((dds_ostreamLE_t *) os, obj, &sertype))
+  if (!dds_stream_write_sampleLE ((dds_ostreamLE_t *) os, obj, &desc))
     return DDS_RETCODE_BAD_PARAMETER;
   return DDS_RETCODE_OK;
 }
