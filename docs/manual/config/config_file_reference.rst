@@ -2660,7 +2660,7 @@ The categorisation of tracing output is incomplete and hence most of the verbosi
 The default value is: "none".
 
 ..
-   generated from ddsi_config.h[0afa09c75f102f762ff2471c993b4f50c1aace9d] 
+   generated from ddsi_config.h[294fb9a4494999676522e6f04b2f5a7f1d5f4202] 
    generated from ddsi__cfgunits.h[be1b976c6e9466472b0c331487c05180ec1052d4] 
    generated from ddsi__cfgelems.h[6674d0b12bab30dd24dea8880fc9ecd0a35b5b0e] 
    generated from ddsi_config.c[d6fddb909c263a4b9d04e3bdb4f868d2b6feb5bf] 
@@ -2670,4 +2670,4 @@ The default value is: "none".
    generated from generate_md.c[a61b6a9649d18afeca4c73b5784f36989d7994e0] 
    generated from generate_rst.c[34dcb6b5e2ac2cd15e78497107ce0b6eed6e6e94] 
    generated from generate_xsd.c[45064e8869b3c00573057d7c8f02d20f04b40e16] 
-   generated from generate_defconfig.c[c80e7f499c9e6a426834a565068e35143c353a7b] 
+   generated from generate_defconfig.c[ddf5057ceb5fb512b47f7028da2d75837a349830] 
