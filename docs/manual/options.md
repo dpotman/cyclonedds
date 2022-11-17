@@ -1864,12 +1864,12 @@ While none prevents any message from being written to a DDSI2 log file.
 The categorisation of tracing output is incomplete and hence most of the verbosity levels and categories are not of much use in the current release. This is an ongoing process and here we describe the target situation rather than the current situation. Currently, the most useful verbosity levels are config, fine and finest.
 
 The default value is: "none".
-<!--- generated from ddsi_config.h[294fb9a4494999676522e6f04b2f5a7f1d5f4202] -->
+<!--- generated from ddsi_config.h[25c12468a096054dd7c7a9ec2fe32837c1aa9a9f] -->
 <!--- generated from ddsi__cfgunits.h[be1b976c6e9466472b0c331487c05180ec1052d4] -->
 <!--- generated from ddsi__cfgelems.h[6674d0b12bab30dd24dea8880fc9ecd0a35b5b0e] -->
-<!--- generated from ddsi_config.c[d6fddb909c263a4b9d04e3bdb4f868d2b6feb5bf] -->
+<!--- generated from ddsi_config.c[4d8a28fd8d4388d80e375f617f21fb3c2e1a8e49] -->
 <!--- generated from _confgen.h[f2d235d5551cbf920a8a2962831dddeabd2856ac] -->
-<!--- generated from _confgen.c[acfb627fd0638e5200377e4190e70ba1e505d003] -->
+<!--- generated from _confgen.c[953f4e9ec5575783b8a7b0de211dab03a5b741a4] -->
 <!--- generated from generate_rnc.c[a2ec6e48d33ac14a320c8ec3f320028a737920e0] -->
 <!--- generated from generate_md.c[a61b6a9649d18afeca4c73b5784f36989d7994e0] -->
 <!--- generated from generate_rst.c[34dcb6b5e2ac2cd15e78497107ce0b6eed6e6e94] -->
