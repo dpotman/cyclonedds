@@ -44,7 +44,7 @@ DDSI,DDSI Initialization,ddsi_init
 DDSI,DDSI Participant,ddsi_participant
 DDSI,DDSI Proxy Endpoint,ddsi_proxy_endpoint
 DDSI,DDSI Proxy Participant,ddsi_proxy_participant
-DDSI,DDSI Statistics,ddsi_stats
+DDSI,DDSI Statistics,ddsi_statistics
 DDSI,DDSI Topic,ddsi_topic
 DDSI,Deadline QoS,deadline_qos
 DDSI,Debug Support,debug_support
