@@ -43,6 +43,13 @@ install(
   DESTINATION "${CMAKE_INSTALL_EXAMPLESDIR}/throughput"
   COMPONENT dev)
 
+install(
+  FILES
+    dyntype/dyntype.c
+    dyntype/CMakeLists.txt
+  DESTINATION "${CMAKE_INSTALL_EXAMPLESDIR}/dyntype"
+  COMPONENT dev)
+
 if (ENABLE_TOPIC_DISCOVERY)
   install(
     FILES
@@ -81,6 +88,7 @@ if (ENABLE_TOPIC_DISCOVERY)
   add_subdirectory(listtopics)
   add_subdirectory(dynsub)
 endif ()
+add_subdirectory(dyntype)
 if (ENABLE_SHM)
   add_subdirectory(shm_throughput)
 endif ()

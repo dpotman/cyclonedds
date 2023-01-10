@@ -44,7 +44,8 @@ prepend(srcs_ddsc "${CMAKE_CURRENT_LIST_DIR}/src/"
   dds_serdata_default.c
   dds_sertype_default.c
   dds_data_allocator.c
-  dds_loan.c)
+  dds_loan.c
+  dds_dynamic_type.c)
 
 if(ENABLE_SHM)
   list(APPEND srcs_ddsc "${CMAKE_CURRENT_LIST_DIR}/src/dds_shm_monitor.c")

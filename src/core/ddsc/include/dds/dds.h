@@ -4681,6 +4681,44 @@ DDS_EXPORT dds_return_t
 dds_free_typeinfo (
   dds_typeinfo_t *type_info);
 
+
+typedef struct dds_dynamic_type {
+  void * x;
+} dds_dynamic_type_t;
+
+typedef enum dds_dynamic_primitive_kind
+{
+  DDS_DYNAMIC_PRIMITIVE_BOOLEAN,
+  DDS_DYNAMIC_PRIMITIVE_BYTE,
+  DDS_DYNAMIC_PRIMITIVE_INT16,
+  DDS_DYNAMIC_PRIMITIVE_INT32,
+  DDS_DYNAMIC_PRIMITIVE_INT64,
+  DDS_DYNAMIC_PRIMITIVE_UINT16,
+  DDS_DYNAMIC_PRIMITIVE_UINT32,
+  DDS_DYNAMIC_PRIMITIVE_UINT64,
+  DDS_DYNAMIC_PRIMITIVE_FLOAT32,
+  DDS_DYNAMIC_PRIMITIVE_FLOAT64,
+  DDS_DYNAMIC_PRIMITIVE_FLOAT128,
+  DDS_DYNAMIC_PRIMITIVE_INT8,
+  DDS_DYNAMIC_PRIMITIVE_UINT8,
+  DDS_DYNAMIC_PRIMITIVE_CHAR8,
+  DDS_DYNAMIC_PRIMITIVE_CHAR16
+} dds_dynamic_primitive_kind_t;
+
+dds_return_t dds_dynamic_type_create_struct (dds_entity_t entity, dds_dynamic_type_t *type, const char *type_name);
+dds_return_t dds_dynamic_type_create_union (dds_entity_t entity, dds_dynamic_type_t *type, const char *type_name, dds_dynamic_type_t *discriminant_type);
+dds_return_t dds_dynamic_type_create_sequence (dds_entity_t entity, dds_dynamic_type_t *type, const char *type_name, dds_dynamic_type_t *element_type, uint32_t bound);
+dds_return_t dds_dynamic_type_create_array (dds_entity_t entity, dds_dynamic_type_t *type, const char *type_name, dds_dynamic_type_t *element_type, uint32_t num_bounds, uint32_t *bounds);
+dds_return_t dds_dynamic_type_create_primitive (dds_entity_t entity, dds_dynamic_type_t *type, dds_dynamic_primitive_kind_t primitive_kind);
+dds_return_t dds_dynamic_type_add_struct_member (dds_dynamic_type_t *type, dds_dynamic_type_t *member_type, const char *member_name);
+dds_return_t dds_dynamic_type_add_union_member (dds_dynamic_type_t *type, dds_dynamic_type_t *member_type, const char *member_name, bool is_default, uint32_t label_count, int32_t *labels);
+
+dds_return_t dds_dynamic_type_register (dds_dynamic_type_t *type, dds_typeinfo_t **type_info);
+dds_dynamic_type_t * dds_dynamic_type_ref (dds_dynamic_type_t *type);
+void dds_dynamic_type_unref (dds_dynamic_type_t *type);
+void dds_dynamic_type_copy (dds_dynamic_type_t *dst, const dds_dynamic_type_t *src);
+void dds_typeinfo_free (dds_typeinfo_t *type_info);
+
 #if defined (__cplusplus)
 }
 #endif

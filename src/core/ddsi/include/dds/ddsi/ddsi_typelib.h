@@ -56,6 +56,9 @@ DDS_EXPORT ddsi_typeinfo_t *ddsi_typeinfo_deser (const unsigned char *data, uint
 DDS_EXPORT void ddsi_typeinfo_fini (ddsi_typeinfo_t *typeinfo);
 
 /** @component type_system */
+DDS_EXPORT void ddsi_typeinfo_free (ddsi_typeinfo_t *typeinfo);
+
+/** @component type_system */
 DDS_EXPORT ddsi_typeinfo_t * ddsi_typeinfo_dup (const ddsi_typeinfo_t *src);
 
 /** @component type_system */

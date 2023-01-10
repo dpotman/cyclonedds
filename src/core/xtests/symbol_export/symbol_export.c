@@ -636,6 +636,7 @@ int main (int argc, char **argv)
   ddsi_typeinfo_typeid (ptr, 0);
   ddsi_typeinfo_deser (ptr, 0);
   ddsi_typeinfo_fini (ptr);
+  ddsi_typeinfo_free (ptr);
   ddsi_typeinfo_dup (ptr);
   ddsi_typeinfo_minimal_typeid (ptr);
   ddsi_typeinfo_complete_typeid (ptr);

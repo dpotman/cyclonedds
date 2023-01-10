@@ -82,6 +82,7 @@ set(srcs_ddsi
   ddsi_xevent.c
   ddsi_xmsg.c
   ddsi_freelist.c
+  ddsi_dynamic_type.c
 )
 
 set(hdrs_ddsi
@@ -136,6 +137,7 @@ set(hdrs_ddsi
   ddsi_whc.h
   ddsi_xevent.h
   ddsi_xmsg.h
+  ddsi_dynamic_type.h
 )
 
 set(hdrs_private_ddsi
