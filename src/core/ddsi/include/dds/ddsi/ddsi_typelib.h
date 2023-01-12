@@ -102,6 +102,7 @@ struct ddsi_typeobj *ddsi_type_get_typeobj (struct ddsi_domaingv *gv, const stru
 
 /** @component type_system */
 bool ddsi_type_resolved (struct ddsi_domaingv *gv, const struct ddsi_type *type, ddsi_type_include_deps_t resolved_kind);
+struct ddsi_domaingv *ddsi_type_get_gv (const struct ddsi_type *type);
 
 
 /**

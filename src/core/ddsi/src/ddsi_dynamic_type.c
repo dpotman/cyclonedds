@@ -164,27 +164,30 @@ dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struc
   uint8_t data_type = DDS_XTypes_TK_NONE;
   switch (primitive_kind)
   {
-    case DDS_DYNAMIC_PRIMITIVE_BOOLEAN: data_type = DDS_XTypes_TK_BOOLEAN; break;
-    case DDS_DYNAMIC_PRIMITIVE_BYTE: data_type = DDS_XTypes_TK_BYTE; break;
-    case DDS_DYNAMIC_PRIMITIVE_INT16: data_type = DDS_XTypes_TK_INT16; break;
-    case DDS_DYNAMIC_PRIMITIVE_INT32: data_type = DDS_XTypes_TK_INT32; break;
-    case DDS_DYNAMIC_PRIMITIVE_INT64: data_type = DDS_XTypes_TK_INT64; break;
-    case DDS_DYNAMIC_PRIMITIVE_UINT16: data_type = DDS_XTypes_TK_UINT16; break;
-    case DDS_DYNAMIC_PRIMITIVE_UINT32: data_type = DDS_XTypes_TK_UINT32; break;
-    case DDS_DYNAMIC_PRIMITIVE_UINT64: data_type = DDS_XTypes_TK_UINT64; break;
-    case DDS_DYNAMIC_PRIMITIVE_FLOAT32: data_type = DDS_XTypes_TK_FLOAT32; break;
-    case DDS_DYNAMIC_PRIMITIVE_FLOAT64: data_type = DDS_XTypes_TK_FLOAT64; break;
-    case DDS_DYNAMIC_PRIMITIVE_FLOAT128: data_type = DDS_XTypes_TK_FLOAT128; break;
-    case DDS_DYNAMIC_PRIMITIVE_INT8: data_type = /* FIXME */ DDS_XTypes_TK_NONE; break;
-    case DDS_DYNAMIC_PRIMITIVE_UINT8: data_type = /* FIXME */ DDS_XTypes_TK_NONE; break;
-    case DDS_DYNAMIC_PRIMITIVE_CHAR8: data_type = DDS_XTypes_TK_CHAR8; break;
-    case DDS_DYNAMIC_PRIMITIVE_CHAR16: data_type = DDS_XTypes_TK_CHAR16; break;
+    case DDS_DYNAMIC_BOOLEAN: data_type = DDS_XTypes_TK_BOOLEAN; break;
+    case DDS_DYNAMIC_BYTE: data_type = DDS_XTypes_TK_BYTE; break;
+    case DDS_DYNAMIC_INT16: data_type = DDS_XTypes_TK_INT16; break;
+    case DDS_DYNAMIC_INT32: data_type = DDS_XTypes_TK_INT32; break;
+    case DDS_DYNAMIC_INT64: data_type = DDS_XTypes_TK_INT64; break;
+    case DDS_DYNAMIC_UINT16: data_type = DDS_XTypes_TK_UINT16; break;
+    case DDS_DYNAMIC_UINT32: data_type = DDS_XTypes_TK_UINT32; break;
+    case DDS_DYNAMIC_UINT64: data_type = DDS_XTypes_TK_UINT64; break;
+    case DDS_DYNAMIC_FLOAT32: data_type = DDS_XTypes_TK_FLOAT32; break;
+    case DDS_DYNAMIC_FLOAT64: data_type = DDS_XTypes_TK_FLOAT64; break;
+    case DDS_DYNAMIC_FLOAT128: data_type = DDS_XTypes_TK_FLOAT128; break;
+    case DDS_DYNAMIC_INT8: data_type = /* FIXME */ DDS_XTypes_TK_NONE; break;
+    case DDS_DYNAMIC_UINT8: data_type = /* FIXME */ DDS_XTypes_TK_NONE; break;
+    case DDS_DYNAMIC_CHAR8: data_type = DDS_XTypes_TK_CHAR8; break;
+    case DDS_DYNAMIC_CHAR16: data_type = DDS_XTypes_TK_CHAR16; break;
   }
+  if (data_type == DDS_XTypes_TK_NONE)
+    return DDS_RETCODE_BAD_PARAMETER;
+
   dynamic_type_init (gv, *type, data_type, DDSI_TYPEID_KIND_FULLY_DESCRIPTIVE);
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name)
+dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, dds_dynamic_type_struct_member_param_t *params)
 {
   assert (type->state == DDSI_TYPE_CONSTRUCTING);
   assert (type->xt._d == DDS_XTypes_TK_STRUCTURE);
@@ -201,12 +204,14 @@ dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct
   dynamic_type_complete (member_type);
   m->type = *member_type;
   m->id = type->xt._u.structure.members.length - 1;
+  if (params->is_key)
+    m->flags = DDS_XTypes_IS_KEY;
   ddsrt_strlcpy (m->detail.name, member_name, sizeof (m->detail.name));
 
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, bool is_default, uint32_t label_count, int32_t *labels)
+dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, dds_dynamic_type_union_member_param_t *params)
 {
   assert (type->state == DDSI_TYPE_CONSTRUCTING);
   assert (type->gv == (*member_type)->gv);
@@ -225,16 +230,16 @@ dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct 
   m->type = *member_type;
   m->id = type->xt._u.union_type.members.length - 1;
   ddsrt_strlcpy (m->detail.name, member_name, sizeof (m->detail.name));
-  if (is_default)
+  if (params->is_default)
     m->flags = DDS_XTypes_IS_DEFAULT;
   else
   {
-    m->label_seq._maximum = m->label_seq._length = label_count;
-    m->label_seq._buffer = ddsrt_malloc (label_count * sizeof (*m->label_seq._buffer));
+    m->label_seq._maximum = m->label_seq._length = params->n_labels;
+    m->label_seq._buffer = ddsrt_malloc (params->n_labels * sizeof (*m->label_seq._buffer));
     if (m->label_seq._buffer == NULL)
       return DDS_RETCODE_OUT_OF_RESOURCES;
     m->label_seq._release = true;
-    memcpy (m->label_seq._buffer, labels, label_count * sizeof (*m->label_seq._buffer));
+    memcpy (m->label_seq._buffer, params->labels, params->n_labels * sizeof (*m->label_seq._buffer));
   }
   return DDS_RETCODE_OK;
 }

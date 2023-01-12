@@ -1069,6 +1069,11 @@ struct ddsi_typeobj *ddsi_type_get_typeobj (struct ddsi_domaingv *gv, const stru
   return to;
 }
 
+struct ddsi_domaingv *ddsi_type_get_gv (const struct ddsi_type *type)
+{
+  return type->gv;
+}
+
 static void ddsi_type_unref_impl_locked (struct ddsi_domaingv *gv, struct ddsi_type *type)
 {
   assert (type->refc > 0);
