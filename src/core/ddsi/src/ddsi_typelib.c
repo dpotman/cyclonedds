@@ -487,7 +487,7 @@ dds_return_t ddsi_type_add_typeobj (struct ddsi_domaingv *gv, struct ddsi_type *
 
 static dds_return_t ddsi_type_register_dep_impl (struct ddsi_domaingv *gv, const ddsi_typeid_t *src_type_id, struct ddsi_type **dst_dep_type, const struct DDS_XTypes_TypeIdentifier *dep_tid, bool from_type_info)
 {
-  dds_return_t ret;
+  dds_return_t ret = DDS_RETCODE_OK;
   struct ddsi_typeid dep_type_id;
   dep_type_id.x = *dep_tid;
   struct ddsi_type_dep *dep = ddsrt_calloc (1, sizeof (*dep));
