@@ -2074,28 +2074,31 @@ static inline const uint32_t *normalize_error_ops (void) { normalize_error (); r
    padding and a primitive type overflowing our offset */
 #define CDR_SIZE_MAX ((uint32_t) 0xfffffff0)
 
-static uint32_t check_align_prim (uint32_t off, uint32_t size, uint32_t a_lg2)
+static uint32_t check_align_prim (uint32_t off, uint32_t size, uint32_t a_lg2, uint32_t c_lg2)
 {
   assert (a_lg2 <= 3);
   const uint32_t a = 1u << a_lg2;
+  assert (c_lg2 <= 3);
+  const uint32_t c = 1u << c_lg2;
   assert (size <= CDR_SIZE_MAX);
   assert (off <= size);
   const uint32_t off1 = (off + a - 1) & ~(a - 1);
   assert (off <= off1 && off1 <= CDR_SIZE_MAX);
-  if (size < off1 + a)
+  if (size < off1 + c)
     return normalize_error_offset ();
   return off1;
 }
 
-static uint32_t check_align_prim_many (uint32_t off, uint32_t size, uint32_t a_lg2, uint32_t n)
+static uint32_t check_align_prim_many (uint32_t off, uint32_t size, uint32_t a_lg2, uint32_t c_lg2, uint32_t n)
 {
   assert (a_lg2 <= 3);
   const uint32_t a = 1u << a_lg2;
+  assert (c_lg2 <= 3);
   assert (size <= CDR_SIZE_MAX);
   assert (off <= size);
   const uint32_t off1 = (off + a - 1) & ~(a - 1);
   assert (off <= off1 && off1 <= CDR_SIZE_MAX);
-  if (size < off1 || ((size - off1) >> a_lg2) < n)
+  if (size < off1 || ((size - off1) >> c_lg2) < n)
     return normalize_error_offset ();
   return off1;
 }
@@ -2112,7 +2115,7 @@ static bool normalize_uint8 (uint32_t *off, uint32_t size)
 static bool normalize_uint16 (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static bool normalize_uint16 (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap)
 {
-  if ((*off = check_align_prim (*off, size, 1)) == UINT32_MAX)
+  if ((*off = check_align_prim (*off, size, 1, 1)) == UINT32_MAX)
     return false;
   if (bswap)
     *((uint16_t *) (data + *off)) = ddsrt_bswap2u (*((uint16_t *) (data + *off)));
@@ -2123,7 +2126,7 @@ static bool normalize_uint16 (char * __restrict data, uint32_t * __restrict off,
 static bool normalize_uint32 (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static bool normalize_uint32 (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap)
 {
-  if ((*off = check_align_prim (*off, size, 2)) == UINT32_MAX)
+  if ((*off = check_align_prim (*off, size, 2, 2)) == UINT32_MAX)
     return false;
   if (bswap)
     *((uint32_t *) (data + *off)) = ddsrt_bswap4u (*((uint32_t *) (data + *off)));
@@ -2134,7 +2137,7 @@ static bool normalize_uint32 (char * __restrict data, uint32_t * __restrict off,
 static bool normalize_uint64 (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static bool normalize_uint64 (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version)
 {
-  if ((*off = check_align_prim (*off, size, xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2 ? 2 : 3)) == UINT32_MAX)
+  if ((*off = check_align_prim (*off, size, xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2 ? 2 : 3, 3)) == UINT32_MAX)
     return false;
   if (bswap)
   {
@@ -2174,7 +2177,7 @@ static bool read_and_normalize_bool (bool * __restrict val, char * __restrict da
 static inline bool read_and_normalize_uint8 (uint8_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static inline bool read_and_normalize_uint8 (uint8_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size)
 {
-  if ((*off = check_align_prim (*off, size, 0)) == UINT32_MAX)
+  if ((*off = check_align_prim (*off, size, 0, 0)) == UINT32_MAX)
     return false;
   *val = *((uint8_t *) (data + *off));
   (*off)++;
@@ -2184,7 +2187,7 @@ static inline bool read_and_normalize_uint8 (uint8_t * __restrict val, char * __
 static inline bool read_and_normalize_uint16 (uint16_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static inline bool read_and_normalize_uint16 (uint16_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap)
 {
-  if ((*off = check_align_prim (*off, size, 1)) == UINT32_MAX)
+  if ((*off = check_align_prim (*off, size, 1, 1)) == UINT32_MAX)
     return false;
   if (bswap)
     *((uint16_t *) (data + *off)) = ddsrt_bswap2u (*((uint16_t *) (data + *off)));
@@ -2196,7 +2199,7 @@ static inline bool read_and_normalize_uint16 (uint16_t * __restrict val, char * 
 static inline bool read_and_normalize_uint32 (uint32_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static inline bool read_and_normalize_uint32 (uint32_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap)
 {
-  if ((*off = check_align_prim (*off, size, 2)) == UINT32_MAX)
+  if ((*off = check_align_prim (*off, size, 2, 2)) == UINT32_MAX)
     return false;
   if (bswap)
     *((uint32_t *) (data + *off)) = ddsrt_bswap4u (*((uint32_t *) (data + *off)));
@@ -2208,7 +2211,7 @@ static inline bool read_and_normalize_uint32 (uint32_t * __restrict val, char * 
 static inline bool read_and_normalize_uint64 (uint64_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static inline bool read_and_normalize_uint64 (uint64_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version)
 {
-  if ((*off = check_align_prim (*off, size, xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2 ? 2 : 3)) == UINT32_MAX)
+  if ((*off = check_align_prim (*off, size, xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2 ? 2 : 3, 3)) == UINT32_MAX)
     return false;
   if (bswap)
   {
@@ -2224,7 +2227,7 @@ static inline bool read_and_normalize_uint64 (uint64_t * __restrict val, char * 
 static bool peek_and_normalize_uint32 (uint32_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static bool peek_and_normalize_uint32 (uint32_t * __restrict val, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap)
 {
-  if ((*off = check_align_prim (*off, size, 2)) == UINT32_MAX)
+  if ((*off = check_align_prim (*off, size, 2, 2)) == UINT32_MAX)
     return false;
   if (bswap)
     *val = ddsrt_bswap4u (*((uint32_t *) (data + *off)));
@@ -2336,12 +2339,12 @@ static bool normalize_primarray (char * __restrict data, uint32_t * __restrict o
   switch (type)
   {
     case DDS_OP_VAL_1BY:
-      if ((*off = check_align_prim_many (*off, size, 0, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, 0, 0, num)) == UINT32_MAX)
         return false;
       *off += num;
       return true;
     case DDS_OP_VAL_2BY:
-      if ((*off = check_align_prim_many (*off, size, 1, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, 1, 1, num)) == UINT32_MAX)
         return false;
       if (bswap)
       {
@@ -2352,7 +2355,7 @@ static bool normalize_primarray (char * __restrict data, uint32_t * __restrict o
       *off += 2 * num;
       return true;
     case DDS_OP_VAL_4BY:
-      if ((*off = check_align_prim_many (*off, size, 2, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, 2, 2, num)) == UINT32_MAX)
         return false;
       if (bswap)
       {
@@ -2363,7 +2366,7 @@ static bool normalize_primarray (char * __restrict data, uint32_t * __restrict o
       *off += 4 * num;
       return true;
     case DDS_OP_VAL_8BY:
-      if ((*off = check_align_prim_many (*off, size, xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2 ? 2 : 3, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2 ? 2 : 3, 3, num)) == UINT32_MAX)
         return false;
       if (bswap)
       {
@@ -2390,7 +2393,7 @@ static bool normalize_enumarray (char * __restrict data, uint32_t * __restrict o
   switch (enum_sz)
   {
     case 1: {
-      if ((*off = check_align_prim_many (*off, size, 0, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, 0, 0, num)) == UINT32_MAX)
         return false;
       uint8_t * const xs = (uint8_t *) (data + *off);
       for (uint32_t i = 0; i < num; i++)
@@ -2400,7 +2403,7 @@ static bool normalize_enumarray (char * __restrict data, uint32_t * __restrict o
       break;
     }
     case 2: {
-      if ((*off = check_align_prim_many (*off, size, 1, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, 1, 1, num)) == UINT32_MAX)
         return false;
       uint16_t * const xs = (uint16_t *) (data + *off);
       for (uint32_t i = 0; i < num; i++)
@@ -2410,7 +2413,7 @@ static bool normalize_enumarray (char * __restrict data, uint32_t * __restrict o
       break;
     }
     case 4: {
-      if ((*off = check_align_prim_many (*off, size, 2, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, 2, 2, num)) == UINT32_MAX)
         return false;
       uint32_t * const xs = (uint32_t *) (data + *off);
       for (uint32_t i = 0; i < num; i++)
@@ -2431,7 +2434,7 @@ static bool normalize_bitmaskarray (char * __restrict data, uint32_t * __restric
   switch (DDS_OP_TYPE_SZ (insn))
   {
     case 1: {
-      if ((*off = check_align_prim_many (*off, size, 0, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, 0, 0, num)) == UINT32_MAX)
         return false;
       uint8_t * const xs = (uint8_t *) (data + *off);
       for (uint32_t i = 0; i < num; i++)
@@ -2441,7 +2444,7 @@ static bool normalize_bitmaskarray (char * __restrict data, uint32_t * __restric
       break;
     }
     case 2: {
-      if ((*off = check_align_prim_many (*off, size, 1, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, 1, 1, num)) == UINT32_MAX)
         return false;
       uint16_t * const xs = (uint16_t *) (data + *off);
       for (uint32_t i = 0; i < num; i++)
@@ -2451,7 +2454,7 @@ static bool normalize_bitmaskarray (char * __restrict data, uint32_t * __restric
       break;
     }
     case 4: {
-      if ((*off = check_align_prim_many (*off, size, 2, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, 2, 2, num)) == UINT32_MAX)
         return false;
       uint32_t * const xs = (uint32_t *) (data + *off);
       for (uint32_t i = 0; i < num; i++)
@@ -2461,7 +2464,7 @@ static bool normalize_bitmaskarray (char * __restrict data, uint32_t * __restric
       break;
     }
     case 8: {
-      if ((*off = check_align_prim_many (*off, size, xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2 ? 2 : 3, num)) == UINT32_MAX)
+      if ((*off = check_align_prim_many (*off, size, xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2 ? 2 : 3, 3, num)) == UINT32_MAX)
         return false;
       uint64_t * const xs = (uint64_t *) (data + *off);
       for (uint32_t i = 0; i < num; i++)
@@ -2644,13 +2647,13 @@ static bool normalize_uni_disc (uint32_t * __restrict val, char * __restrict dat
       return true;
     }
     case DDS_OP_VAL_1BY:
-      if ((*off = check_align_prim (*off, size, 0)) == UINT32_MAX)
+      if ((*off = check_align_prim (*off, size, 0, 0)) == UINT32_MAX)
         return false;
       *val = *((uint8_t *) (data + *off));
       (*off) += 1;
       return true;
     case DDS_OP_VAL_2BY:
-      if ((*off = check_align_prim (*off, size, 1)) == UINT32_MAX)
+      if ((*off = check_align_prim (*off, size, 1, 1)) == UINT32_MAX)
         return false;
       if (bswap)
         *((uint16_t *) (data + *off)) = ddsrt_bswap2u (*((uint16_t *) (data + *off)));
@@ -2658,7 +2661,7 @@ static bool normalize_uni_disc (uint32_t * __restrict val, char * __restrict dat
       (*off) += 2;
       return true;
     case DDS_OP_VAL_4BY:
-      if ((*off = check_align_prim (*off, size, 2)) == UINT32_MAX)
+      if ((*off = check_align_prim (*off, size, 2, 2)) == UINT32_MAX)
         return false;
       if (bswap)
         *((uint32_t *) (data + *off)) = ddsrt_bswap4u (*((uint32_t *) (data + *off)));
