@@ -46,6 +46,7 @@
 #include "dds/ddsc/dds_public_error.h"
 #include "dds/ddsc/dds_public_status.h"
 #include "dds/ddsc/dds_public_listener.h"
+#include "dds/ddsc/dds_public_dynamic_type.h"
 
 #if defined (__cplusplus)
 extern "C" {
@@ -4680,60 +4681,6 @@ dds_get_typeinfo (
 DDS_EXPORT dds_return_t
 dds_free_typeinfo (
   dds_typeinfo_t *type_info);
-
-
-typedef struct dds_dynamic_type {
-  void * x;
-  dds_return_t ret;
-} dds_dynamic_type_t;
-
-typedef struct dds_dynamic_type_struct_member_param {
-  bool is_key;
-} dds_dynamic_type_struct_member_param_t;
-
-typedef struct dds_dynamic_type_union_member_param {
-  bool is_default;
-  uint32_t n_labels;
-  int32_t *labels;
-} dds_dynamic_type_union_member_param_t;
-
-typedef enum dds_dynamic_primitive_kind
-{
-  DDS_DYNAMIC_BOOLEAN,
-  DDS_DYNAMIC_BYTE,
-  DDS_DYNAMIC_INT16,
-  DDS_DYNAMIC_INT32,
-  DDS_DYNAMIC_INT64,
-  DDS_DYNAMIC_UINT16,
-  DDS_DYNAMIC_UINT32,
-  DDS_DYNAMIC_UINT64,
-  DDS_DYNAMIC_FLOAT32,
-  DDS_DYNAMIC_FLOAT64,
-  DDS_DYNAMIC_FLOAT128,
-  DDS_DYNAMIC_INT8,
-  DDS_DYNAMIC_UINT8,
-  DDS_DYNAMIC_CHAR8,
-  DDS_DYNAMIC_CHAR16
-} dds_dynamic_primitive_kind_t;
-
-dds_dynamic_type_t dds_dynamic_type_create_struct (dds_entity_t entity, const char *type_name);
-dds_dynamic_type_t dds_dynamic_type_create_union (dds_entity_t entity, const char *type_name, dds_dynamic_primitive_kind_t discriminant_type_primitive);
-dds_dynamic_type_t dds_dynamic_type_create_union_enum (dds_entity_t entity, const char *type_name, dds_dynamic_type_t *discriminant_type_enum);
-dds_dynamic_type_t dds_dynamic_type_create_sequence (dds_entity_t entity, const char *type_name, dds_dynamic_type_t *element_type, uint32_t bound);
-dds_dynamic_type_t dds_dynamic_type_create_sequence_primitive (dds_entity_t entity, const char *type_name, dds_dynamic_primitive_kind_t element_type_primitive, uint32_t bound);
-dds_dynamic_type_t dds_dynamic_type_create_array (dds_entity_t entity, const char *type_name, dds_dynamic_type_t *element_type, uint32_t num_bounds, uint32_t *bounds);
-dds_dynamic_type_t dds_dynamic_type_create_array_primitive (dds_entity_t entity, const char *type_name, dds_dynamic_primitive_kind_t element_type_primitive, uint32_t num_bounds, uint32_t *bounds);
-dds_dynamic_type_t dds_dynamic_type_create_primitive (dds_entity_t entity, dds_dynamic_primitive_kind_t primitive_kind);
-dds_return_t dds_dynamic_type_add_struct_member (dds_dynamic_type_t *type, dds_dynamic_type_t *member_type, const char *member_name, dds_dynamic_type_struct_member_param_t *params);
-dds_return_t dds_dynamic_type_add_struct_member_primitive (dds_dynamic_type_t *type, dds_dynamic_primitive_kind_t member_type_primitive, const char *member_name, dds_dynamic_type_struct_member_param_t *params);
-dds_return_t dds_dynamic_type_add_union_member (dds_dynamic_type_t *type, dds_dynamic_type_t *member_type, const char *member_name, dds_dynamic_type_union_member_param_t *params);
-dds_return_t dds_dynamic_type_add_union_member_primitive (dds_dynamic_type_t *type, dds_dynamic_primitive_kind_t member_type_primitive, const char *member_name, dds_dynamic_type_union_member_param_t *params);
-
-dds_return_t dds_dynamic_type_register (dds_dynamic_type_t *type, dds_typeinfo_t **type_info);
-dds_dynamic_type_t * dds_dynamic_type_ref (dds_dynamic_type_t *type);
-void dds_dynamic_type_unref (dds_dynamic_type_t *type);
-dds_dynamic_type_t dds_dynamic_type_dup (const dds_dynamic_type_t *src);
-void dds_typeinfo_free (dds_typeinfo_t *type_info);
 
 #if defined (__cplusplus)
 }

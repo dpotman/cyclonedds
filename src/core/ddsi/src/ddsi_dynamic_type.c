@@ -95,7 +95,7 @@ static void dynamic_type_complete (struct ddsi_type **type)
   ddsrt_mutex_unlock (&gv->typelib_lock);
 }
 
-static void dynamic_type_init (struct ddsi_domaingv *gv, struct ddsi_type *type, uint8_t data_type, ddsi_typeid_kind_t kind)
+static void dynamic_type_init (struct ddsi_domaingv *gv, struct ddsi_type *type, DDS_XTypes_TypeKind data_type, ddsi_typeid_kind_t kind)
 {
   assert (type);
   type->gv = gv;
@@ -157,12 +157,12 @@ dds_return_t ddsi_dynamic_type_create_array (struct ddsi_domaingv *gv, struct dd
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struct ddsi_type **type, dds_dynamic_primitive_kind_t primitive_kind)
+dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struct ddsi_type **type, DDS_XTypes_TypeKind kind)
 {
   if ((*type = ddsrt_calloc (1, sizeof (**type))) == NULL)
     return DDS_RETCODE_OUT_OF_RESOURCES;
   uint8_t data_type = DDS_XTypes_TK_NONE;
-  switch (primitive_kind)
+  switch (kind)
   {
     case DDS_DYNAMIC_BOOLEAN: data_type = DDS_XTypes_TK_BOOLEAN; break;
     case DDS_DYNAMIC_BYTE: data_type = DDS_XTypes_TK_BYTE; break;
@@ -179,6 +179,9 @@ dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struc
     case DDS_DYNAMIC_UINT8: data_type = /* FIXME */ DDS_XTypes_TK_NONE; break;
     case DDS_DYNAMIC_CHAR8: data_type = DDS_XTypes_TK_CHAR8; break;
     case DDS_DYNAMIC_CHAR16: data_type = DDS_XTypes_TK_CHAR16; break;
+    default:
+      ddsrt_free (*type);
+      return DDS_RETCODE_BAD_PARAMETER;
   }
   if (data_type == DDS_XTypes_TK_NONE)
     return DDS_RETCODE_BAD_PARAMETER;
@@ -187,7 +190,7 @@ dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struc
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, dds_dynamic_type_struct_member_param_t *params)
+dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, struct ddsi_dynamic_type_struct_member_param params)
 {
   assert (type->state == DDSI_TYPE_CONSTRUCTING);
   assert (type->xt._d == DDS_XTypes_TK_STRUCTURE);
@@ -204,14 +207,14 @@ dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct
   dynamic_type_complete (member_type);
   m->type = *member_type;
   m->id = type->xt._u.structure.members.length - 1;
-  if (params->is_key)
+  if (params.is_key)
     m->flags = DDS_XTypes_IS_KEY;
   ddsrt_strlcpy (m->detail.name, member_name, sizeof (m->detail.name));
 
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, dds_dynamic_type_union_member_param_t *params)
+dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, struct ddsi_dynamic_type_union_member_param params)
 {
   assert (type->state == DDSI_TYPE_CONSTRUCTING);
   assert (type->gv == (*member_type)->gv);
@@ -230,16 +233,17 @@ dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct 
   m->type = *member_type;
   m->id = type->xt._u.union_type.members.length - 1;
   ddsrt_strlcpy (m->detail.name, member_name, sizeof (m->detail.name));
-  if (params->is_default)
+  if (params.is_default)
     m->flags = DDS_XTypes_IS_DEFAULT;
   else
   {
-    m->label_seq._maximum = m->label_seq._length = params->n_labels;
-    m->label_seq._buffer = ddsrt_malloc (params->n_labels * sizeof (*m->label_seq._buffer));
+    assert (sizeof (*m->label_seq._buffer) == sizeof (*params.labels));
+    m->label_seq._maximum = m->label_seq._length = params.n_labels;
+    m->label_seq._buffer = ddsrt_malloc (params.n_labels * sizeof (*m->label_seq._buffer));
     if (m->label_seq._buffer == NULL)
       return DDS_RETCODE_OUT_OF_RESOURCES;
     m->label_seq._release = true;
-    memcpy (m->label_seq._buffer, params->labels, params->n_labels * sizeof (*m->label_seq._buffer));
+    memcpy (m->label_seq._buffer, params.labels, params.n_labels * sizeof (*m->label_seq._buffer));
   }
   return DDS_RETCODE_OK;
 }

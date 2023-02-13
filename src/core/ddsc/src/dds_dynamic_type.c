@@ -17,10 +17,6 @@
 #include "dds/ddsi/ddsi_typelib.h"
 #include "dds__entity.h"
 
-static dds_dynamic_type_struct_member_param_t default_struct_params = {
-  .is_key = false
-};
-
 static struct ddsi_domaingv * get_entity_gv (dds_entity_t entity)
 {
   struct ddsi_domaingv *gv = NULL;
@@ -31,128 +27,189 @@ static struct ddsi_domaingv * get_entity_gv (dds_entity_t entity)
   return gv;
 }
 
-static dds_dynamic_type_t create_primitive_impl (struct ddsi_domaingv *gv, dds_dynamic_primitive_kind_t primitive_kind)
+static DDS_XTypes_TypeKind typekind_to_xtkind (dds_dynamic_type_kind_t type_kind)
 {
-  dds_dynamic_type_t type;
-  type.ret = ddsi_dynamic_type_create_primitive (gv, (struct ddsi_type **) &type.x, primitive_kind);
+  switch (type_kind) {
+    case DDS_DYNAMIC_NONE:        return DDS_XTypes_TK_NONE;
+    case DDS_DYNAMIC_BOOLEAN:     return DDS_XTypes_TK_BOOLEAN;
+    case DDS_DYNAMIC_BYTE:        return DDS_XTypes_TK_BYTE;
+    case DDS_DYNAMIC_INT16:       return DDS_XTypes_TK_INT16;
+    case DDS_DYNAMIC_INT32:       return DDS_XTypes_TK_INT32;
+    case DDS_DYNAMIC_INT64:       return DDS_XTypes_TK_INT64;
+    case DDS_DYNAMIC_UINT16:      return DDS_XTypes_TK_UINT16;
+    case DDS_DYNAMIC_UINT32:      return DDS_XTypes_TK_UINT32;
+    case DDS_DYNAMIC_UINT64:      return DDS_XTypes_TK_UINT64;
+    case DDS_DYNAMIC_FLOAT32:     return DDS_XTypes_TK_FLOAT32;
+    case DDS_DYNAMIC_FLOAT64:     return DDS_XTypes_TK_FLOAT64;
+    case DDS_DYNAMIC_FLOAT128:    return DDS_XTypes_TK_FLOAT128;
+    case DDS_DYNAMIC_INT8:        return 0; // FIXME DDS_XTypes_TK_INT8;
+    case DDS_DYNAMIC_UINT8:       return 0; // FIXME DDS_XTypes_TK_UINT8;
+    case DDS_DYNAMIC_CHAR8:       return DDS_XTypes_TK_CHAR8;
+    case DDS_DYNAMIC_CHAR16:      return DDS_XTypes_TK_CHAR16;
+    case DDS_DYNAMIC_STRING8:     return DDS_XTypes_TK_STRING8;
+    case DDS_DYNAMIC_STRING16:    return DDS_XTypes_TK_STRING16;
+    case DDS_DYNAMIC_ENUMERATION: return DDS_XTypes_TK_ENUM;
+    case DDS_DYNAMIC_BITMASK:     return DDS_XTypes_TK_BITMASK;
+    case DDS_DYNAMIC_ALIAS:       return DDS_XTypes_TK_ALIAS;
+    case DDS_DYNAMIC_ARRAY:       return DDS_XTypes_TK_ARRAY;
+    case DDS_DYNAMIC_SEQUENCE:    return DDS_XTypes_TK_SEQUENCE;
+    case DDS_DYNAMIC_MAP:         return DDS_XTypes_TK_MAP;
+    case DDS_DYNAMIC_STRUCTURE:   return DDS_XTypes_TK_STRUCTURE;
+    case DDS_DYNAMIC_UNION:       return DDS_XTypes_TK_UNION;
+    case DDS_DYNAMIC_BITSET:      return DDS_XTypes_TK_BITSET;
+  }
+  return DDS_XTypes_TK_NONE;
+}
+
+static dds_dynamic_type_kind_t xtkind_to_typekind (DDS_XTypes_TypeKind xt_kind)
+{
+  switch (xt_kind) {
+    case DDS_XTypes_TK_BOOLEAN: return DDS_DYNAMIC_BOOLEAN;
+    case DDS_XTypes_TK_BYTE: return DDS_DYNAMIC_BYTE;
+    case DDS_XTypes_TK_INT16: return DDS_DYNAMIC_INT16;
+    case DDS_XTypes_TK_INT32: return DDS_DYNAMIC_INT32;
+    case DDS_XTypes_TK_INT64: return DDS_DYNAMIC_INT64;
+    case DDS_XTypes_TK_UINT16: return DDS_DYNAMIC_UINT16;
+    case DDS_XTypes_TK_UINT32: return DDS_DYNAMIC_UINT32;
+    case DDS_XTypes_TK_UINT64: return DDS_DYNAMIC_UINT64;
+    case DDS_XTypes_TK_FLOAT32: return DDS_DYNAMIC_FLOAT32;
+    case DDS_XTypes_TK_FLOAT64: return DDS_DYNAMIC_FLOAT64;
+    case DDS_XTypes_TK_FLOAT128: return DDS_DYNAMIC_FLOAT128;
+    // FIXME DDS_XTypes_TK_INT8: return DDS_DYNAMIC_INT8;
+    // FIXME DDS_XTypes_TK_UINT8: return DDS_DYNAMIC_UINT8;
+    case DDS_XTypes_TK_CHAR8: return DDS_DYNAMIC_CHAR8;
+    case DDS_XTypes_TK_CHAR16: return DDS_DYNAMIC_CHAR16;
+    case DDS_XTypes_TK_STRING8: return DDS_DYNAMIC_STRING8;
+    case DDS_XTypes_TK_STRING16: return DDS_DYNAMIC_STRING16;
+    case DDS_XTypes_TK_ENUM: return DDS_DYNAMIC_ENUMERATION;
+    case DDS_XTypes_TK_BITMASK: return DDS_DYNAMIC_BITMASK;
+    case DDS_XTypes_TK_ALIAS: return DDS_DYNAMIC_ALIAS;
+    case DDS_XTypes_TK_ARRAY: return DDS_DYNAMIC_ARRAY;
+    case DDS_XTypes_TK_SEQUENCE: return DDS_DYNAMIC_SEQUENCE;
+    case DDS_XTypes_TK_MAP: return DDS_DYNAMIC_MAP;
+    case DDS_XTypes_TK_STRUCTURE: return DDS_DYNAMIC_STRUCTURE;
+    case DDS_XTypes_TK_UNION: return DDS_DYNAMIC_UNION;
+    case DDS_XTypes_TK_BITSET: return DDS_DYNAMIC_BITSET;
+  }
+  return DDS_DYNAMIC_NONE;
+}
+
+static dds_dynamic_type_t dyntype_from_typeref (struct ddsi_domaingv *gv, dds_dynamic_type_spec_t type_spec)
+{
+  switch (type_spec.kind)
+  {
+    case DDS_DYNAMIC_TYPE_KIND_PRIMITIVE: {
+      dds_dynamic_type_t type;
+      type.ret = ddsi_dynamic_type_create_primitive (gv, (struct ddsi_type **) &type.x, typekind_to_xtkind (type_spec.type.primitive));
+      return type;
+    }
+    case DDS_DYNAMIC_TYPE_KIND_DEFINITION:
+      return type_spec.type.type;
+  }
+
+  return (dds_dynamic_type_t) { .ret = DDS_RETCODE_BAD_PARAMETER };
+}
+
+dds_dynamic_type_t dds_dynamic_type_create (dds_entity_t entity, dds_dynamic_type_descriptor_t descriptor)
+{
+  struct ddsi_domaingv *gv = get_entity_gv (entity);
+  dds_dynamic_type_t type = { .ret = DDS_RETCODE_BAD_PARAMETER };
+
+  switch (descriptor.kind)
+  {
+    case DDS_DYNAMIC_NONE:
+      type.ret = DDS_RETCODE_BAD_PARAMETER;
+      break;
+
+    case DDS_DYNAMIC_BOOLEAN:
+    case DDS_DYNAMIC_BYTE:
+    case DDS_DYNAMIC_INT16:
+    case DDS_DYNAMIC_INT32:
+    case DDS_DYNAMIC_INT64:
+    case DDS_DYNAMIC_UINT16:
+    case DDS_DYNAMIC_UINT32:
+    case DDS_DYNAMIC_UINT64:
+    case DDS_DYNAMIC_FLOAT32:
+    case DDS_DYNAMIC_FLOAT64:
+    case DDS_DYNAMIC_FLOAT128:
+    case DDS_DYNAMIC_INT8:
+    case DDS_DYNAMIC_UINT8:
+    case DDS_DYNAMIC_CHAR8:
+      type.ret = ddsi_dynamic_type_create_primitive (gv, (struct ddsi_type **) &type.x, typekind_to_xtkind (descriptor.kind));
+      break;
+    case DDS_DYNAMIC_STRING8:
+    case DDS_DYNAMIC_ENUMERATION:
+    case DDS_DYNAMIC_BITMASK:
+    case DDS_DYNAMIC_ALIAS:
+      type.ret = DDS_RETCODE_UNSUPPORTED;
+      break;
+    case DDS_DYNAMIC_ARRAY: {
+      dds_dynamic_type_t element_type = dyntype_from_typeref (gv, descriptor.element_type);
+      type.ret = ddsi_dynamic_type_create_array (gv, (struct ddsi_type **) &type.x, descriptor.name, (struct ddsi_type **) &element_type.x, descriptor.num_bounds, descriptor.bounds);
+      break;
+    }
+    case DDS_DYNAMIC_SEQUENCE:
+      if (descriptor.num_bounds > 1)
+        type.ret = DDS_RETCODE_BAD_PARAMETER;
+      else
+      {
+        dds_dynamic_type_t element_type = dyntype_from_typeref (gv, descriptor.element_type);
+        type.ret = ddsi_dynamic_type_create_sequence (gv, (struct ddsi_type **) &type.x, descriptor.name, (struct ddsi_type **) &element_type.x, descriptor.num_bounds > 0 ? descriptor.bounds[0] : 0);
+      }
+      break;
+    case DDS_DYNAMIC_STRUCTURE:
+      type.ret = ddsi_dynamic_type_create_struct (gv, (struct ddsi_type **) &type.x, descriptor.name);
+      break;
+    case DDS_DYNAMIC_UNION: {
+      dds_dynamic_type_t discriminant_type = dyntype_from_typeref (gv, descriptor.discriminator_type);
+      type.ret = ddsi_dynamic_type_create_union (gv, (struct ddsi_type **) &type.x, descriptor.name, (struct ddsi_type **) &discriminant_type.x);
+      break;
+    }
+
+    case DDS_DYNAMIC_CHAR16:
+    case DDS_DYNAMIC_STRING16:
+    case DDS_DYNAMIC_MAP:
+    case DDS_DYNAMIC_BITSET:
+      type.ret = DDS_RETCODE_UNSUPPORTED;
+      break;
+  }
+
   return type;
 }
 
-dds_dynamic_type_t dds_dynamic_type_create_primitive (dds_entity_t entity, dds_dynamic_primitive_kind_t primitive_kind)
-{
-  return create_primitive_impl (get_entity_gv (entity), primitive_kind);
-}
-
-dds_dynamic_type_t dds_dynamic_type_create_struct (dds_entity_t entity, const char *type_name)
-{
-  dds_dynamic_type_t type;
-  type.ret = ddsi_dynamic_type_create_struct (get_entity_gv (entity), (struct ddsi_type **) &type.x, type_name);
-  return type;
-}
-
-static dds_dynamic_type_t create_union_impl (dds_entity_t entity, const char *type_name, dds_dynamic_type_t *discriminant_type)
-{
-  dds_dynamic_type_t type;
-  type.ret = ddsi_dynamic_type_create_union (get_entity_gv (entity), (struct ddsi_type **) &type.x, type_name, (struct ddsi_type **) &discriminant_type->x);
-  return type;
-}
-
-dds_dynamic_type_t dds_dynamic_type_create_union (dds_entity_t entity, const char *type_name, dds_dynamic_primitive_kind_t discriminant_type_primitive)
-{
-  dds_dynamic_type_t discriminant_type = dds_dynamic_type_create_primitive (entity, discriminant_type_primitive);
-  if (discriminant_type.ret != DDS_RETCODE_OK)
-    return (dds_dynamic_type_t) { .x = NULL, .ret = discriminant_type.ret };
-  return create_union_impl (entity, type_name, &discriminant_type);
-}
-
-dds_dynamic_type_t dds_dynamic_type_create_union_enum (dds_entity_t entity, const char *type_name, dds_dynamic_type_t *discriminant_type_enum)
-{
-  return create_union_impl (entity, type_name, discriminant_type_enum);
-}
-
-dds_dynamic_type_t dds_dynamic_type_create_sequence (dds_entity_t entity, const char *type_name, dds_dynamic_type_t *element_type, uint32_t bound)
-{
-  dds_dynamic_type_t type;
-  type.ret = ddsi_dynamic_type_create_sequence (get_entity_gv (entity), (struct ddsi_type **) &type.x, type_name, (struct ddsi_type **) &element_type->x, bound);
-  return type;
-}
-
-dds_dynamic_type_t dds_dynamic_type_create_sequence_primitive (dds_entity_t entity, const char *type_name, dds_dynamic_primitive_kind_t element_type_primitive, uint32_t bound)
-{
-  dds_dynamic_type_t element_type = dds_dynamic_type_create_primitive (entity, element_type_primitive);
-  if (element_type.ret != DDS_RETCODE_OK)
-    return (dds_dynamic_type_t) { .x = NULL, .ret = element_type.ret };
-  return dds_dynamic_type_create_sequence (entity, type_name, &element_type, bound);
-}
-
-dds_dynamic_type_t dds_dynamic_type_create_array (dds_entity_t entity, const char *type_name, dds_dynamic_type_t *element_type, uint32_t num_bounds, uint32_t *bounds)
-{
-  dds_dynamic_type_t type;
-  type.ret = ddsi_dynamic_type_create_array (get_entity_gv (entity), (struct ddsi_type **) &type.x, type_name, (struct ddsi_type **) &element_type->x, num_bounds, bounds);
-  return type;
-}
-
-dds_dynamic_type_t dds_dynamic_type_create_array_primitive (dds_entity_t entity, const char *type_name, dds_dynamic_primitive_kind_t element_type_primitive, uint32_t num_bounds, uint32_t *bounds)
-{
-  dds_dynamic_type_t element_type = dds_dynamic_type_create_primitive (entity, element_type_primitive);
-  if (element_type.ret != DDS_RETCODE_OK)
-    return (dds_dynamic_type_t) { .x = NULL, .ret = element_type.ret };
-  return dds_dynamic_type_create_array (entity, type_name, &element_type, num_bounds, bounds);
-}
-
-dds_return_t dds_dynamic_type_add_struct_member (dds_dynamic_type_t *type, dds_dynamic_type_t *member_type, const char *member_name, dds_dynamic_type_struct_member_param_t *params)
+dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_type_member_descriptor_t member_descriptor)
 {
   if (type->ret != DDS_RETCODE_OK)
     return type->ret;
-  if (member_type->ret != DDS_RETCODE_OK)
-  {
-    type->ret = member_type->ret;
-    return type->ret;
-  }
-  if (params == NULL)
-    params = &default_struct_params;
-  type->ret = ddsi_dynamic_type_add_struct_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type->x, member_name, params);
-  return type->ret;
-}
 
-dds_return_t dds_dynamic_type_add_struct_member_primitive (dds_dynamic_type_t *type, dds_dynamic_primitive_kind_t member_type_primitive, const char *member_name, dds_dynamic_type_struct_member_param_t *params)
-{
-  dds_dynamic_type_t member_type = create_primitive_impl (ddsi_type_get_gv ((struct ddsi_type *) type->x), member_type_primitive);
+  dds_dynamic_type_t member_type = dyntype_from_typeref (ddsi_type_get_gv ((struct ddsi_type *) type->x), member_descriptor.type);
   if (member_type.ret != DDS_RETCODE_OK)
   {
     type->ret = member_type.ret;
-    return type->ret;
   }
-  return dds_dynamic_type_add_struct_member (type, &member_type, member_name, params);
-}
+  else
+  {
+    switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x)))
+    {
+      case DDS_DYNAMIC_ALIAS:
+      case DDS_DYNAMIC_BITMASK:
+      case DDS_DYNAMIC_ENUMERATION:
+      case DDS_DYNAMIC_UNION:
+        type->ret = ddsi_dynamic_type_add_union_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type.x, member_descriptor.name,
+            (struct ddsi_dynamic_type_union_member_param) { .is_default = member_descriptor.default_label, .labels = member_descriptor.labels, .n_labels = member_descriptor.num_labels });
+        break;
 
-dds_return_t dds_dynamic_type_add_union_member (dds_dynamic_type_t *type, dds_dynamic_type_t *member_type, const char *member_name, dds_dynamic_type_union_member_param_t *params)
-{
-  if (type->ret != DDS_RETCODE_OK)
-    return type->ret;
-  if (member_type->ret != DDS_RETCODE_OK)
-  {
-    type->ret = member_type->ret;
-    return type->ret;
+      case DDS_DYNAMIC_STRUCTURE:
+        type->ret = ddsi_dynamic_type_add_struct_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type.x, member_descriptor.name,
+            (struct ddsi_dynamic_type_struct_member_param) { .is_key = false });
+        break;
+
+      default:
+        type->ret = DDS_RETCODE_PRECONDITION_NOT_MET;
+        break;
+    }
   }
-  if (params == NULL || (params->n_labels == 0 && !params->is_default))
-  {
-    type->ret = DDS_RETCODE_BAD_PARAMETER;
-    return type->ret;
-  }
-  type->ret = ddsi_dynamic_type_add_union_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type->x, member_name, params);
   return type->ret;
-}
-
-dds_return_t dds_dynamic_type_add_union_member_primitive (dds_dynamic_type_t *type, dds_dynamic_primitive_kind_t member_type_primitive, const char *member_name, dds_dynamic_type_union_member_param_t *params)
-{
-  dds_dynamic_type_t member_type = create_primitive_impl (ddsi_type_get_gv ((struct ddsi_type *) type->x), member_type_primitive);
-  if (member_type.ret != DDS_RETCODE_OK)
-  {
-    type->ret = member_type.ret;
-    return type->ret;
-  }
-  return dds_dynamic_type_add_union_member (type, &member_type, member_name, params);
 }
 
 dds_return_t dds_dynamic_type_register (dds_dynamic_type_t *type, dds_typeinfo_t **type_info)
@@ -162,10 +219,17 @@ dds_return_t dds_dynamic_type_register (dds_dynamic_type_t *type, dds_typeinfo_t
   return ddsi_dynamic_type_register ((struct ddsi_type **) &type->x, type_info);
 }
 
-dds_dynamic_type_t * dds_dynamic_type_ref (dds_dynamic_type_t *type)
+dds_dynamic_type_t dds_dynamic_type_ref (dds_dynamic_type_t *type)
 {
-  type->x = ddsi_dynamic_type_ref ((struct ddsi_type *) type->x);
-  return type;
+  dds_dynamic_type_t ref;
+  if (type->ret != DDS_RETCODE_OK)
+    ref.ret = type->ret;
+  else
+  {
+    ref.ret = DDS_RETCODE_OK;
+    ref.x = ddsi_dynamic_type_ref ((struct ddsi_type *) type->x);
+  }
+  return ref;
 }
 
 void dds_dynamic_type_unref (dds_dynamic_type_t *type)
@@ -179,10 +243,4 @@ dds_dynamic_type_t dds_dynamic_type_dup (const dds_dynamic_type_t *src)
   dst.x = ddsi_dynamic_type_dup ((struct ddsi_type *) src->x);
   dst.ret = src->ret;
   return dst;
-}
-
-// FIXME: move to dds_domain.c?
-void dds_typeinfo_free (dds_typeinfo_t *type_info)
-{
-  ddsi_typeinfo_free (type_info);
 }

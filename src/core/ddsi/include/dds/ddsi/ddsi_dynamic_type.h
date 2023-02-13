@@ -22,14 +22,24 @@
 extern "C" {
 #endif
 
+struct ddsi_dynamic_type_struct_member_param {
+  bool is_key;
+};
+
+struct ddsi_dynamic_type_union_member_param {
+  bool is_default;
+  uint32_t n_labels;
+  int32_t *labels;
+};
+
 dds_return_t ddsi_dynamic_type_create_struct (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name);
 dds_return_t ddsi_dynamic_type_create_union (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **discriminant_type);
 dds_return_t ddsi_dynamic_type_create_sequence (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **element_type, uint32_t bound);
 dds_return_t ddsi_dynamic_type_create_array (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **element_type, uint32_t num_bounds, uint32_t *bounds);
-dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struct ddsi_type **type, dds_dynamic_primitive_kind_t primitive_kind);
+dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struct ddsi_type **type, DDS_XTypes_TypeKind kind);
 
-dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, dds_dynamic_type_struct_member_param_t *params);
-dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, dds_dynamic_type_union_member_param_t *params);
+dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, struct ddsi_dynamic_type_struct_member_param params);
+dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, struct ddsi_dynamic_type_union_member_param params);
 
 dds_return_t ddsi_dynamic_type_register (struct ddsi_type **type, ddsi_typeinfo_t **type_info);
 struct ddsi_type * ddsi_dynamic_type_ref (struct ddsi_type *type);
