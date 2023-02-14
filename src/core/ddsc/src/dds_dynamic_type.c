@@ -195,13 +195,25 @@ dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_
       case DDS_DYNAMIC_BITMASK:
       case DDS_DYNAMIC_ENUMERATION:
       case DDS_DYNAMIC_UNION:
-        type->ret = ddsi_dynamic_type_add_union_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type.x, member_descriptor.name,
-            (struct ddsi_dynamic_type_union_member_param) { .is_default = member_descriptor.default_label, .labels = member_descriptor.labels, .n_labels = member_descriptor.num_labels });
+        type->ret = ddsi_dynamic_type_add_union_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type.x,
+            (struct ddsi_dynamic_type_union_member_param) {
+              .id = member_descriptor.id,
+              .name = member_descriptor.name,
+              .index = member_descriptor.index,
+              .is_default = member_descriptor.default_label,
+              .labels = member_descriptor.labels,
+              .n_labels = member_descriptor.num_labels
+            });
         break;
 
       case DDS_DYNAMIC_STRUCTURE:
-        type->ret = ddsi_dynamic_type_add_struct_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type.x, member_descriptor.name,
-            (struct ddsi_dynamic_type_struct_member_param) { .is_key = false });
+        type->ret = ddsi_dynamic_type_add_struct_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type.x,
+            (struct ddsi_dynamic_type_struct_member_param) {
+              .id = member_descriptor.id,
+              .name = member_descriptor.name,
+              .index = member_descriptor.index,
+              .is_key = false
+            });
         break;
 
       default:

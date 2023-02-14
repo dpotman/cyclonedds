@@ -190,35 +190,83 @@ dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struc
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, struct ddsi_dynamic_type_struct_member_param params)
+dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, struct ddsi_dynamic_type_struct_member_param params)
 {
   assert (type->state == DDSI_TYPE_CONSTRUCTING);
   assert (type->xt._d == DDS_XTypes_TK_STRUCTURE);
+  if (type->xt._u.structure.members.length == UINT32_MAX)
+    return DDS_RETCODE_BAD_PARAMETER;
 
-  type->xt._u.structure.members.length++;
+  // check member id or set to max+1
+  uint32_t member_id = 0;
+  if (params.id == DDS_DYNAMIC_MEMBER_ID_INVALID)
+  {
+    for (uint32_t n = 0; n < type->xt._u.structure.members.length; n++)
+      if (type->xt._u.structure.members.seq[n].id >= member_id)
+        member_id = type->xt._u.structure.members.seq[n].id + 1;
+  }
+  else
+  {
+    /* the 4 most significant bits in the member id are reserved
+       (used in EMHEADER) */
+    if (params.id > DDS_DYNAMIC_MEMBER_ID_MAX)
+      return DDS_RETCODE_BAD_PARAMETER;
+    for (uint32_t n = 0; n < type->xt._u.structure.members.length; n++)
+      if (type->xt._u.structure.members.seq[n].id == params.id)
+        return DDS_RETCODE_BAD_PARAMETER;
+    member_id = params.id;
+  }
+
   struct xt_struct_member *tmp = ddsrt_realloc (type->xt._u.structure.members.seq,
-      type->xt._u.structure.members.length * sizeof (*type->xt._u.structure.members.seq));
+      (type->xt._u.structure.members.length + 1) * sizeof (*type->xt._u.structure.members.seq));
   if (tmp == NULL)
     return DDS_RETCODE_OUT_OF_RESOURCES;
+  type->xt._u.structure.members.length++;
   type->xt._u.structure.members.seq = tmp;
 
-  struct xt_struct_member *m = &type->xt._u.structure.members.seq[type->xt._u.structure.members.length - 1];
+  /* Set max index and move current members if required */
+  uint32_t member_index = params.index;
+  if (member_index > type->xt._u.structure.members.length - 1)
+    member_index = type->xt._u.structure.members.length - 1;
+  if (member_index < type->xt._u.structure.members.length - 1)
+  {
+    memmove (&type->xt._u.structure.members.seq[member_index + 1], &type->xt._u.structure.members.seq[member_index],
+        (type->xt._u.structure.members.length - 1 - member_index) * sizeof (*type->xt._u.structure.members.seq));
+  }
+
+  struct xt_struct_member *m = &type->xt._u.structure.members.seq[member_index];
   memset (m, 0, sizeof (*m));
   dynamic_type_complete (member_type);
   m->type = *member_type;
-  m->id = type->xt._u.structure.members.length - 1;
+  m->id = member_id;
   if (params.is_key)
     m->flags = DDS_XTypes_IS_KEY;
-  ddsrt_strlcpy (m->detail.name, member_name, sizeof (m->detail.name));
+  ddsrt_strlcpy (m->detail.name, params.name, sizeof (m->detail.name));
 
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, struct ddsi_dynamic_type_union_member_param params)
+dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, struct ddsi_dynamic_type_union_member_param params)
 {
   assert (type->state == DDSI_TYPE_CONSTRUCTING);
   assert (type->gv == (*member_type)->gv);
   assert (type->xt._d == DDS_XTypes_TK_UNION);
+
+  // check member id or set to max+1
+  uint32_t member_id = 0;
+  if (params.id == DDS_DYNAMIC_MEMBER_ID_INVALID)
+  {
+    for (uint32_t n = 0; n < type->xt._u.union_type.members.length; n++)
+      if (type->xt._u.union_type.members.seq[n].id >= member_id)
+        member_id = type->xt._u.union_type.members.seq[n].id + 1;
+  }
+  else
+  {
+    for (uint32_t n = 0; n < type->xt._u.union_type.members.length; n++)
+      if (type->xt._u.union_type.members.seq[n].id == params.id)
+        return DDS_RETCODE_BAD_PARAMETER;
+    member_id = params.id;
+  }
 
   type->xt._u.union_type.members.length++;
   struct xt_union_member *tmp = ddsrt_realloc (type->xt._u.union_type.members.seq,
@@ -227,12 +275,22 @@ dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct 
     return DDS_RETCODE_OUT_OF_RESOURCES;
   type->xt._u.union_type.members.seq = tmp;
 
-  struct xt_union_member *m = &type->xt._u.union_type.members.seq[type->xt._u.union_type.members.length - 1];
+  /* Set max index and move current members if required */
+  uint32_t member_index = params.index;
+  if (member_index > type->xt._u.union_type.members.length - 1)
+    member_index = type->xt._u.union_type.members.length - 1;
+  if (member_index < type->xt._u.union_type.members.length - 1)
+  {
+    memmove (&type->xt._u.union_type.members.seq[member_index + 1], &type->xt._u.union_type.members.seq[member_index],
+        (type->xt._u.union_type.members.length - 1 - member_index) * sizeof (*type->xt._u.union_type.members.seq));
+  }
+
+  struct xt_union_member *m = &type->xt._u.union_type.members.seq[member_index];
   memset (m, 0, sizeof (*m));
   dynamic_type_complete (member_type);
   m->type = *member_type;
-  m->id = type->xt._u.union_type.members.length - 1;
-  ddsrt_strlcpy (m->detail.name, member_name, sizeof (m->detail.name));
+  m->id = member_id;
+  ddsrt_strlcpy (m->detail.name, params.name, sizeof (m->detail.name));
   if (params.is_default)
     m->flags = DDS_XTypes_IS_DEFAULT;
   else

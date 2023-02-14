@@ -23,10 +23,16 @@ extern "C" {
 #endif
 
 struct ddsi_dynamic_type_struct_member_param {
+  uint32_t id;
+  const char *name;
+  uint32_t index;
   bool is_key;
 };
 
 struct ddsi_dynamic_type_union_member_param {
+  uint32_t id;
+  const char *name;
+  uint32_t index;
   bool is_default;
   uint32_t n_labels;
   int32_t *labels;
@@ -38,8 +44,8 @@ dds_return_t ddsi_dynamic_type_create_sequence (struct ddsi_domaingv *gv, struct
 dds_return_t ddsi_dynamic_type_create_array (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **element_type, uint32_t num_bounds, uint32_t *bounds);
 dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struct ddsi_type **type, DDS_XTypes_TypeKind kind);
 
-dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, struct ddsi_dynamic_type_struct_member_param params);
-dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, const char *member_name, struct ddsi_dynamic_type_union_member_param params);
+dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, struct ddsi_dynamic_type_struct_member_param params);
+dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct ddsi_type **member_type, struct ddsi_dynamic_type_union_member_param params);
 
 dds_return_t ddsi_dynamic_type_register (struct ddsi_type **type, ddsi_typeinfo_t **type_info);
 struct ddsi_type * ddsi_dynamic_type_ref (struct ddsi_type *type);

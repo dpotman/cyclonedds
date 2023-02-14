@@ -16,38 +16,65 @@ int main (int argc, char ** argv)
   dds_dynamic_type_add_member (&dsubstruct, DDS_DYNAMIC_MEMBER_PRIM(DDS_DYNAMIC_UINT16, "submember_uint16"));
 
   dds_dynamic_type_t dsubunion = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_UNION, .discriminator_type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_INT32), .name = "dynamic_subunion" });
-  dds_dynamic_type_add_member (&dsubunion, (dds_dynamic_type_member_descriptor_t) { .type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_INT32), .name = "member_int32", .labels = (int32_t[]) { 1, 2 }, .num_labels = 2 });
-  dds_dynamic_type_add_member (&dsubunion, (dds_dynamic_type_member_descriptor_t) { .type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_FLOAT64), .name = "member_float64", .labels = (int32_t[]) { 9, 10 }, .num_labels = 2 });
-  dds_dynamic_type_add_member (&dsubunion, (dds_dynamic_type_member_descriptor_t) { .type = DDS_DYNAMIC_TYPE_SPEC(dds_dynamic_type_ref (&dsubstruct)), .name = "submember_substruct", .labels = (int32_t[]) { 15, 16 }, .num_labels = 2 });
-  dds_dynamic_type_add_member (&dsubunion, (dds_dynamic_type_member_descriptor_t) { .type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_BOOLEAN), .name = "submember_default", .default_label = true });
+  dds_dynamic_type_add_member (&dsubunion, DDS_DYNAMIC_UNION_MEMBER_PRIM(DDS_DYNAMIC_INT32, "member_int32", 2, ((int32_t[]) { 1, 2 })));
+  dds_dynamic_type_add_member (&dsubunion, DDS_DYNAMIC_UNION_MEMBER_ID_PRIM(DDS_DYNAMIC_FLOAT64, "member_float64", 100 /* has specific member id */, 2, ((int32_t[]) { 9, 10 })));
+  dds_dynamic_type_add_member (&dsubunion, DDS_DYNAMIC_UNION_MEMBER(dds_dynamic_type_ref (&dsubstruct), "submember_substruct", 2, ((int32_t[]) { 15, 16 })));
+  dds_dynamic_type_add_member (&dsubunion, DDS_DYNAMIC_UNION_MEMBER_DEFAULT_PRIM(DDS_DYNAMIC_BOOLEAN, "submember_default"));
 
   dds_dynamic_type_t dsubunion2 = dds_dynamic_type_dup (&dsubunion);
-  dds_dynamic_type_add_member (&dsubunion2, (dds_dynamic_type_member_descriptor_t) { .type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_BOOLEAN), .name = "submember_bool", .labels = (int32_t[]) { 5 }, .num_labels = 1 });
+  dds_dynamic_type_add_member (&dsubunion2, DDS_DYNAMIC_UNION_MEMBER_PRIM(DDS_DYNAMIC_BOOLEAN, "submember_bool", 1, ((int32_t[]) { 5 })));
 
   dds_dynamic_type_t dsubsubstruct = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_STRUCTURE, .name = "dynamic_subsubstruct" });
-  dds_dynamic_type_add_member (&dsubsubstruct, DDS_DYNAMIC_MEMBER(DDS_DYNAMIC_TYPE_SPEC(dsubunion2), "subsubmember_union"));
+  dds_dynamic_type_add_member (&dsubsubstruct, DDS_DYNAMIC_MEMBER(dsubunion2, "subsubmember_union"));
 
   // Sequences
   dds_dynamic_type_t dseq = dds_dynamic_type_create (participant,
-      (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_SEQUENCE, .name = "dynamic_seq", .element_type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_INT32), .bounds = (uint32_t[]) { 10 }, .num_bounds = 1 } );
+      (dds_dynamic_type_descriptor_t) {
+        .kind = DDS_DYNAMIC_SEQUENCE,
+        .name = "dynamic_seq",
+        .element_type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_INT32),
+        .bounds = (uint32_t[]) { 10 },
+        .num_bounds = 1
+      });
   dds_dynamic_type_t dseq2 = dds_dynamic_type_create (participant,
-      (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_SEQUENCE, .name = "dynamic_seq2", .element_type = DDS_DYNAMIC_TYPE_SPEC(dds_dynamic_type_ref (&dsubstruct)), .num_bounds = 0 } );
+      (dds_dynamic_type_descriptor_t) {
+        .kind = DDS_DYNAMIC_SEQUENCE,
+        .name = "dynamic_seq2",
+        .element_type = DDS_DYNAMIC_TYPE_SPEC(dds_dynamic_type_ref (&dsubstruct)),
+        .num_bounds = 0
+      });
 
   // Arrays
   dds_dynamic_type_t darr = dds_dynamic_type_create (participant,
-    (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_ARRAY, .name = "dynamic_array", .element_type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_FLOAT64), .bounds = (uint32_t[]) { 5, 99 }, .num_bounds = 2 });
+    (dds_dynamic_type_descriptor_t) {
+      .kind = DDS_DYNAMIC_ARRAY,
+      .name = "dynamic_array",
+      .element_type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_FLOAT64),
+      .bounds = (uint32_t[]) { 5, 99 },
+      .num_bounds = 2
+    });
 
   dds_dynamic_type_t dstruct = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_STRUCTURE, .name = "dynamic_struct" });
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_PRIM(DDS_DYNAMIC_INT32, "member_int32"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_PRIM(DDS_DYNAMIC_FLOAT64, "member_float64"));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_ID_PRIM(DDS_DYNAMIC_FLOAT64, "member_float64", 10 /* has specific member id */));
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_PRIM(DDS_DYNAMIC_BOOLEAN, "member_bool"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(DDS_DYNAMIC_TYPE_SPEC(dds_dynamic_type_ref (&dsubstruct)), "member_struct"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(DDS_DYNAMIC_TYPE_SPEC(dsubstruct /* last use of this type, so no ref */ ), "member_struct2"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(DDS_DYNAMIC_TYPE_SPEC(dsubunion), "member_union"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(DDS_DYNAMIC_TYPE_SPEC(dseq), "member_seq"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(DDS_DYNAMIC_TYPE_SPEC(dseq2), "member_seq2"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(DDS_DYNAMIC_TYPE_SPEC(darr), "member_array"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(DDS_DYNAMIC_TYPE_SPEC(dsubsubstruct), "member_substruct"));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dds_dynamic_type_ref (&dsubstruct), "member_struct"));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dsubstruct /* last use of this type, so no ref */, "member_struct2"));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_ID(dsubunion, "member_union", 20 /* has specific member id */));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dseq, "member_seq"));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(darr, "member_array"));
+  dds_dynamic_type_add_member (&dstruct, (dds_dynamic_type_member_descriptor_t) {
+      .type = DDS_DYNAMIC_TYPE_SPEC(dseq2),
+      .name = "member_seq2",
+      .index = 0,
+      .id = 999
+  });
+  dds_dynamic_type_add_member (&dstruct, (dds_dynamic_type_member_descriptor_t) {
+      .type = DDS_DYNAMIC_TYPE_SPEC(dsubsubstruct),
+      .name = "member_substruct",
+      .index = 3,
+      .id = DDS_DYNAMIC_MEMBER_ID_AUTO
+  });
 
   // Register type and create topic
   dds_typeinfo_t *type_info;
