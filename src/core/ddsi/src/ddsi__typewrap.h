@@ -78,7 +78,11 @@ bool ddsi_xt_is_unresolved (const struct xt_type *t);
 /** @component xtypes_wrapper */
 bool ddsi_xt_is_resolved (const struct xt_type *t);
 
+/** @component xtypes_wrapper */
 void ddsi_xt_copy (struct ddsi_domaingv *gv, struct xt_type *dst, const struct xt_type *src);
+
+/** @component xtypes_wrapper */
+void ddsi_xt_get_namehash (DDS_XTypes_NameHash name_hash, const char *name);
 
 #endif /* DDS_HAS_TYPE_DISCOVERY */
 

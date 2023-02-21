@@ -77,7 +77,7 @@ typedef enum dds_dynamic_type_kind
 #define DDS_DYNAMIC_TYPE_SPEC_PRIM(p) ((dds_dynamic_type_spec_t) { .kind = DDS_DYNAMIC_TYPE_KIND_PRIMITIVE, .type.primitive = (p) })
 
 #define DDS_DYNAMIC_MEMBER_(member_type_spec,member_name,member_id,member_index) \
-    ((dds_dynamic_type_member_descriptor_t) { \
+    ((dds_dynamic_member_descriptor_t) { \
       .type = (member_type_spec), \
       .name = (member_name), \
       .id = (member_id), \
@@ -94,7 +94,7 @@ typedef enum dds_dynamic_type_kind
 
 
 #define DDS_DYNAMIC_UNION_MEMBER_(member_type_spec,member_name,member_id,member_index,member_num_labels,member_labels,member_is_default) \
-    ((dds_dynamic_type_member_descriptor_t) { \
+    ((dds_dynamic_member_descriptor_t) { \
       .type = (member_type_spec), \
       .id = (member_id), \
       .index = (member_index), \
@@ -145,7 +145,7 @@ typedef struct dds_dynamic_type_descriptor {
   dds_dynamic_type_spec_t key_element_type;
 } dds_dynamic_type_descriptor_t;
 
-typedef struct dds_dynamic_type_member_descriptor {
+typedef struct dds_dynamic_member_descriptor {
   const char * name;
   uint32_t id;
   dds_dynamic_type_spec_t type;
@@ -154,13 +154,55 @@ typedef struct dds_dynamic_type_member_descriptor {
   uint32_t num_labels;
   int32_t *labels;
   bool default_label;
-} dds_dynamic_type_member_descriptor_t;
+} dds_dynamic_member_descriptor_t;
 
+enum dds_dynamic_type_extensibility {
+  DDS_DYNAMIC_TYPE_EXT_FINAL,
+  DDS_DYNAMIC_TYPE_EXT_APPENDABLE,
+  DDS_DYNAMIC_TYPE_EXT_MUTABLE
+};
+
+enum dds_dynamic_type_autoid {
+  DDS_DYNAMIC_TYPE_AUTOID_SEQUENTIAL,
+  DDS_DYNAMIC_TYPE_AUTOID_HASH
+};
+
+typedef struct dds_dynamic_enum_literal_value {
+  enum {
+    DDS_DYNAMIC_ENUM_LITERAL_VALUE_NEXT_AVAIL,
+    DDS_DYNAMIC_ENUM_LITERAL_VALUE_EXPLICIT
+  } value_kind;
+  int32_t value;
+} dds_dynamic_enum_literal_value_t;
+
+#define DDS_DYNAMIC_ENUM_LITERAL_VALUE_AUTO ((dds_dynamic_enum_literal_value_t) { DDS_DYNAMIC_ENUM_LITERAL_VALUE_NEXT_AVAIL, 0 })
+#define DDS_DYNAMIC_ENUM_LITERAL_VALUE(v) ((dds_dynamic_enum_literal_value_t) { DDS_DYNAMIC_ENUM_LITERAL_VALUE_EXPLICIT, (v) })
+
+#define DDS_DYNAMIC_BITMASK_POSITION_AUTO (UINT16_MAX)
+
+// Create type, add member and set type properties
 dds_dynamic_type_t dds_dynamic_type_create (dds_entity_t entity, dds_dynamic_type_descriptor_t descriptor);
-dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_type_member_descriptor_t member_descriptor);
+
+dds_return_t dds_dynamic_type_set_extensibility (dds_dynamic_type_t *type, enum dds_dynamic_type_extensibility extensibility);
+dds_return_t dds_dynamic_type_set_bit_bound (dds_dynamic_type_t *type, uint16_t bit_bound);
+dds_return_t dds_dynamic_type_set_nested (dds_dynamic_type_t *type, bool is_nested);
+dds_return_t dds_dynamic_type_set_autoid (dds_dynamic_type_t *type, enum dds_dynamic_type_autoid value);
+
+dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_member_descriptor_t member_descriptor);
+dds_return_t dds_dynamic_type_add_enum_literal (dds_dynamic_type_t *type, const char *name, dds_dynamic_enum_literal_value_t value, bool is_default);
+dds_return_t dds_dynamic_type_add_bitmask_field (dds_dynamic_type_t *type, const char *name, uint16_t position);
+
+// Set member properties
+dds_return_t dds_dynamic_member_set_key (dds_dynamic_type_t *type, uint32_t member_id, bool is_key);
+dds_return_t dds_dynamic_member_set_optional (dds_dynamic_type_t *type, uint32_t member_id, bool is_optional);
+dds_return_t dds_dynamic_member_set_external (dds_dynamic_type_t *type, uint32_t member_id, bool is_external);
+dds_return_t dds_dynamic_member_set_hashid (dds_dynamic_type_t *type, uint32_t member_id, const char *hash_member_name);
+dds_return_t dds_dynamic_member_set_must_understand (dds_dynamic_type_t *type, uint32_t member_id, bool is_must_understand);
+
+// Register, duplicate and (un)ref types
 dds_return_t dds_dynamic_type_register (dds_dynamic_type_t *type, struct ddsi_typeinfo **type_info);
 dds_dynamic_type_t dds_dynamic_type_ref (dds_dynamic_type_t *type);
-void dds_dynamic_type_unref (dds_dynamic_type_t *type);
+dds_return_t dds_dynamic_type_unref (dds_dynamic_type_t *type);
 dds_dynamic_type_t dds_dynamic_type_dup (const dds_dynamic_type_t *src);
 
 

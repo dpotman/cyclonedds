@@ -13,12 +13,19 @@ int main (int argc, char ** argv)
     DDS_FATAL("dds_create_participant: %s\n", dds_strretcode (-participant));
 
   dds_dynamic_type_t dsubstruct = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_STRUCTURE, .name = "dynamic_substruct" });
+  dds_dynamic_type_set_extensibility (&dsubstruct, DDS_DYNAMIC_TYPE_EXT_APPENDABLE);
+  dds_dynamic_type_set_autoid (&dsubstruct, DDS_DYNAMIC_TYPE_AUTOID_HASH);
   dds_dynamic_type_add_member (&dsubstruct, DDS_DYNAMIC_MEMBER_PRIM(DDS_DYNAMIC_UINT16, "submember_uint16"));
 
-  dds_dynamic_type_t dsubunion = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_UNION, .discriminator_type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_INT32), .name = "dynamic_subunion" });
+  dds_dynamic_type_t dsubunion = dds_dynamic_type_create (participant,
+      (dds_dynamic_type_descriptor_t) {
+        .kind = DDS_DYNAMIC_UNION,
+        .discriminator_type = DDS_DYNAMIC_TYPE_SPEC_PRIM(DDS_DYNAMIC_INT32),
+        .name = "dynamic_subunion"
+      });
   dds_dynamic_type_add_member (&dsubunion, DDS_DYNAMIC_UNION_MEMBER_PRIM(DDS_DYNAMIC_INT32, "member_int32", 2, ((int32_t[]) { 1, 2 })));
   dds_dynamic_type_add_member (&dsubunion, DDS_DYNAMIC_UNION_MEMBER_ID_PRIM(DDS_DYNAMIC_FLOAT64, "member_float64", 100 /* has specific member id */, 2, ((int32_t[]) { 9, 10 })));
-  dds_dynamic_type_add_member (&dsubunion, DDS_DYNAMIC_UNION_MEMBER(dds_dynamic_type_ref (&dsubstruct), "submember_substruct", 2, ((int32_t[]) { 15, 16 })));
+  dds_dynamic_type_add_member (&dsubunion, DDS_DYNAMIC_UNION_MEMBER(dds_dynamic_type_ref (&dsubstruct) /* increase ref because type is re-used */, "submember_substruct", 2, ((int32_t[]) { 15, 16 })));
   dds_dynamic_type_add_member (&dsubunion, DDS_DYNAMIC_UNION_MEMBER_DEFAULT_PRIM(DDS_DYNAMIC_BOOLEAN, "submember_default"));
 
   dds_dynamic_type_t dsubunion2 = dds_dynamic_type_dup (&dsubunion);
@@ -40,7 +47,7 @@ int main (int argc, char ** argv)
       (dds_dynamic_type_descriptor_t) {
         .kind = DDS_DYNAMIC_SEQUENCE,
         .name = "dynamic_seq2",
-        .element_type = DDS_DYNAMIC_TYPE_SPEC(dds_dynamic_type_ref (&dsubstruct)),
+        .element_type = DDS_DYNAMIC_TYPE_SPEC(dds_dynamic_type_ref (&dsubstruct)) /* increase ref because type is re-used */,
         .num_bounds = 0
       });
 
@@ -54,22 +61,39 @@ int main (int argc, char ** argv)
       .num_bounds = 2
     });
 
+  // Enum
+  dds_dynamic_type_t denum = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_ENUMERATION, .name = "dynamic_enum" });
+  dds_dynamic_type_add_enum_literal (&denum, "DYNAMIC_ENUM_VALUE1", DDS_DYNAMIC_ENUM_LITERAL_VALUE_AUTO, false);
+  dds_dynamic_type_add_enum_literal (&denum, "DYNAMIC_ENUM_VALUE2", DDS_DYNAMIC_ENUM_LITERAL_VALUE_AUTO, false);
+  dds_dynamic_type_add_enum_literal (&denum, "DYNAMIC_ENUM_VALUE5", DDS_DYNAMIC_ENUM_LITERAL_VALUE(5), false);
+
+  // Bitmask
+  dds_dynamic_type_t dbitmask = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_BITMASK, .name = "dynamic_bitmask" });
+  dds_dynamic_type_add_bitmask_field (&dbitmask, "DYNAMIC_BITMASK_1", DDS_DYNAMIC_BITMASK_POSITION_AUTO);
+  dds_dynamic_type_add_bitmask_field (&dbitmask, "DYNAMIC_BITMASK_5", 5);
+  dds_dynamic_type_add_bitmask_field (&dbitmask, "DYNAMIC_BITMASK_6", DDS_DYNAMIC_BITMASK_POSITION_AUTO);
+
+  // Alias
+
+
   dds_dynamic_type_t dstruct = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_STRUCTURE, .name = "dynamic_struct" });
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_PRIM(DDS_DYNAMIC_INT32, "member_int32"));
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_ID_PRIM(DDS_DYNAMIC_FLOAT64, "member_float64", 10 /* has specific member id */));
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_PRIM(DDS_DYNAMIC_BOOLEAN, "member_bool"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dds_dynamic_type_ref (&dsubstruct), "member_struct"));
-  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dsubstruct /* last use of this type, so no ref */, "member_struct2"));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dds_dynamic_type_ref (&dsubstruct) /* increase ref because type is re-used */, "member_struct"));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dsubstruct, "member_struct2"));
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_ID(dsubunion, "member_union", 20 /* has specific member id */));
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dseq, "member_seq"));
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(darr, "member_array"));
-  dds_dynamic_type_add_member (&dstruct, (dds_dynamic_type_member_descriptor_t) {
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(denum, "member_enum"));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dbitmask, "member_bitmask"));
+  dds_dynamic_type_add_member (&dstruct, (dds_dynamic_member_descriptor_t) {
       .type = DDS_DYNAMIC_TYPE_SPEC(dseq2),
       .name = "member_seq2",
       .index = 0,
       .id = 999
   });
-  dds_dynamic_type_add_member (&dstruct, (dds_dynamic_type_member_descriptor_t) {
+  dds_dynamic_type_add_member (&dstruct, (dds_dynamic_member_descriptor_t) {
       .type = DDS_DYNAMIC_TYPE_SPEC(dsubsubstruct),
       .name = "member_substruct",
       .index = 3,
@@ -86,7 +110,6 @@ int main (int argc, char ** argv)
   rc = dds_create_topic_descriptor (DDS_FIND_SCOPE_LOCAL_DOMAIN, participant, type_info, 0, &descriptor);
   if (rc != DDS_RETCODE_OK)
     DDS_FATAL ("dds_create_topic_descriptor: %s\n", dds_strretcode (-rc));
-  dds_free (type_info);
 
   dds_entity_t topic = dds_create_topic (participant, descriptor, "dynamictopic", NULL, NULL);
   if (topic < 0)
@@ -97,6 +120,7 @@ int main (int argc, char ** argv)
     DDS_FATAL ("dds_create_writer: %s\n", dds_strretcode (-writer));
 
   // Cleanup
+  dds_free_typeinfo (type_info);
   dds_delete_topic_descriptor (descriptor);
   dds_dynamic_type_unref (&dstruct);
 

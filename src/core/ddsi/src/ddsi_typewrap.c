@@ -494,7 +494,7 @@ static void xt_lbounds_dup (struct DDS_XTypes_LBoundSeq *dst, const struct DDS_X
   dst->_buffer = ddsrt_memdup (src->_buffer, dst->_length * sizeof (*dst->_buffer));
 }
 
-static void get_namehash (DDS_XTypes_NameHash name_hash, const char *name)
+void ddsi_xt_get_namehash (DDS_XTypes_NameHash name_hash, const char *name)
 {
   /* FIXME: multi byte utf8 chars? */
   char buf[16];
@@ -510,7 +510,7 @@ static void DDS_XTypes_AppliedAnnotationSeq_copy (struct DDS_XTypes_AppliedAnnot
 static void set_member_detail (struct xt_member_detail *dst, const DDS_XTypes_CompleteMemberDetail *src)
 {
   ddsrt_strlcpy (dst->name, src->name, sizeof (dst->name));
-  get_namehash (dst->name_hash, dst->name);
+  ddsi_xt_get_namehash (dst->name_hash, dst->name);
   if (src->ann_builtin) {
     dst->annotations.ann_builtin = ddsrt_calloc(1, sizeof(struct DDS_XTypes_AppliedBuiltinMemberAnnotations));
     DDS_XTypes_AppliedBuiltinMemberAnnotations_copy (dst->annotations.ann_builtin, src->ann_builtin);
