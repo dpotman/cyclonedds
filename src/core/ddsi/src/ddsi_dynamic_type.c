@@ -105,6 +105,12 @@ static void dynamic_type_init (struct ddsi_domaingv *gv, struct ddsi_type *type,
   type->xt.kind = kind;
 }
 
+bool ddsi_dynamic_type_is_constructing (const struct ddsi_type *type)
+{
+  assert (type);
+  return (type->state == DDSI_TYPE_CONSTRUCTING);
+}
+
 dds_return_t ddsi_dynamic_type_create_struct (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **base_type)
 {
   if ((*type = ddsrt_calloc (1, sizeof (**type))) == NULL)

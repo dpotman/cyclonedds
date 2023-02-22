@@ -82,7 +82,7 @@ dds_return_t ddsi_dynamic_type_register (struct ddsi_type **type, ddsi_typeinfo_
 struct ddsi_type * ddsi_dynamic_type_ref (struct ddsi_type *type);
 void ddsi_dynamic_type_unref (struct ddsi_type *type);
 struct ddsi_type * ddsi_dynamic_type_dup (const struct ddsi_type *src);
-
+bool ddsi_dynamic_type_is_constructing (const struct ddsi_type *type);
 
 #if defined (__cplusplus)
 }

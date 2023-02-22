@@ -74,7 +74,11 @@ int main (int argc, char ** argv)
   dds_dynamic_type_add_bitmask_field (&dbitmask, "DYNAMIC_BITMASK_6", DDS_DYNAMIC_BITMASK_POSITION_AUTO);
 
   // Alias
-
+  dds_dynamic_type_t dalias = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) {
+      .kind = DDS_DYNAMIC_ALIAS,
+      .base_type = DDS_DYNAMIC_TYPE_SPEC(dds_dynamic_type_ref (&dseq2)), /* increase ref because type is re-used */
+      .name = "dynamic_alias"
+  });
 
   dds_dynamic_type_t dstruct = dds_dynamic_type_create (participant, (dds_dynamic_type_descriptor_t) { .kind = DDS_DYNAMIC_STRUCTURE, .name = "dynamic_struct" });
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER_PRIM(DDS_DYNAMIC_INT32, "member_int32"));
@@ -87,6 +91,9 @@ int main (int argc, char ** argv)
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(darr, "member_array"));
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(denum, "member_enum"));
   dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dbitmask, "member_bitmask"));
+  dds_dynamic_type_add_member (&dstruct, DDS_DYNAMIC_MEMBER(dalias, "member_alias"));
+
+  // Add members at specific index
   dds_dynamic_type_add_member (&dstruct, (dds_dynamic_member_descriptor_t) {
       .type = DDS_DYNAMIC_TYPE_SPEC(dseq2),
       .name = "member_seq2",
