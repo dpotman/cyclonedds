@@ -301,7 +301,7 @@ typedef struct dds_dynamic_enum_literal_value {
  * @retval DDS_RETCODE_OUT_OF_RESOURCES
  *            Not enough resources to create the type.
  */
-dds_dynamic_type_t dds_dynamic_type_create (dds_entity_t entity, dds_dynamic_type_descriptor_t descriptor);
+DDS_EXPORT dds_dynamic_type_t dds_dynamic_type_create (dds_entity_t entity, dds_dynamic_type_descriptor_t descriptor);
 
 /**
  * @brief Set the extensibility of a Dynamic Type
@@ -320,7 +320,7 @@ dds_dynamic_type_t dds_dynamic_type_create (dds_entity_t entity, dds_dynamic_typ
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_type_set_extensibility (dds_dynamic_type_t *type, enum dds_dynamic_type_extensibility extensibility);
+DDS_EXPORT dds_return_t dds_dynamic_type_set_extensibility (dds_dynamic_type_t *type, enum dds_dynamic_type_extensibility extensibility);
 
 /**
  * @brief Set the bit-bound of a Dynamic Type
@@ -339,7 +339,7 @@ dds_return_t dds_dynamic_type_set_extensibility (dds_dynamic_type_t *type, enum 
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_type_set_bit_bound (dds_dynamic_type_t *type, uint16_t bit_bound);
+DDS_EXPORT dds_return_t dds_dynamic_type_set_bit_bound (dds_dynamic_type_t *type, uint16_t bit_bound);
 
 /**
  * @brief Set the nested flag of a Dynamic Type
@@ -358,7 +358,7 @@ dds_return_t dds_dynamic_type_set_bit_bound (dds_dynamic_type_t *type, uint16_t 
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_type_set_nested (dds_dynamic_type_t *type, bool is_nested);
+DDS_EXPORT dds_return_t dds_dynamic_type_set_nested (dds_dynamic_type_t *type, bool is_nested);
 
 /**
  * @brief Set the auto-id kind of a Dynamic Type
@@ -377,7 +377,7 @@ dds_return_t dds_dynamic_type_set_nested (dds_dynamic_type_t *type, bool is_nest
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_type_set_autoid (dds_dynamic_type_t *type, enum dds_dynamic_type_autoid value);
+DDS_EXPORT dds_return_t dds_dynamic_type_set_autoid (dds_dynamic_type_t *type, enum dds_dynamic_type_autoid value);
 
 /**
  * @brief Add a member to a Dynamic Type
@@ -401,7 +401,7 @@ dds_return_t dds_dynamic_type_set_autoid (dds_dynamic_type_t *type, enum dds_dyn
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type (non the member type) is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_member_descriptor_t member_descriptor);
+DDS_EXPORT dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_member_descriptor_t member_descriptor);
 
 /**
  * @brief Add a literal to a Dynamic Enum Type
@@ -424,7 +424,7 @@ dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_type_add_enum_literal (dds_dynamic_type_t *type, const char *name, dds_dynamic_enum_literal_value_t value, bool is_default);
+DDS_EXPORT dds_return_t dds_dynamic_type_add_enum_literal (dds_dynamic_type_t *type, const char *name, dds_dynamic_enum_literal_value_t value, bool is_default);
 
 /**
  * @brief Add a field to a Dynamic bitmask Type
@@ -446,7 +446,7 @@ dds_return_t dds_dynamic_type_add_enum_literal (dds_dynamic_type_t *type, const 
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_type_add_bitmask_field (dds_dynamic_type_t *type, const char *name, uint16_t position);
+DDS_EXPORT dds_return_t dds_dynamic_type_add_bitmask_field (dds_dynamic_type_t *type, const char *name, uint16_t position);
 
 /**
  * @brief Set the key flag for a Dynamic Type member
@@ -466,7 +466,7 @@ dds_return_t dds_dynamic_type_add_bitmask_field (dds_dynamic_type_t *type, const
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_member_set_key (dds_dynamic_type_t *type, uint32_t member_id, bool is_key);
+DDS_EXPORT dds_return_t dds_dynamic_member_set_key (dds_dynamic_type_t *type, uint32_t member_id, bool is_key);
 
 /**
  * @brief Set the optional flag for a Dynamic Type member
@@ -486,7 +486,7 @@ dds_return_t dds_dynamic_member_set_key (dds_dynamic_type_t *type, uint32_t memb
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_member_set_optional (dds_dynamic_type_t *type, uint32_t member_id, bool is_optional);
+DDS_EXPORT dds_return_t dds_dynamic_member_set_optional (dds_dynamic_type_t *type, uint32_t member_id, bool is_optional);
 
 /**
  * @brief Set the external flag for a Dynamic Type member
@@ -506,7 +506,7 @@ dds_return_t dds_dynamic_member_set_optional (dds_dynamic_type_t *type, uint32_t
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_member_set_external (dds_dynamic_type_t *type, uint32_t member_id, bool is_external);
+DDS_EXPORT dds_return_t dds_dynamic_member_set_external (dds_dynamic_type_t *type, uint32_t member_id, bool is_external);
 
 /**
  * @brief Set the hash ID flag and hash field name for a Dynamic Type member
@@ -526,7 +526,7 @@ dds_return_t dds_dynamic_member_set_external (dds_dynamic_type_t *type, uint32_t
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_member_set_hashid (dds_dynamic_type_t *type, uint32_t member_id, const char *hash_member_name);
+DDS_EXPORT dds_return_t dds_dynamic_member_set_hashid (dds_dynamic_type_t *type, uint32_t member_id, const char *hash_member_name);
 
 /**
  * @brief Set the must-understand flag for a Dynamic Type member
@@ -546,7 +546,7 @@ dds_return_t dds_dynamic_member_set_hashid (dds_dynamic_type_t *type, uint32_t m
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_member_set_must_understand (dds_dynamic_type_t *type, uint32_t member_id, bool is_must_understand);
+DDS_EXPORT dds_return_t dds_dynamic_member_set_must_understand (dds_dynamic_type_t *type, uint32_t member_id, bool is_must_understand);
 
 
 /**
@@ -572,7 +572,7 @@ dds_return_t dds_dynamic_member_set_must_understand (dds_dynamic_type_t *type, u
  * @retval DDS_RETCODE_OUT_OF_RESOURCES
  *            Not enough resources to create the type.
  */
-dds_return_t dds_dynamic_type_register (dds_dynamic_type_t *type, struct ddsi_typeinfo **type_info);
+DDS_EXPORT dds_return_t dds_dynamic_type_register (dds_dynamic_type_t *type, struct ddsi_typeinfo **type_info);
 
 /**
  * @brief Reference a Dynamic Type
@@ -586,7 +586,7 @@ dds_return_t dds_dynamic_type_register (dds_dynamic_type_t *type, struct ddsi_ty
  *
  * @return dds_dynamic_type_t Dynamic Type with increased ref-count
  */
-dds_dynamic_type_t dds_dynamic_type_ref (dds_dynamic_type_t *type);
+DDS_EXPORT dds_dynamic_type_t dds_dynamic_type_ref (dds_dynamic_type_t *type);
 
 /**
  * @brief Unref a Dynamic Type
@@ -602,7 +602,7 @@ dds_dynamic_type_t dds_dynamic_type_ref (dds_dynamic_type_t *type);
  * @retval DDS_RETCODE_PRECONDITION_NOT_MET
  *            The provided type is not in the CONSTRUCTING state.
  */
-dds_return_t dds_dynamic_type_unref (dds_dynamic_type_t *type);
+DDS_EXPORT dds_return_t dds_dynamic_type_unref (dds_dynamic_type_t *type);
 
 /**
  * @brief Duplicate a Dynamic Type
@@ -616,7 +616,7 @@ dds_return_t dds_dynamic_type_unref (dds_dynamic_type_t *type);
  *
  * @return dds_dynamic_type_t A duplicate of the source type.
  */
-dds_dynamic_type_t dds_dynamic_type_dup (const dds_dynamic_type_t *src);
+DDS_EXPORT dds_dynamic_type_t dds_dynamic_type_dup (const dds_dynamic_type_t *src);
 
 
 #if defined (__cplusplus)
