@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2022 ZettaScale Technology and others
+ * Copyright(c) 2023 ZettaScale Technology and others
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -13,12 +13,14 @@
 #include <string.h>
 #include "dds/dds.h"
 #include "dds/ddsrt/heap.h"
+#include "dds/ddsrt/md5.h"
 #include "dds/ddsrt/string.h"
 #include "dds/ddsi/ddsi_entity.h"
 #include "dds/ddsi/ddsi_typelib.h"
 #include "dds/ddsi/ddsi_dynamic_type.h"
 #include "ddsi__xt_impl.h"
 #include "ddsi__typewrap.h"
+#include "ddsi__dynamic_type.h"
 
 static void dynamic_type_ref_deps (struct ddsi_type *type)
 {
@@ -150,7 +152,7 @@ dds_return_t ddsi_dynamic_type_create_sequence (struct ddsi_domaingv *gv, struct
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_dynamic_type_create_array (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **element_type, uint32_t num_bounds, uint32_t *bounds)
+dds_return_t ddsi_dynamic_type_create_array (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **element_type, uint32_t num_bounds, const uint32_t *bounds)
 {
   if ((*type = ddsrt_calloc (1, sizeof (**type))) == NULL)
     return DDS_RETCODE_OUT_OF_RESOURCES;
@@ -227,8 +229,8 @@ dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struc
     case DDS_DYNAMIC_FLOAT32: data_type = DDS_XTypes_TK_FLOAT32; break;
     case DDS_DYNAMIC_FLOAT64: data_type = DDS_XTypes_TK_FLOAT64; break;
     case DDS_DYNAMIC_FLOAT128: data_type = DDS_XTypes_TK_FLOAT128; break;
-    case DDS_DYNAMIC_INT8: data_type = /* FIXME */ DDS_XTypes_TK_NONE; break;
-    case DDS_DYNAMIC_UINT8: data_type = /* FIXME */ DDS_XTypes_TK_NONE; break;
+    case DDS_DYNAMIC_INT8: data_type = DDS_XTypes_TK_INT8; break;
+    case DDS_DYNAMIC_UINT8: data_type = DDS_XTypes_TK_UINT8; break;
     case DDS_DYNAMIC_CHAR8: data_type = DDS_XTypes_TK_CHAR8; break;
     case DDS_DYNAMIC_CHAR16: data_type = DDS_XTypes_TK_CHAR16; break;
     default:
@@ -332,6 +334,19 @@ dds_return_t ddsi_dynamic_type_set_bitbound (struct ddsi_type *type, uint16_t bi
   return ret;
 }
 
+uint32_t ddsi_dynamic_type_member_hashid (const char *name)
+{
+  uint32_t id;
+  ddsrt_md5_state_t md5st;
+  ddsrt_md5_byte_t digest[16];
+
+  ddsrt_md5_init (&md5st);
+  ddsrt_md5_append (&md5st, (ddsrt_md5_byte_t *) name, (unsigned int) strlen(name));
+  ddsrt_md5_finish (&md5st, digest);
+  id = digest[0] | ((uint32_t) digest[1] << 8) | ((uint32_t) digest[2] << 16) | ((uint32_t) digest[3] << 24);
+  return id & DDSI_DYNAMIC_TYPE_MEMBERID_MASK;
+}
+
 dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct ddsi_type **member_type, struct ddsi_dynamic_type_struct_member_param params)
 {
   assert (type->state == DDSI_TYPE_CONSTRUCTING);
@@ -343,22 +358,26 @@ dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct
   uint32_t member_id = 0;
   if (params.id == DDS_DYNAMIC_MEMBER_ID_INVALID)
   {
-    // FIXME: auto-id hash
-    for (uint32_t n = 0; n < type->xt._u.structure.members.length; n++)
-      if (type->xt._u.structure.members.seq[n].id >= member_id)
-        member_id = type->xt._u.structure.members.seq[n].id + 1;
+    if (type->xt._u.structure.flags & DDS_XTypes_IS_AUTOID_HASH)
+      member_id = ddsi_dynamic_type_member_hashid (params.name);
+    else
+    {
+      for (uint32_t n = 0; n < type->xt._u.structure.members.length; n++)
+        if (type->xt._u.structure.members.seq[n].id >= member_id)
+          member_id = type->xt._u.structure.members.seq[n].id + 1;
+    }
   }
   else
   {
-    /* the 4 most significant bits in the member id are reserved
-       (used in EMHEADER) */
-    if (params.id > DDS_DYNAMIC_MEMBER_ID_MAX)
+    /* the 4 most significant bits in the member id are reserved (used in EMHEADER) */
+    if (params.id & ~DDSI_DYNAMIC_TYPE_MEMBERID_MASK)
       return DDS_RETCODE_BAD_PARAMETER;
-    for (uint32_t n = 0; n < type->xt._u.structure.members.length; n++)
-      if (type->xt._u.structure.members.seq[n].id == params.id)
-        return DDS_RETCODE_BAD_PARAMETER;
     member_id = params.id;
   }
+
+  for (uint32_t n = 0; n < type->xt._u.structure.members.length; n++)
+    if (type->xt._u.structure.members.seq[n].id == member_id)
+      return DDS_RETCODE_BAD_PARAMETER;
 
   struct xt_struct_member *tmp = ddsrt_realloc (type->xt._u.structure.members.seq,
       (type->xt._u.structure.members.length + 1) * sizeof (*type->xt._u.structure.members.seq));
@@ -399,17 +418,26 @@ dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct 
   uint32_t member_id = 0;
   if (params.id == DDS_DYNAMIC_MEMBER_ID_INVALID)
   {
-    for (uint32_t n = 0; n < type->xt._u.union_type.members.length; n++)
-      if (type->xt._u.union_type.members.seq[n].id >= member_id)
-        member_id = type->xt._u.union_type.members.seq[n].id + 1;
+    if (type->xt._u.union_type.flags & DDS_XTypes_IS_AUTOID_HASH)
+      member_id = ddsi_dynamic_type_member_hashid (params.name);
+    else
+    {
+      for (uint32_t n = 0; n < type->xt._u.union_type.members.length; n++)
+        if (type->xt._u.union_type.members.seq[n].id >= member_id)
+          member_id = type->xt._u.union_type.members.seq[n].id + 1;
+    }
   }
   else
   {
-    for (uint32_t n = 0; n < type->xt._u.union_type.members.length; n++)
-      if (type->xt._u.union_type.members.seq[n].id == params.id)
-        return DDS_RETCODE_BAD_PARAMETER;
+    /* the 4 most significant bits in the member id are reserved (used in EMHEADER) */
+    if (params.id & ~DDSI_DYNAMIC_TYPE_MEMBERID_MASK)
+      return DDS_RETCODE_BAD_PARAMETER;
     member_id = params.id;
   }
+
+  for (uint32_t n = 0; n < type->xt._u.union_type.members.length; n++)
+    if (type->xt._u.union_type.members.seq[n].id == member_id)
+      return DDS_RETCODE_BAD_PARAMETER;
 
   type->xt._u.union_type.members.length++;
   struct xt_union_member *tmp = ddsrt_realloc (type->xt._u.union_type.members.seq,
@@ -634,15 +662,31 @@ dds_return_t ddsi_dynamic_type_member_set_hashid (struct ddsi_type *type, uint32
   assert (type->xt._d == DDS_XTypes_TK_STRUCTURE || type->xt._d == DDS_XTypes_TK_UNION);
   dds_return_t ret;
   uint32_t member_index;
+  uint32_t id = ddsi_dynamic_type_member_hashid (hash_member_name);
   if (type->xt._d == DDS_XTypes_TK_STRUCTURE)
   {
+    if (!(type->xt._u.structure.flags & DDS_XTypes_IS_AUTOID_HASH))
+      return DDS_RETCODE_PRECONDITION_NOT_MET;
     if ((ret = find_struct_member (type, member_id, &member_index)) == DDS_RETCODE_OK)
-      ddsi_xt_get_namehash (type->xt._u.structure.members.seq[member_index].detail.name_hash, hash_member_name);
+    {
+      for (uint32_t n = 0; n < type->xt._u.structure.members.length; n++)
+        if (type->xt._u.structure.members.seq[n].id == member_id)
+          return DDS_RETCODE_BAD_PARAMETER;
+
+      type->xt._u.structure.members.seq[member_index].id = id;
+    }
   }
   else
   {
+    if (!(type->xt._u.union_type.flags & DDS_XTypes_IS_AUTOID_HASH))
+      return DDS_RETCODE_PRECONDITION_NOT_MET;
     if ((ret = find_union_member (type, member_id, &member_index)) == DDS_RETCODE_OK)
-      ddsi_xt_get_namehash (type->xt._u.union_type.members.seq[member_index].detail.name_hash, hash_member_name);
+    {
+      for (uint32_t n = 0; n < type->xt._u.union_type.members.length; n++)
+        if (type->xt._u.union_type.members.seq[n].id == member_id)
+          return DDS_RETCODE_BAD_PARAMETER;
+      type->xt._u.union_type.members.seq[member_index].id = id;
+    }
   }
   return ret;
 }

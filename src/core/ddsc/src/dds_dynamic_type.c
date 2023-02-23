@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2022 ZettaScale Technology and others
+ * Copyright(c) 2023 ZettaScale Technology and others
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -42,8 +42,8 @@ static DDS_XTypes_TypeKind typekind_to_xtkind (dds_dynamic_type_kind_t type_kind
     case DDS_DYNAMIC_FLOAT32:     return DDS_XTypes_TK_FLOAT32;
     case DDS_DYNAMIC_FLOAT64:     return DDS_XTypes_TK_FLOAT64;
     case DDS_DYNAMIC_FLOAT128:    return DDS_XTypes_TK_FLOAT128;
-    case DDS_DYNAMIC_INT8:        return 0; // FIXME DDS_XTypes_TK_INT8;
-    case DDS_DYNAMIC_UINT8:       return 0; // FIXME DDS_XTypes_TK_UINT8;
+    case DDS_DYNAMIC_INT8:        return DDS_XTypes_TK_INT8;
+    case DDS_DYNAMIC_UINT8:       return DDS_XTypes_TK_UINT8;
     case DDS_DYNAMIC_CHAR8:       return DDS_XTypes_TK_CHAR8;
     case DDS_DYNAMIC_CHAR16:      return DDS_XTypes_TK_CHAR16;
     case DDS_DYNAMIC_STRING8:     return DDS_XTypes_TK_STRING8;
@@ -75,8 +75,8 @@ static dds_dynamic_type_kind_t xtkind_to_typekind (DDS_XTypes_TypeKind xt_kind)
     case DDS_XTypes_TK_FLOAT32: return DDS_DYNAMIC_FLOAT32;
     case DDS_XTypes_TK_FLOAT64: return DDS_DYNAMIC_FLOAT64;
     case DDS_XTypes_TK_FLOAT128: return DDS_DYNAMIC_FLOAT128;
-    // FIXME DDS_XTypes_TK_INT8: return DDS_DYNAMIC_INT8;
-    // FIXME DDS_XTypes_TK_UINT8: return DDS_DYNAMIC_UINT8;
+    case DDS_XTypes_TK_INT8: return DDS_DYNAMIC_INT8;
+    case DDS_XTypes_TK_UINT8: return DDS_DYNAMIC_UINT8;
     case DDS_XTypes_TK_CHAR8: return DDS_DYNAMIC_CHAR8;
     case DDS_XTypes_TK_CHAR16: return DDS_DYNAMIC_CHAR16;
     case DDS_XTypes_TK_STRING8: return DDS_DYNAMIC_STRING8;
@@ -165,8 +165,6 @@ dds_dynamic_type_t dds_dynamic_type_create (dds_entity_t entity, dds_dynamic_typ
   struct ddsi_domaingv *gv;
   if ((gv = get_entity_gv (entity)) == NULL)
     goto err;
-
-  // FIXME: parameter checking (including type-specific checks and must-be-unset checks)
 
   switch (descriptor.kind)
   {

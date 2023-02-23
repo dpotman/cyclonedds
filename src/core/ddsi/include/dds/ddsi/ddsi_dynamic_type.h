@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2022 ZettaScale Technology and others
+ * Copyright(c) 2023 ZettaScale Technology and others
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -61,7 +61,7 @@ dds_return_t ddsi_dynamic_type_create_union (struct ddsi_domaingv *gv, struct dd
 dds_return_t ddsi_dynamic_type_create_sequence (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **element_type, uint32_t bound);
 
 /** @component dynamic_type_support */
-dds_return_t ddsi_dynamic_type_create_array (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **element_type, uint32_t num_bounds, uint32_t *bounds);
+dds_return_t ddsi_dynamic_type_create_array (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name, struct ddsi_type **element_type, uint32_t num_bounds, const uint32_t *bounds);
 
 /** @component dynamic_type_support */
 dds_return_t ddsi_dynamic_type_create_enum (struct ddsi_domaingv *gv, struct ddsi_type **type, const char *type_name);

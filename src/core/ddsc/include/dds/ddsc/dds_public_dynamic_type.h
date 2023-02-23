@@ -1,5 +1,5 @@
 /*
- * Copyright(c) 2021 ZettaScale Technology and others
+ * Copyright(c) 2023 ZettaScale Technology and others
  *
  * This program and the accompanying materials are made available under the
  * terms of the Eclipse Public License v. 2.0 which is available at
@@ -55,12 +55,6 @@ typedef struct dds_dynamic_type {
  */
 #define DDS_DYNAMIC_MEMBER_ID_INVALID 0xf000000u
 #define DDS_DYNAMIC_MEMBER_ID_AUTO DDS_DYNAMIC_MEMBER_ID_INVALID
-
-/**
- * @ingroup dynamic_type
- *
- * Maximum value for the member ID */
-#define DDS_DYNAMIC_MEMBER_ID_MAX 0x0fffffffu
 
 /**
  * @ingroup dynamic_type
@@ -210,7 +204,7 @@ typedef struct dds_dynamic_type_descriptor {
   dds_dynamic_type_spec_t base_type; /**< Option base type for a struct, or (required) aliased type in case of an alias type. */
   dds_dynamic_type_spec_t discriminator_type; /**< Discriminator type for a union (required). */
   uint32_t num_bounds; /**< Number of bounds for array and sequence types. In case of sequence, this can be 0 (unbounded) or 1. */
-  uint32_t *bounds; /**< Bounds for array (0..num_bounds) and sequence (single value) */
+  const uint32_t *bounds; /**< Bounds for array (0..num_bounds) and sequence (single value) */
   dds_dynamic_type_spec_t element_type; /**< Element type for array and sequence, required. */
   dds_dynamic_type_spec_t key_element_type; /**< Key element type for map type */
 } dds_dynamic_type_descriptor_t;
