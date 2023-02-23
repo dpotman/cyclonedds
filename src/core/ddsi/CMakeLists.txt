@@ -82,7 +82,6 @@ set(srcs_ddsi
   ddsi_xevent.c
   ddsi_xmsg.c
   ddsi_freelist.c
-  ddsi_dynamic_type.c
 )
 
 set(hdrs_ddsi
@@ -137,7 +136,6 @@ set(hdrs_ddsi
   ddsi_whc.h
   ddsi_xevent.h
   ddsi_xmsg.h
-  ddsi_dynamic_type.h
 )
 
 set(hdrs_private_ddsi
@@ -206,7 +204,6 @@ set(hdrs_private_ddsi
   ddsi__xevent.h
   ddsi__xmsg.h
   ddsi__log.h
-  ddsi__dynamic_type.h
 )
 
 if(ENABLE_LIFESPAN)
@@ -233,6 +230,7 @@ if(ENABLE_TYPE_DISCOVERY)
     ddsi_typelookup.c
     ddsi_typewrap.c
     ddsi_typebuilder.c
+    ddsi_dynamic_type.c
   )
   list(APPEND hdrs_ddsi
     ddsi_xt_typeinfo.h
@@ -240,10 +238,12 @@ if(ENABLE_TYPE_DISCOVERY)
     ddsi_xt_typemap.h
     ddsi_typewrap.h
     ddsi_typebuilder.h
+    ddsi_dynamic_type.h
   )
   list(APPEND hdrs_private_ddsi
     ddsi__xt_impl.h
     ddsi__typelookup.h
+    ddsi__dynamic_type.h
   )
 endif()
 if(ENABLE_SECURITY)

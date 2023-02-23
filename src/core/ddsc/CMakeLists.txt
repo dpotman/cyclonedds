@@ -45,7 +45,11 @@ prepend(srcs_ddsc "${CMAKE_CURRENT_LIST_DIR}/src/"
   dds_sertype_default.c
   dds_data_allocator.c
   dds_loan.c
-  dds_dynamic_type.c)
+)
+
+if(ENABLE_TYPE_DISCOVERY)
+  list(APPEND srcs_ddsc "${CMAKE_CURRENT_LIST_DIR}/src/dds_dynamic_type.c")
+endif()
 
 if(ENABLE_SHM)
   list(APPEND srcs_ddsc "${CMAKE_CURRENT_LIST_DIR}/src/dds_shm_monitor.c")
@@ -92,6 +96,10 @@ prepend(hdrs_public_ddsc "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>$<
   ddsc/dds_opcodes.h
   ddsc/dds_data_allocator.h
   ddsc/dds_loan_api.h)
+
+if(ENABLE_TYPE_DISCOVERY)
+  list(APPEND hdrs_public_ddsc "$<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>/dds/ddsc/dds_public_dynamic_type.h")
+endif()
 
 if(ENABLE_SHM)
   list(APPEND hdrs_private_ddsc "${CMAKE_CURRENT_LIST_DIR}/src/dds__shm_monitor.h")
