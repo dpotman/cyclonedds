@@ -211,7 +211,7 @@ dds_return_t ddsi_dynamic_type_create_string (struct ddsi_domaingv *gv, struct d
   return DDS_RETCODE_OK;
 }
 
-dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struct ddsi_type **type, DDS_XTypes_TypeKind kind)
+dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struct ddsi_type **type, dds_dynamic_type_kind_t kind)
 {
   if ((*type = ddsrt_calloc (1, sizeof (**type))) == NULL)
     return DDS_RETCODE_OUT_OF_RESOURCES;
@@ -544,7 +544,7 @@ dds_return_t ddsi_dynamic_type_add_bitmask_field (struct ddsi_type *type, struct
       {
         if (type->xt._u.bitmask.bitflags.seq[n].position == type->xt._u.bitmask.bit_bound - 1)
           return DDS_RETCODE_BAD_PARAMETER;
-        position = type->xt._u.bitmask.bitflags.seq[n].position + 1;
+        position = (uint16_t) (type->xt._u.bitmask.bitflags.seq[n].position + 1);
       }
     }
   }

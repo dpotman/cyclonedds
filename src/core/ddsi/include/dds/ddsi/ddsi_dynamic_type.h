@@ -76,7 +76,7 @@ dds_return_t ddsi_dynamic_type_create_alias (struct ddsi_domaingv *gv, struct dd
 dds_return_t ddsi_dynamic_type_create_string (struct ddsi_domaingv *gv, struct ddsi_type **type);
 
 /** @component dynamic_type_support */
-dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struct ddsi_type **type, DDS_XTypes_TypeKind kind);
+dds_return_t ddsi_dynamic_type_create_primitive (struct ddsi_domaingv *gv, struct ddsi_type **type, dds_dynamic_type_kind_t kind);
 
 
 /** @component dynamic_type_support */
