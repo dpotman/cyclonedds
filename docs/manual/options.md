@@ -6,7 +6,7 @@ CycloneDDS configuration
 
 ## //CycloneDDS/Domain
 Attributes: [Id](#cycloneddsdomainid)
-Children: [Compatibility](#cycloneddsdomaincompatibility), [Discovery](#cycloneddsdomaindiscovery), [General](#cycloneddsdomaingeneral), [Internal](#cycloneddsdomaininternal), [Partitioning](#cycloneddsdomainpartitioning), [SSL](#cycloneddsdomainssl), [Security](#cycloneddsdomainsecurity), [Sizing](#cycloneddsdomainsizing), [TCP](#cycloneddsdomaintcp), [Threads](#cycloneddsdomainthreads), [Tracing](#cycloneddsdomaintracing)
+Children: [Compatibility](#cycloneddsdomaincompatibility), [Discovery](#cycloneddsdomaindiscovery), [General](#cycloneddsdomaingeneral), [Internal](#cycloneddsdomaininternal), [Partitioning](#cycloneddsdomainpartitioning), [SSL](#cycloneddsdomainssl), [Security](#cycloneddsdomainsecurity), [SharedMemory](#cycloneddsdomainsharedmemory), [Sizing](#cycloneddsdomainsizing), [TCP](#cycloneddsdomaintcp), [Threads](#cycloneddsdomainthreads), [Tracing](#cycloneddsdomaintracing)
 
 The General element specifying Domain related settings.
 
@@ -1589,6 +1589,10 @@ If a single file is supplied, the is library located by the current working dire
 The default value is: `dds\_security\_crypto`
 
 
+### //CycloneDDS/Domain/SharedMemory
+The Shared Memory element allows specifying various parameters related to using shared memory.
+
+
 ### //CycloneDDS/Domain/Sizing
 Children: [ReceiveBufferChunkSize](#cycloneddsdomainsizingreceivebufferchunksize), [ReceiveBufferSize](#cycloneddsdomainsizingreceivebuffersize)
 
@@ -1840,10 +1844,10 @@ While none prevents any message from being written to a DDSI2 log file.
 The categorisation of tracing output is incomplete and hence most of the verbosity levels and categories are not of much use in the current release. This is an ongoing process and here we describe the target situation rather than the current situation. Currently, the most useful verbosity levels are config, fine and finest.
 
 The default value is: `none`
-<!--- generated from ddsi_config.h[547ad091ba52280c57754ab3030d17dfc5ee31de] -->
+<!--- generated from ddsi_config.h[cc0a68ca6e63e930feb6c2acd1b0ab4567831adc] -->
 <!--- generated from ddsi__cfgunits.h[be1b976c6e9466472b0c331487c05180ec1052d4] -->
-<!--- generated from ddsi__cfgelems.h[c2d743048b9cf0075ce4963101a2c5f245c21c2b] -->
-<!--- generated from ddsi_config.c[8605a2a65200bd17ea151b76f8da5277ccb34070] -->
+<!--- generated from ddsi__cfgelems.h[21a5f4b8001e26574250b47a23cb33997dc1827e] -->
+<!--- generated from ddsi_config.c[2679670636155e8445b321224c3b5a059312ae21] -->
 <!--- generated from _confgen.h[f2d235d5551cbf920a8a2962831dddeabd2856ac] -->
 <!--- generated from _confgen.c[d74e4fd06e485c5d299dbcc7741cbdb95c5ec706] -->
 <!--- generated from generate_rnc.c[a2ec6e48d33ac14a320c8ec3f320028a737920e0] -->

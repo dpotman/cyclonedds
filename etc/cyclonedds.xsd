@@ -25,6 +25,7 @@ CycloneDDS configuration</xs:documentation>
         <xs:element minOccurs="0" ref="config:Partitioning"/>
         <xs:element minOccurs="0" ref="config:SSL"/>
         <xs:element minOccurs="0" ref="config:Security"/>
+        <xs:element minOccurs="0" ref="config:SharedMemory"/>
         <xs:element minOccurs="0" ref="config:Sizing"/>
         <xs:element minOccurs="0" ref="config:TCP"/>
         <xs:element minOccurs="0" ref="config:Threads"/>
@@ -1641,6 +1642,13 @@ MIIEpAIBAAKCAQEA3HIh...AOBaaqSV37XBUJg==&lt;br&gt;
       </xs:sequence>
     </xs:complexType>
   </xs:element>
+  <xs:element name="SharedMemory">
+    <xs:annotation>
+      <xs:documentation>
+&lt;p&gt;The Shared Memory element allows specifying various parameters related to using shared memory.&lt;/p&gt;</xs:documentation>
+    </xs:annotation>
+    <xs:complexType/>
+  </xs:element>
   <xs:element name="Sizing">
     <xs:annotation>
       <xs:documentation>
@@ -1931,10 +1939,10 @@ MIIEpAIBAAKCAQEA3HIh...AOBaaqSV37XBUJg==&lt;br&gt;
     </xs:restriction>
   </xs:simpleType>
 </xs:schema>
-<!--- generated from ddsi_config.h[547ad091ba52280c57754ab3030d17dfc5ee31de] -->
+<!--- generated from ddsi_config.h[cc0a68ca6e63e930feb6c2acd1b0ab4567831adc] -->
 <!--- generated from ddsi__cfgunits.h[be1b976c6e9466472b0c331487c05180ec1052d4] -->
-<!--- generated from ddsi__cfgelems.h[c2d743048b9cf0075ce4963101a2c5f245c21c2b] -->
-<!--- generated from ddsi_config.c[8605a2a65200bd17ea151b76f8da5277ccb34070] -->
+<!--- generated from ddsi__cfgelems.h[21a5f4b8001e26574250b47a23cb33997dc1827e] -->
+<!--- generated from ddsi_config.c[2679670636155e8445b321224c3b5a059312ae21] -->
 <!--- generated from _confgen.h[f2d235d5551cbf920a8a2962831dddeabd2856ac] -->
 <!--- generated from _confgen.c[d74e4fd06e485c5d299dbcc7741cbdb95c5ec706] -->
 <!--- generated from generate_rnc.c[a2ec6e48d33ac14a320c8ec3f320028a737920e0] -->
