@@ -1,0 +1,7 @@
+module ForwarderData
+{
+  struct Msg
+  {
+    long value;
+  };
+};

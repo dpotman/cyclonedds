@@ -83,6 +83,15 @@ if (ENABLE_SHM)
     COMPONENT dev)
 endif ()
 
+install(
+  FILES
+    forwarder/ForwarderData.idl
+    forwarder/publisher.c
+    forwarder/forwarder.c
+    forwarder/CMakeLists.txt
+  DESTINATION "${CMAKE_INSTALL_EXAMPLESDIR}/helloworld"
+  COMPONENT dev)
+
 add_subdirectory(helloworld)
 add_subdirectory(roundtrip)
 add_subdirectory(throughput)
@@ -92,6 +101,7 @@ if (ENABLE_TOPIC_DISCOVERY)
 endif ()
 if (ENABLE_TYPE_DISCOVERY)
   add_subdirectory(dyntype)
+  add_subdirectory(forwarder)
 endif ()
 if (ENABLE_SHM)
   add_subdirectory(shm_throughput)
