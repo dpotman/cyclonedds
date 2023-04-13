@@ -29,14 +29,25 @@ int main (int argc, char ** argv)
 
   signal (SIGINT, sigint);
 
-  ForwarderData_Msg msg = { .value = 0 };
+  ForwarderData_Msg msg;
+  unsigned int len = 8*1024;
+  msg.value = 0;
+  msg.id = 0;
+
+  msg.bs._buffer = dds_alloc (len);
+  msg.bs._length = len;
+  msg.bs._release = true;
+  for (uint32_t i = 0; i < len; i++) {
+    msg.bs._buffer[i] = 'a';
+  }
   while (!done)
   {
+    msg.id = msg.value % 2;
     msg.value++;
-    printf ("Writing message (%"PRId32")\n", msg.value);
+    printf ("Writing message (%"PRId32") - id = %d\n", msg.value, msg.id);
     ret = dds_write (writer, &msg);
     assert (ret == DDS_RETCODE_OK);
-    dds_sleepfor (DDS_MSECS (500));
+    dds_sleepfor (DDS_MSECS (1000));
   }
 
   ret = dds_delete (participant);

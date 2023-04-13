@@ -1,7 +1,11 @@
 module ForwarderData
 {
+  @appendable
   struct Msg
   {
+    @key
+    long id;
     long value;
+    sequence<octet> bs;
   };
 };

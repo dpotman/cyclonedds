@@ -2,7 +2,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <signal.h>
-
 #include "dds/dds.h"
 #include "dds/ddsi/ddsi_serdata.h"
 
@@ -90,6 +89,8 @@ int main (int argc, char ** argv)
     struct ddsi_serdata *serdata_rd = NULL;
     dds_sample_info_t info;
     dds_return_t n = dds_takecdr (reader, &serdata_rd, 1, &info, 0);
+    struct ddsi_keyhash key_hash;
+    // struct ddsi_keyhash *key_hash = dds_alloc(sizeof(ddsi_keyhash));
     if (n > 0)
     {
       uint32_t sz = ddsi_serdata_size (serdata_rd);
@@ -110,7 +111,13 @@ int main (int argc, char ** argv)
       // write data (e.g. triggered by incoming data via Zenoh)
       ddsrt_iovec_t data_out = { .iov_len = sz, .iov_base = buf };
       struct ddsi_serdata *serdata_wr = ddsi_serdata_from_ser_iov (sertype, SDK_DATA, 1, &data_out, sz);
-      printf ("Write raw data\n");
+      ddsi_serdata_get_keyhash(serdata_rd, &key_hash, true);
+      printf ("Write raw data (%zu bytes)\n", data_in.iov_len);
+      printf("KeyHash: ");
+      for (int i = 0; i < 16; ++i) {
+        printf("%x:", key_hash.value[i]);
+      }
+      printf("\n");
       dds_writecdr (writer, serdata_wr);
       free (buf);
     }
