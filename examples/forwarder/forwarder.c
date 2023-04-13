@@ -66,6 +66,7 @@ int main (int argc, char ** argv)
   dds_return_t ret;
   (void)argc;
   (void)argv;
+  const char *write_partitions[] = { "forwarder-write" };
 
   dds_entity_t participant = dds_create_participant (DDS_DOMAIN_DEFAULT, NULL, NULL);
   assert (participant >= 0);
@@ -73,8 +74,14 @@ int main (int argc, char ** argv)
   signal (SIGINT, sigint);
 
   dds_entity_t topic = get_topic (participant);
+  if (topic < 0)
+    return 0;
+
   dds_entity_t reader = dds_create_reader (participant, topic, NULL, NULL);
-  dds_entity_t writer = dds_create_writer (participant, topic, NULL, NULL);
+  dds_qos_t *wr_qos = dds_create_qos ();
+  dds_qset_partition (wr_qos, 1, write_partitions);
+  dds_entity_t writer = dds_create_writer (participant, topic, wr_qos, NULL);
+  dds_delete_qos (wr_qos);
 
   const struct ddsi_sertype *sertype;
   ret = dds_get_entity_sertype (topic, &sertype);
@@ -85,13 +92,14 @@ int main (int argc, char ** argv)
     dds_entity_t waitset = dds_create_waitset (participant);
     (void) dds_set_status_mask (reader, DDS_DATA_AVAILABLE_STATUS);
     (void) dds_waitset_attach (waitset, reader, reader);
+    dds_waitset_wait (waitset, NULL, 0, DDS_MSECS (100));
 
     struct ddsi_serdata *serdata_rd = NULL;
     dds_sample_info_t info;
     dds_return_t n = dds_takecdr (reader, &serdata_rd, 1, &info, 0);
     struct ddsi_keyhash key_hash;
     // struct ddsi_keyhash *key_hash = dds_alloc(sizeof(ddsi_keyhash));
-    if (n > 0)
+    if (n > 0 && info.valid_data)
     {
       uint32_t sz = ddsi_serdata_size (serdata_rd);
       ddsrt_iovec_t data_in;
@@ -111,7 +119,7 @@ int main (int argc, char ** argv)
       // write data (e.g. triggered by incoming data via Zenoh)
       ddsrt_iovec_t data_out = { .iov_len = sz, .iov_base = buf };
       struct ddsi_serdata *serdata_wr = ddsi_serdata_from_ser_iov (sertype, SDK_DATA, 1, &data_out, sz);
-      ddsi_serdata_get_keyhash(serdata_rd, &key_hash, true);
+      ddsi_serdata_get_keyhash(serdata_wr, &key_hash, true);
       printf ("Write raw data (%zu bytes)\n", data_in.iov_len);
       printf("KeyHash: ");
       for (int i = 0; i < 16; ++i) {
@@ -121,7 +129,6 @@ int main (int argc, char ** argv)
       dds_writecdr (writer, serdata_wr);
       free (buf);
     }
-    dds_sleepfor (DDS_MSECS (500));
   }
 
   ret = dds_delete (participant);

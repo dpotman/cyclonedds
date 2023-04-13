@@ -50,6 +50,8 @@ int main (int argc, char ** argv)
     dds_sleepfor (DDS_MSECS (1000));
   }
 
+  dds_free (msg.bs._buffer);
+
   ret = dds_delete (participant);
   assert (ret == DDS_RETCODE_OK);
 
