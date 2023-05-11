@@ -974,7 +974,7 @@ bool dds_qos_has_psmx_instances (const dds_qos_t *qos, const char *psmx_instance
   char **values;
   bool found = false;
   dds_qget_psmx_instances (qos, &n, &values);
-  for (uint32_t i = 0; !found && i < n; i++)
+  for (uint32_t i = 0; !found && values != NULL && i < n; i++)
   {
     if (strcmp (psmx_instance_name, values[i]) == 0)
       found = true;
