@@ -11,14 +11,14 @@
 #ifndef PSMX_CDDS_IMPL_H
 #define PSMX_CDDS_IMPL_H
 
-#include "dds/export.h"
+#include "dds/psmx_cdds/export.h"
 #include "dds/dds.h"
 
 #if defined (__cplusplus)
 extern "C" {
 #endif
 
-dds_return_t cdds_create_psmx (dds_psmx_t **psmx, dds_loan_origin_type_t identifier, const char *config);
+PSMX_CDDS_EXPORT dds_return_t cdds_create_psmx (dds_psmx_t **psmx, dds_loan_origin_type_t identifier, const char *config);
 
 #if defined (__cplusplus)
 }

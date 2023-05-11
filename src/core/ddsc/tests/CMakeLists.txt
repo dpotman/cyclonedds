@@ -181,6 +181,7 @@ target_link_libraries(oneliner PRIVATE RoundTrip Space ddsc)
 
 
 # PSMX implementation with Cyclone as transport, for testing
+
 idlc_generate(TARGET psmx_cdds_data FILES psmx_cdds_data.idl)
 set(psmx_cdds_sources
   "psmx_cdds_impl.c"
@@ -188,8 +189,11 @@ set(psmx_cdds_sources
 add_library(psmx_cdds SHARED ${psmx_cdds_sources})
 target_include_directories(
   psmx_cdds PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>"
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../../ddsi/include>")
 target_link_libraries(psmx_cdds PRIVATE ddsc psmx_cdds_data)
+
+generate_export_header(psmx_cdds BASE_NAME PSMX_CDDS EXPORT_FILE_NAME "${CMAKE_CURRENT_BINARY_DIR}/include/dds/psmx_cdds/export.h")
 
 install(TARGETS psmx_cdds
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
