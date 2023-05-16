@@ -68,6 +68,7 @@
 #include "ddsi__typelib.h"
 #include "ddsi__vendor.h"
 #include "ddsi__sockwaitset.h"
+#include "ddsi__xt_impl.h"
 
 #include "dds__whc.h"
 #include "dds/cdr/dds_cdrstream.h"
@@ -1976,6 +1977,13 @@ void ddsi_fini (struct ddsi_domaingv *gv)
 #ifdef DDS_HAS_TYPE_DISCOVERY
 #ifndef NDEBUG
   {
+    struct ddsi_type tmpl, *t = &tmpl;
+    memset (&tmpl, 0, sizeof (tmpl));
+    while ((t = ddsrt_avl_lookup_succ (&ddsi_typelib_treedef, &gv->typelib, t)))
+    {
+      printf ("type: %p d %u refc %u\n", t, t->xt._d, t->refc);
+    }
+
     assert(ddsrt_avl_is_empty(&gv->typelib));
     assert(ddsrt_avl_is_empty(&gv->typedeps));
     assert(ddsrt_avl_is_empty(&gv->typedeps_reverse));

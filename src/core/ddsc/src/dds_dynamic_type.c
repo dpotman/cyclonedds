@@ -105,8 +105,8 @@ static dds_dynamic_type_t dyntype_from_typespec (struct ddsi_domaingv *gv, dds_d
     case DDS_DYNAMIC_TYPE_KIND_UNSET:
       return (dds_dynamic_type_t) { .ret = DDS_RETCODE_OK };
     case DDS_DYNAMIC_TYPE_KIND_PRIMITIVE: {
-      dds_dynamic_type_t type;
-      type.ret = ddsi_dynamic_type_create_primitive (gv, (struct ddsi_type **) &type.x, typekind_to_xtkind (type_spec.type.primitive));
+      dds_dynamic_type_t type = { .x = { NULL, NULL} };
+      type.ret = ddsi_dynamic_type_create_primitive (gv, (struct ddsi_type **) &type.x[0], typekind_to_xtkind (type_spec.type.primitive));
       return type;
     }
     case DDS_DYNAMIC_TYPE_KIND_DEFINITION:
@@ -125,7 +125,7 @@ static bool typespec_valid (dds_dynamic_type_spec_t type_spec, bool allow_unset)
     case DDS_DYNAMIC_TYPE_KIND_PRIMITIVE:
       return type_spec.type.primitive >= DDS_DYNAMIC_BOOLEAN && type_spec.type.primitive <= DDS_DYNAMIC_CHAR16;
     case DDS_DYNAMIC_TYPE_KIND_DEFINITION:
-      return type_spec.type.type.ret == DDS_RETCODE_OK && type_spec.type.type.x != NULL;
+      return type_spec.type.type.ret == DDS_RETCODE_OK && type_spec.type.type.x[0] != NULL;
   }
   return false;
 }
@@ -142,9 +142,9 @@ static bool union_disc_valid (dds_dynamic_type_spec_t type_spec)
         type_spec.type.primitive == DDS_DYNAMIC_UINT8 || type_spec.type.primitive == DDS_DYNAMIC_UINT16 || type_spec.type.primitive == DDS_DYNAMIC_UINT32 || type_spec.type.primitive == DDS_DYNAMIC_UINT64 ||
         type_spec.type.primitive == DDS_DYNAMIC_CHAR8 || type_spec.type.primitive == DDS_DYNAMIC_CHAR16;
     case DDS_DYNAMIC_TYPE_KIND_DEFINITION: {
-      if (type_spec.type.type.ret != DDS_RETCODE_OK || type_spec.type.type.x == NULL)
+      if (type_spec.type.type.ret != DDS_RETCODE_OK || type_spec.type.type.x[0] == NULL)
         return false;
-      DDS_XTypes_TypeKind xtkind = ddsi_type_get_kind ((struct ddsi_type *) type_spec.type.type.x);
+      DDS_XTypes_TypeKind xtkind = ddsi_type_get_kind ((struct ddsi_type *) type_spec.type.type.x[0]);
       return xtkind == DDS_XTypes_TK_ENUM || xtkind == DDS_XTypes_TK_ALIAS;
     }
   }
@@ -165,7 +165,7 @@ static bool membername_valid (const char *name)
 
 dds_dynamic_type_t dds_dynamic_type_create (dds_entity_t entity, dds_dynamic_type_descriptor_t descriptor)
 {
-  dds_dynamic_type_t type = { .x = NULL };
+  dds_dynamic_type_t type = { .x = { NULL, NULL } };
   struct ddsi_domaingv *gv;
   if ((type.ret = get_entity_gv (entity, &gv)) != DDS_RETCODE_OK)
     goto err;
@@ -189,29 +189,29 @@ dds_dynamic_type_t dds_dynamic_type_create (dds_entity_t entity, dds_dynamic_typ
     case DDS_DYNAMIC_INT8:
     case DDS_DYNAMIC_UINT8:
     case DDS_DYNAMIC_CHAR8:
-      type.ret = ddsi_dynamic_type_create_primitive (gv, (struct ddsi_type **) &type.x, descriptor.kind);
+      type.ret = ddsi_dynamic_type_create_primitive (gv, (struct ddsi_type **) &type.x[0], descriptor.kind);
       break;
     case DDS_DYNAMIC_STRING8:
       if (descriptor.num_bounds > 1)
         goto err_bad_param;
-      type.ret = ddsi_dynamic_type_create_string8 (gv, (struct ddsi_type **) &type.x, descriptor.num_bounds ? descriptor.bounds[0] : 0);
+      type.ret = ddsi_dynamic_type_create_string8 (gv, (struct ddsi_type **) &type.x[0], descriptor.num_bounds ? descriptor.bounds[0] : 0);
       break;
     case DDS_DYNAMIC_ALIAS: {
       if (!typespec_valid (descriptor.base_type, false) || !typename_valid (descriptor.name))
         goto err_bad_param;
       dds_dynamic_type_t aliased_type = dyntype_from_typespec (gv, descriptor.base_type);
-      type.ret = ddsi_dynamic_type_create_alias (gv, (struct ddsi_type **) &type.x, descriptor.name, (struct ddsi_type **) &aliased_type.x);
+      type.ret = ddsi_dynamic_type_create_alias (gv, (struct ddsi_type **) &type.x[0], descriptor.name, (struct ddsi_type **) &aliased_type.x[0]);
       break;
     }
     case DDS_DYNAMIC_ENUMERATION:
       if (!typename_valid (descriptor.name))
         goto err_bad_param;
-      type.ret = ddsi_dynamic_type_create_enum (gv, (struct ddsi_type **) &type.x, descriptor.name);
+      type.ret = ddsi_dynamic_type_create_enum (gv, (struct ddsi_type **) &type.x[0], descriptor.name);
       break;
     case DDS_DYNAMIC_BITMASK:
       if (!typename_valid (descriptor.name))
         goto err_bad_param;
-      type.ret = ddsi_dynamic_type_create_bitmask (gv, (struct ddsi_type **) &type.x, descriptor.name);
+      type.ret = ddsi_dynamic_type_create_bitmask (gv, (struct ddsi_type **) &type.x[0], descriptor.name);
       break;
     case DDS_DYNAMIC_ARRAY: {
       if (!typespec_valid (descriptor.element_type, false) || !typename_valid (descriptor.name) || descriptor.num_bounds == 0 || descriptor.bounds == NULL)
@@ -220,28 +220,28 @@ dds_dynamic_type_t dds_dynamic_type_create (dds_entity_t entity, dds_dynamic_typ
         if (descriptor.bounds[n] == 0)
           goto err_bad_param;
       dds_dynamic_type_t element_type = dyntype_from_typespec (gv, descriptor.element_type);
-      type.ret = ddsi_dynamic_type_create_array (gv, (struct ddsi_type **) &type.x, descriptor.name, (struct ddsi_type **) &element_type.x, descriptor.num_bounds, descriptor.bounds);
+      type.ret = ddsi_dynamic_type_create_array (gv, (struct ddsi_type **) &type.x[0], descriptor.name, (struct ddsi_type **) &element_type.x[0], descriptor.num_bounds, descriptor.bounds);
       break;
     }
     case DDS_DYNAMIC_SEQUENCE: {
       if (!typespec_valid (descriptor.element_type, false) || !typename_valid (descriptor.name) || descriptor.num_bounds > 1 || (descriptor.num_bounds == 1 && descriptor.bounds == NULL))
         goto err_bad_param;
       dds_dynamic_type_t element_type = dyntype_from_typespec (gv, descriptor.element_type);
-      type.ret = ddsi_dynamic_type_create_sequence (gv, (struct ddsi_type **) &type.x, descriptor.name, (struct ddsi_type **) &element_type.x, descriptor.num_bounds > 0 ? descriptor.bounds[0] : 0);
+      type.ret = ddsi_dynamic_type_create_sequence (gv, (struct ddsi_type **) &type.x[0], descriptor.name, (struct ddsi_type **) &element_type.x[0], descriptor.num_bounds > 0 ? descriptor.bounds[0] : 0);
       break;
     }
     case DDS_DYNAMIC_STRUCTURE: {
       if (!typespec_valid (descriptor.base_type, true) || !typename_valid (descriptor.name))
         goto err_bad_param;
       dds_dynamic_type_t base_type = dyntype_from_typespec (gv, descriptor.base_type);
-      type.ret = ddsi_dynamic_type_create_struct (gv, (struct ddsi_type **) &type.x, descriptor.name, (struct ddsi_type **) &base_type.x);
+      type.ret = ddsi_dynamic_type_create_struct (gv, (struct ddsi_type **) &type.x[0], descriptor.name, (struct ddsi_type **) &base_type.x[0]);
       break;
     }
     case DDS_DYNAMIC_UNION: {
       if (!typespec_valid (descriptor.discriminator_type, false) || !union_disc_valid (descriptor.discriminator_type) || !typename_valid (descriptor.name))
         goto err_bad_param;
       dds_dynamic_type_t discriminator_type = dyntype_from_typespec (gv, descriptor.discriminator_type);
-      type.ret = ddsi_dynamic_type_create_union (gv, (struct ddsi_type **) &type.x, descriptor.name, (struct ddsi_type **) &discriminator_type.x);
+      type.ret = ddsi_dynamic_type_create_union (gv, (struct ddsi_type **) &type.x[0], descriptor.name, (struct ddsi_type **) &discriminator_type.x[0]);
       break;
     }
 
@@ -266,7 +266,7 @@ static dds_return_t check_type_param (const dds_dynamic_type_t *type, bool allow
     return DDS_RETCODE_BAD_PARAMETER;
   if (type->ret != DDS_RETCODE_OK)
     return type->ret;
-  if (!allow_non_constructing && !ddsi_dynamic_type_is_constructing ((struct ddsi_type *) type->x))
+  if (!allow_non_constructing && !ddsi_dynamic_type_is_constructing ((struct ddsi_type *) type->x[0]))
     return DDS_RETCODE_PRECONDITION_NOT_MET;
   return DDS_RETCODE_OK;
 }
@@ -280,7 +280,7 @@ dds_return_t dds_dynamic_type_add_enum_literal (dds_dynamic_type_t *type, const 
     type->ret = DDS_RETCODE_BAD_PARAMETER;
   else
   {
-    type->ret = ddsi_dynamic_type_add_enum_literal ((struct ddsi_type *) type->x, (struct ddsi_dynamic_type_enum_literal_param) {
+    type->ret = ddsi_dynamic_type_add_enum_literal ((struct ddsi_type *) type->x[0], (struct ddsi_dynamic_type_enum_literal_param) {
       .name = name,
       .is_auto_value = value.value_kind == DDS_DYNAMIC_ENUM_LITERAL_VALUE_NEXT_AVAIL,
       .value = value.value,
@@ -299,7 +299,7 @@ dds_return_t dds_dynamic_type_add_bitmask_field (dds_dynamic_type_t *type, const
     type->ret = DDS_RETCODE_BAD_PARAMETER;
   else
   {
-    type->ret = ddsi_dynamic_type_add_bitmask_field ((struct ddsi_type *) type->x, (struct ddsi_dynamic_type_bitmask_field_param) {
+    type->ret = ddsi_dynamic_type_add_bitmask_field ((struct ddsi_type *) type->x[0], (struct ddsi_dynamic_type_bitmask_field_param) {
       .name = name,
       .is_auto_position = (position == DDS_DYNAMIC_BITMASK_POSITION_AUTO),
       .position = (position == DDS_DYNAMIC_BITMASK_POSITION_AUTO) ? 0 : position
@@ -320,7 +320,7 @@ dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_
     goto err;
   }
 
-  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x)))
+  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x[0])))
   {
     case DDS_DYNAMIC_ENUMERATION:
       type->ret = dds_dynamic_type_add_enum_literal (type, member_descriptor.name, DDS_DYNAMIC_ENUM_LITERAL_VALUE_AUTO, member_descriptor.default_label);
@@ -335,8 +335,8 @@ dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_
         type->ret = DDS_RETCODE_BAD_PARAMETER;
         goto err;
       }
-      dds_dynamic_type_t member_type = dyntype_from_typespec (ddsi_type_get_gv ((struct ddsi_type *) type->x), member_descriptor.type);
-      type->ret = ddsi_dynamic_type_add_union_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type.x,
+      dds_dynamic_type_t member_type = dyntype_from_typespec (ddsi_type_get_gv ((struct ddsi_type *) type->x[0]), member_descriptor.type);
+      type->ret = ddsi_dynamic_type_add_union_member ((struct ddsi_type *) type->x[0], (struct ddsi_type **) &member_type.x[0],
           (struct ddsi_dynamic_type_union_member_param) {
             .id = member_descriptor.id,
             .name = member_descriptor.name,
@@ -355,8 +355,8 @@ dds_return_t dds_dynamic_type_add_member (dds_dynamic_type_t *type, dds_dynamic_
         type->ret = DDS_RETCODE_BAD_PARAMETER;
         goto err;
       }
-      dds_dynamic_type_t member_type = dyntype_from_typespec (ddsi_type_get_gv ((struct ddsi_type *) type->x), member_descriptor.type);
-      type->ret = ddsi_dynamic_type_add_struct_member ((struct ddsi_type *) type->x, (struct ddsi_type **) &member_type.x,
+      dds_dynamic_type_t member_type = dyntype_from_typespec (ddsi_type_get_gv ((struct ddsi_type *) type->x[0]), member_descriptor.type);
+      type->ret = ddsi_dynamic_type_add_struct_member ((struct ddsi_type *) type->x[0], (struct ddsi_type **) &member_type.x[0],
           (struct ddsi_dynamic_type_struct_member_param) {
             .id = member_descriptor.id,
             .name = member_descriptor.name,
@@ -385,13 +385,13 @@ dds_return_t dds_dynamic_type_set_extensibility (dds_dynamic_type_t *type, enum 
   if (extensibility > DDS_DYNAMIC_TYPE_EXT_MUTABLE)
     return DDS_RETCODE_BAD_PARAMETER;
 
-  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x)))
+  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x[0])))
   {
     case DDS_DYNAMIC_STRUCTURE:
     case DDS_DYNAMIC_UNION:
     case DDS_DYNAMIC_ENUMERATION:
     case DDS_DYNAMIC_BITMASK:
-      type->ret = ddsi_dynamic_type_set_extensibility ((struct ddsi_type *) type->x, extensibility);
+      type->ret = ddsi_dynamic_type_set_extensibility ((struct ddsi_type *) type->x[0], extensibility);
       break;
     default:
       type->ret = DDS_RETCODE_BAD_PARAMETER;
@@ -407,11 +407,11 @@ dds_return_t dds_dynamic_type_set_nested (dds_dynamic_type_t *type, bool is_nest
   if ((ret = check_type_param (type, false)) != DDS_RETCODE_OK)
     return ret;
 
-  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x)))
+  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x[0])))
   {
     case DDS_DYNAMIC_STRUCTURE:
     case DDS_DYNAMIC_UNION:
-      type->ret = ddsi_dynamic_type_set_nested ((struct ddsi_type *) type->x, is_nested);
+      type->ret = ddsi_dynamic_type_set_nested ((struct ddsi_type *) type->x[0], is_nested);
       break;
     default:
       type->ret = DDS_RETCODE_BAD_PARAMETER;
@@ -431,11 +431,11 @@ dds_return_t dds_dynamic_type_set_autoid (dds_dynamic_type_t *type, enum dds_dyn
     type->ret = DDS_RETCODE_BAD_PARAMETER;
   else
   {
-    switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x)))
+    switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x[0])))
     {
       case DDS_DYNAMIC_STRUCTURE:
       case DDS_DYNAMIC_UNION:
-        type->ret = ddsi_dynamic_type_set_autoid ((struct ddsi_type *) type->x, value);
+        type->ret = ddsi_dynamic_type_set_autoid ((struct ddsi_type *) type->x[0], value);
         break;
       default:
         type->ret = DDS_RETCODE_BAD_PARAMETER;
@@ -451,13 +451,13 @@ dds_return_t dds_dynamic_type_set_bit_bound (dds_dynamic_type_t *type, uint16_t 
   if ((ret = check_type_param (type, false)) != DDS_RETCODE_OK)
     return ret;
 
-  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x)))
+  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x[0])))
   {
     case DDS_DYNAMIC_ENUMERATION:
-      type->ret = (bit_bound > 0 && bit_bound <= 32) ? ddsi_dynamic_type_set_bitbound ((struct ddsi_type *) type->x, bit_bound) : DDS_RETCODE_BAD_PARAMETER;
+      type->ret = (bit_bound > 0 && bit_bound <= 32) ? ddsi_dynamic_type_set_bitbound ((struct ddsi_type *) type->x[0], bit_bound) : DDS_RETCODE_BAD_PARAMETER;
       break;
     case DDS_DYNAMIC_BITMASK:
-      type->ret = (bit_bound > 0 && bit_bound <= 64) ? ddsi_dynamic_type_set_bitbound ((struct ddsi_type *) type->x, bit_bound) : DDS_RETCODE_BAD_PARAMETER;
+      type->ret = (bit_bound > 0 && bit_bound <= 64) ? ddsi_dynamic_type_set_bitbound ((struct ddsi_type *) type->x[0], bit_bound) : DDS_RETCODE_BAD_PARAMETER;
       break;
     default:
       type->ret = DDS_RETCODE_BAD_PARAMETER;
@@ -474,13 +474,13 @@ static dds_return_t set_member_bool_prop (dds_dynamic_type_t *type, uint32_t mem
   if ((ret = check_type_param (type, false)) != DDS_RETCODE_OK)
     return ret;
 
-  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x)))
+  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x[0])))
   {
     case DDS_DYNAMIC_STRUCTURE:
-      type->ret = set_fn_struct ? set_fn_struct ((struct ddsi_type *) type->x, member_id, value) : DDS_RETCODE_BAD_PARAMETER;
+      type->ret = set_fn_struct ? set_fn_struct ((struct ddsi_type *) type->x[0], member_id, value) : DDS_RETCODE_BAD_PARAMETER;
       break;
     case DDS_DYNAMIC_UNION:
-      type->ret = set_fn_union ? set_fn_union ((struct ddsi_type *) type->x, member_id, value) : DDS_RETCODE_BAD_PARAMETER;
+      type->ret = set_fn_union ? set_fn_union ((struct ddsi_type *) type->x[0], member_id, value) : DDS_RETCODE_BAD_PARAMETER;
       break;
     default:
       type->ret = DDS_RETCODE_BAD_PARAMETER;
@@ -510,11 +510,11 @@ dds_return_t dds_dynamic_member_set_hashid (dds_dynamic_type_t *type, uint32_t m
   if ((ret = check_type_param (type, false)) != DDS_RETCODE_OK)
     return ret;
 
-  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x)))
+  switch (xtkind_to_typekind (ddsi_type_get_kind ((struct ddsi_type *) type->x[0])))
   {
     case DDS_DYNAMIC_STRUCTURE:
     case DDS_DYNAMIC_UNION:
-      type->ret = ddsi_dynamic_type_member_set_hashid ((struct ddsi_type *) type->x, member_id, hash_member_name);
+      type->ret = ddsi_dynamic_type_member_set_hashid ((struct ddsi_type *) type->x[0], member_id, hash_member_name);
       break;
     default:
       type->ret = DDS_RETCODE_BAD_PARAMETER;
@@ -533,15 +533,18 @@ dds_return_t dds_dynamic_type_register (dds_dynamic_type_t *type, dds_typeinfo_t
   dds_return_t ret;
   if ((ret = check_type_param (type, false)) != DDS_RETCODE_OK)
     return ret;
-  return ddsi_dynamic_type_register ((struct ddsi_type **) &type->x, type_info);
+  return ddsi_dynamic_type_register ((struct ddsi_type **) &type->x[0], (struct ddsi_type **) &type->x[1], type_info);
 }
 
 dds_dynamic_type_t dds_dynamic_type_ref (dds_dynamic_type_t *type)
 {
-  dds_dynamic_type_t ref = { NULL, 0 };
+  dds_dynamic_type_t ref = { .x = { NULL, NULL } };
   if ((ref.ret = check_type_param (type, true)) != DDS_RETCODE_OK)
     return ref;
-  ref.x = ddsi_dynamic_type_ref ((struct ddsi_type *) type->x);
+  struct ddsi_type *tc = (struct ddsi_type *) type->x[0], *tm = (struct ddsi_type *) type->x[1];
+  ddsi_type_ref (ddsi_type_get_gv (tc), (struct ddsi_type **) &ref.x[0], tc);
+  if (type->x[1] != NULL)
+    ddsi_type_ref (ddsi_type_get_gv (tm), (struct ddsi_type **) &ref.x[1], tm);
   return ref;
 }
 
@@ -549,16 +552,20 @@ dds_return_t dds_dynamic_type_unref (dds_dynamic_type_t *type)
 {
   if (type == NULL)
     return DDS_RETCODE_BAD_PARAMETER;
-  ddsi_dynamic_type_unref ((struct ddsi_type *) type->x);
+  struct ddsi_type *tc = (struct ddsi_type *) type->x[0], *tm = (struct ddsi_type *) type->x[1];
+  ddsi_type_unref (ddsi_type_get_gv (tc), tc);
+  if (type->x[1] != NULL)
+    ddsi_type_unref (ddsi_type_get_gv (tm), tm);
   return DDS_RETCODE_OK;
 }
 
 dds_dynamic_type_t dds_dynamic_type_dup (const dds_dynamic_type_t *src)
 {
-  dds_dynamic_type_t dst = { NULL, 0 };
+  dds_dynamic_type_t dst = { .x = { NULL, NULL } };
   if ((dst.ret = check_type_param (src, true)) == DDS_RETCODE_OK)
   {
-    dst.x = ddsi_dynamic_type_dup ((struct ddsi_type *) src->x);
+    dst.x[0] = ddsi_dynamic_type_dup ((struct ddsi_type *) src->x[0]);
+    dst.x[1] = (src->x[1] != NULL) ? ddsi_dynamic_type_dup ((struct ddsi_type *) src->x[1]) : NULL;
     dst.ret = src->ret;
   }
   return dst;

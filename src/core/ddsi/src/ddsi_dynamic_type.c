@@ -68,16 +68,14 @@ err:
   return ret;
 }
 
-static dds_return_t dynamic_type_complete (struct ddsi_type **type)
+static dds_return_t dynamic_type_complete_locked (struct ddsi_type **type)
 {
   dds_return_t ret = DDS_RETCODE_OK;
   struct ddsi_domaingv *gv = (*type)->gv;
-  ddsrt_mutex_lock (&gv->typelib_lock);
 
   if ((*type)->state != DDSI_TYPE_CONSTRUCTING)
   {
     assert ((*type)->state == DDSI_TYPE_RESOLVED);
-    ddsrt_mutex_unlock (&gv->typelib_lock);
     return ret;
   }
 
@@ -129,6 +127,14 @@ static dds_return_t dynamic_type_complete (struct ddsi_type **type)
     }
   }
   ddsi_typeid_fini_impl (&ti);
+  return ret;
+}
+
+static dds_return_t dynamic_type_complete (struct ddsi_type **type)
+{
+  struct ddsi_domaingv *gv = (*type)->gv;
+  ddsrt_mutex_lock (&gv->typelib_lock);
+  dds_return_t ret = dynamic_type_complete_locked (type);
   ddsrt_mutex_unlock (&gv->typelib_lock);
   return ret;
 }
@@ -197,6 +203,7 @@ dds_return_t ddsi_dynamic_type_create_sequence (struct ddsi_domaingv *gv, struct
   dynamic_type_init (gv, *type, DDS_XTypes_TK_SEQUENCE, DDSI_TYPEID_KIND_PLAIN_COLLECTION_COMPLETE);
   (*type)->xt._u.seq.bound = bound;
   (*type)->xt._u.seq.c.element_type = *element_type;
+  (*type)->xt._u.seq.c.element_flags = DDS_XTypes_TRY_CONSTRUCT_DISCARD; // FIXME: support non-default try-construct
   (void) ddsrt_strlcpy ((*type)->xt._u.seq.c.detail.type_name, type_name, sizeof ((*type)->xt._u.seq.c.detail.type_name));
   return DDS_RETCODE_OK;
 }
@@ -217,6 +224,7 @@ dds_return_t ddsi_dynamic_type_create_array (struct ddsi_domaingv *gv, struct dd
   }
   memcpy ((*type)->xt._u.array.bounds._buffer, bounds, num_bounds * sizeof (*(*type)->xt._u.array.bounds._buffer));
   (*type)->xt._u.array.c.element_type = *element_type;
+  (*type)->xt._u.array.c.element_flags = DDS_XTypes_TRY_CONSTRUCT_DISCARD; // FIXME: support non-default try-construct
   (void) ddsrt_strlcpy ((*type)->xt._u.array.c.detail.type_name, type_name, sizeof ((*type)->xt._u.array.c.detail.type_name));
   return DDS_RETCODE_OK;
 }
@@ -468,7 +476,7 @@ dds_return_t ddsi_dynamic_type_add_struct_member (struct ddsi_type *type, struct
   if (params.is_key)
     m->flags |= DDS_XTypes_IS_KEY;
   (void) ddsrt_strlcpy (m->detail.name, params.name, sizeof (m->detail.name));
-
+  ddsi_xt_get_namehash (m->detail.name_hash, m->detail.name);
   return DDS_RETCODE_OK;
 }
 
@@ -542,6 +550,7 @@ dds_return_t ddsi_dynamic_type_add_union_member (struct ddsi_type *type, struct 
   m->type = *member_type;
   m->id = member_id;
   (void) ddsrt_strlcpy (m->detail.name, params.name, sizeof (m->detail.name));
+  ddsi_xt_get_namehash (m->detail.name_hash, m->detail.name);
   m->flags = DDS_XTypes_TRY_CONSTRUCT_DISCARD;
   if (params.is_default)
     m->flags |= DDS_XTypes_IS_DEFAULT;
@@ -784,28 +793,32 @@ dds_return_t ddsi_dynamic_type_member_set_hashid (struct ddsi_type *type, uint32
   return ret;
 }
 
-dds_return_t ddsi_dynamic_type_register (struct ddsi_type **type, ddsi_typeinfo_t **type_info)
+dds_return_t ddsi_dynamic_type_register (struct ddsi_type **type_c, struct ddsi_type **type_m, ddsi_typeinfo_t **type_info)
 {
   dds_return_t ret;
-  if ((ret = dynamic_type_complete (type)) != DDS_RETCODE_OK)
-    return ret;
+  struct ddsi_domaingv *gv = (*type_c)->gv;
+  ddsrt_mutex_lock (&gv->typelib_lock);
+  if ((ret = dynamic_type_complete_locked (type_c)) != DDS_RETCODE_OK)
+    goto err;
   if ((*type_info = ddsrt_malloc (sizeof (**type_info))) == NULL)
-    return DDS_RETCODE_OUT_OF_RESOURCES;
-  if ((ret = ddsi_type_get_typeinfo ((*type)->gv, *type, *type_info)) != DDS_RETCODE_OK)
+  {
+    ret = DDS_RETCODE_OUT_OF_RESOURCES;
+    goto err;
+  }
+  if ((ret = ddsi_type_get_typeinfo_locked (gv, *type_c, *type_info, type_m)) != DDS_RETCODE_OK)
+  {
     ddsrt_free (*type_info);
+    goto err;
+  }
+
+  /* A dynamic type has a ref to the complete type. ddsi_type_get_typeinfo increases
+     the refcount for both minimal and complete type. The ref for the minimal type
+     is transferred to the dynamic type, so we need to release the complete type's ref */
+  ddsi_type_unref_locked (gv, *type_c);
+
+err:
+  ddsrt_mutex_unlock (&gv->typelib_lock);
   return ret;
-}
-
-struct ddsi_type * ddsi_dynamic_type_ref (struct ddsi_type *type)
-{
-  struct ddsi_type *ref;
-  ddsi_type_ref (type->gv, &ref, type);
-  return ref;
-}
-
-void ddsi_dynamic_type_unref (struct ddsi_type *type)
-{
-  ddsi_type_unref (type->gv, type);
 }
 
 struct ddsi_type *ddsi_dynamic_type_dup (const struct ddsi_type *src)
