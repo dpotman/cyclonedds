@@ -2368,6 +2368,7 @@ static int convert_deprecated_interface_specification (struct ddsi_cfgst *cfgst)
 
 #define IOX_CONFIG_SERVICE_NAME "SERVICE_NAME"
 #define IOX_CONFIG_LOG_LEVEL "LOG_LEVEL"
+#define IOX_CONFIG_LOCATOR "LOCATOR"
 #define IOX_CONFIG_LOG_LEVEL_MAX_VALUE_LEN 7
 
 static int convert_deprecated_sharedmemory (struct ddsi_cfgst *cfgst)
@@ -2385,6 +2386,8 @@ static int convert_deprecated_sharedmemory (struct ddsi_cfgst *cfgst)
       config_str_len += strlen (IOX_CONFIG_SERVICE_NAME) + strlen (cfg->iceoryx_service) + 2; // plus 2 for = and ;
     if (cfg->shm_log_lvl != DDSI_SHM_OFF)
       config_str_len += strlen (IOX_CONFIG_LOG_LEVEL) + 9; // max length of log level string, plus 2 for = and ;
+    if (cfg->shm_locator != NULL)
+      config_str_len += strlen (IOX_CONFIG_LOCATOR) + strlen (cfg->shm_locator) + 2; // plus 2 for = and ;
 
     size_t sz = config_str_len + 1;
     psmx_cfg->config = ddsrt_malloc (sz);
@@ -2405,6 +2408,8 @@ static int convert_deprecated_sharedmemory (struct ddsi_cfgst *cfgst)
       assert (strlen (level_str) <= IOX_CONFIG_LOG_LEVEL_MAX_VALUE_LEN);
       (void) snprintf (psmx_cfg->config + strlen (psmx_cfg->config), sz - strlen (psmx_cfg->config), "%s=%s;", IOX_CONFIG_LOG_LEVEL, level_str);
     }
+    if (cfg->shm_locator != NULL)
+      (void) snprintf (psmx_cfg->config, sz, "%s=%s;", IOX_CONFIG_LOCATOR, cfg->shm_locator);
   }
 
   return 1;
