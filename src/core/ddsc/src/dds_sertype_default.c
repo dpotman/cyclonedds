@@ -113,7 +113,11 @@ static uint32_t sertype_default_hash (const struct ddsi_sertype *tpcmn)
 static void sertype_default_free (struct ddsi_sertype *tpcmn)
 {
   struct dds_sertype_default *tp = (struct dds_sertype_default *) tpcmn;
-  ddsrt_free (tp->type.keys.keys);
+  if (tp->type.keys.nkeys > 0)
+  {
+    ddsrt_free (tp->type.keys.keys);
+    ddsrt_free (tp->type.keys.keys_definition_order);
+  }
   ddsrt_free (tp->type.ops.ops);
   if (tp->typeinfo_ser.data != NULL)
     ddsrt_free (tp->typeinfo_ser.data);
@@ -272,6 +276,32 @@ const struct ddsi_sertype_ops dds_sertype_ops_default = {
   .serialize_into = sertype_default_serialize_into
 };
 
+static int key_cmp_idx (const void *va, const void *vb)
+{
+  const struct dds_cdrstream_desc_key *a = va;
+  const struct dds_cdrstream_desc_key *b = vb;
+  if (a->idx != b->idx)
+    return a->idx < b->idx ? -1 : 1;
+  return 0;
+}
+
+static void copy_desc_keys (dds_cdrstream_desc_key_t **dst, const dds_key_descriptor_t *keys, uint32_t nkeys)
+{
+  if (nkeys > 0)
+  {
+    *dst = ddsrt_malloc (nkeys  * sizeof (**dst));
+    for (uint32_t i = 0; i < nkeys; i++)
+    {
+      (*dst)[i].ops_offs = keys[i].m_offset;
+      (*dst)[i].idx = keys[i].m_idx;
+    }
+  }
+  else
+  {
+    *dst = NULL;
+  }
+}
+
 dds_return_t dds_sertype_default_init (const struct dds_domain *domain, struct dds_sertype_default *st, const dds_topic_descriptor_t *desc, uint16_t min_xcdrv, dds_data_representation_id_t data_representation)
 {
   const struct ddsi_domaingv *gv = &domain->gv;
@@ -312,14 +342,19 @@ dds_return_t dds_sertype_default_init (const struct dds_domain *domain, struct d
   st->serpool = domain->serpool;
   st->type.size = desc->m_size;
   st->type.align = desc->m_align;
-  st->type.flagset = desc->m_flagset;
+
+  /* Get the flagset from the descriptor, except for the key related flags that are calculated
+     using the CDR stream serializer */
+  st->type.flagset = desc->m_flagset & ~DDS_CDR_CALCULATED_FLAGS;
+  st->type.flagset |= dds_stream_key_flags (desc->m_ops, NULL, NULL);
+
+  /* Copy keys from topic descriptor, which are ordered by member-id (scoped to their containing
+     type. Additionally a copy of the key list in definition order is stored. */
   st->type.keys.nkeys = desc->m_nkeys;
-  st->type.keys.keys = ddsrt_malloc (st->type.keys.nkeys  * sizeof (*st->type.keys.keys));
-  for (uint32_t i = 0; i < st->type.keys.nkeys; i++)
-  {
-    st->type.keys.keys[i].ops_offs = desc->m_keys[i].m_offset;
-    st->type.keys.keys[i].idx = desc->m_keys[i].m_idx;
-  }
+  copy_desc_keys (&st->type.keys.keys, desc->m_keys, desc->m_nkeys);
+  copy_desc_keys (&st->type.keys.keys_definition_order, desc->m_keys, desc->m_nkeys);
+  qsort (st->type.keys.keys_definition_order, desc->m_nkeys, sizeof (*st->type.keys.keys_definition_order), key_cmp_idx);
+
   st->type.ops.nops = dds_stream_countops (desc->m_ops, desc->m_nkeys, desc->m_keys);
   st->type.ops.ops = ddsrt_memdup (desc->m_ops, st->type.ops.nops * sizeof (*st->type.ops.ops));
 

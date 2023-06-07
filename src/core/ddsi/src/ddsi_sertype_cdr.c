@@ -164,7 +164,12 @@ dds_return_t ddsi_sertype_cdr_init (const struct ddsi_domaingv *gv, struct ddsi_
      the encoding version from the encapsulation header in the CDR is used */
   st->type.size = desc->m_size;
   st->type.align = desc->m_align;
-  st->type.flagset = desc->m_flagset;
+
+  /* Get the flagset from the descriptor, except for the key related flags that are calculated
+     using the CDR stream serializer */
+  st->type.flagset = desc->m_flagset & ~DDS_CDR_CALCULATED_FLAGS;
+  st->type.flagset |= dds_stream_key_flags (desc->m_ops, NULL, NULL);
+
   st->type.ops.nops = dds_stream_countops (desc->m_ops, 0, NULL);
   st->type.ops.ops = ddsrt_memdup (desc->m_ops, st->type.ops.nops * sizeof (*st->type.ops.ops));
 

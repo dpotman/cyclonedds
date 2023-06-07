@@ -29,6 +29,7 @@
   (unsigned char)(((uint32_t)(v) >> 16) & 0xff), \
   (unsigned char)(((uint32_t)(v) >>  8) & 0xff), \
   (unsigned char)( (uint32_t)(v)        & 0xff)
+#define SER64BE(v) SER64(v)
 #else
 #define SER32(v) \
   (unsigned char)( (uint32_t)(v)        & 0xff), \
@@ -49,6 +50,19 @@
   (unsigned char)(((uint64_t)(v) >> 40) & 0xff), \
   (unsigned char)(((uint64_t)(v) >> 48) & 0xff), \
   (unsigned char)( (uint64_t)(v) >> 56)
+#define SER64BE(v) \
+  (unsigned char)( (uint64_t)(v) >> 56        ), \
+  (unsigned char)(((uint64_t)(v) >> 48) & 0xff), \
+  (unsigned char)(((uint64_t)(v) >> 40) & 0xff), \
+  (unsigned char)(((uint64_t)(v) >> 32) & 0xff), \
+  (unsigned char)(((uint64_t)(v) >> 24) & 0xff), \
+  (unsigned char)(((uint64_t)(v) >> 16) & 0xff), \
+  (unsigned char)(((uint64_t)(v) >>  8) & 0xff), \
+  (unsigned char)( (uint64_t)(v)        & 0xff)
 #endif
+
+#define SER_DHEADER(l) SER32(l)
+#define SER_EMHEADER(mu,lc,mid) SER32((mu ? (1 << 31) : 0) + (lc << 28) + (mid & 0x0fffffff))
+#define SER_NEXTINT(l) SER32(l)
 
 #endif /* DDSI_TEST_MEM_SER_H */

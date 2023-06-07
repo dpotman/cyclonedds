@@ -610,6 +610,21 @@ enum dds_stream_typecode_subtype {
  */
 #define DDS_TOPIC_RESTRICT_DATA_REPRESENTATION  (1u << 7)
 
+
+/**
+ * @anchor DDS_TOPIC_KEY_MUTABLE
+ * @ingroup topic_flags
+ * @brief Set if any of the key fields of a type is in a mutable aggregated type.
+ */
+#define DDS_TOPIC_KEY_MUTABLE                  (1u << 8)
+
+/**
+ * @anchor DDS_TOPIC_KEY_APPENDABLE
+ * @ingroup topic_flags
+ * @brief Set if any of the key fields of a type is in an appendable aggregated type.
+ */
+#define DDS_TOPIC_KEY_APPENDABLE                (1u << 9)
+
 /**
  * @anchor DDS_FIXED_KEY_MAX_SIZE
  * @ingroup topic_flags
