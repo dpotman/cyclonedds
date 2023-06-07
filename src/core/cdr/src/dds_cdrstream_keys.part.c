@@ -109,7 +109,7 @@ void dds_stream_write_keyBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdr
 
 static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dds_istream_t * __restrict is, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator,
   uint32_t ops_offs_idx, uint32_t * __restrict ops_offs, const uint32_t * const __restrict op0, const uint32_t * const __restrict op0_type, const uint32_t * __restrict ops, bool mutable_member, bool mutable_member_or_parent,
-  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs)
+  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs, enum dds_cdr_keyfield_order keyfield_order)
 {
   assert (DDS_OP (insn) == DDS_OP_ADR);
   const enum dds_stream_typecode type = DDS_OP_TYPE (insn);
@@ -139,7 +139,7 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dd
       jsr_ops++;
 
     /* only in case the ADR|EXT has the key flag set, pass the actual ostream, otherwise skip the EXT type by passing NULL for ostream */
-    (void) dds_stream_extract_keyBO_from_data1 (is, is_key ? os : NULL, allocator, ops_offs_idx + 1, ops_offs, op0, jsr_ops, jsr_ops, false, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs);
+    (void) dds_stream_extract_keyBO_from_data1 (is, is_key ? os : NULL, allocator, ops_offs_idx + 1, ops_offs, op0, jsr_ops, jsr_ops, false, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs, keyfield_order);
     ops += jmp ? jmp : 3;
   }
   else
@@ -148,9 +148,9 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dd
     {
       assert (*keys_remaining <= n_keys);
       uint32_t idx = n_keys - *keys_remaining; // position (index) of the key in the CDR
-      if (((struct dds_ostream *)os)->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1)
+      if (keyfield_order == DDS_CDR_KEYFIELD_ORDER_DEFINITION)
       {
-        /* Key in CDR encoding version 1 are ordered by their definition order, so we can
+        /* Key fields ordered by their definition order, so we can
            use the key index field from the key descriptors key list */
         key_offs[idx].src_off = is->m_index;
         key_offs[idx].op_off = ops;
@@ -167,7 +167,7 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dd
         bool found = false;
         uint32_t n;
 
-        /* Keys in XCDR2 are ordered by their member id (ascending), so we've to find the key's
+        /* Key fields ordered by their member id (ascending), so we've to find the key's
            position in the key list from the key descriptor (this list is ordered by member id) */
         for (n = 0; !found && n < n_keys; n++)
         {
@@ -208,7 +208,7 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dd
 
 static const uint32_t *dds_stream_extract_keyBO_from_data_delimited (dds_istream_t * __restrict is, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator,
   uint32_t ops_offs_idx, uint32_t * __restrict ops_offs, const uint32_t * const __restrict op0, const uint32_t * const __restrict op0_type, const uint32_t * __restrict ops, bool mutable_member_or_parent,
-  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs)
+  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs, enum dds_cdr_keyfield_order keyfield_order)
 {
   uint32_t delimited_sz = dds_is_get4 (is), delimited_offs = is->m_index, insn;
   ops++;
@@ -219,10 +219,10 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_delimited (dds_istream
       case DDS_OP_ADR:
         /* skip fields that are not in serialized data for appendable type */
         ops = (is->m_index - delimited_offs < delimited_sz) ?
-          dds_stream_extract_keyBO_from_data_adr (insn, is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, ops, false, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs) : dds_stream_skip_adr (insn, ops);
+          dds_stream_extract_keyBO_from_data_adr (insn, is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, ops, false, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs, keyfield_order) : dds_stream_skip_adr (insn, ops);
         break;
       case DDS_OP_JSR:
-        (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, ops + DDS_OP_JUMP (insn), false, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs);
+        (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, ops + DDS_OP_JUMP (insn), false, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs, keyfield_order);
         ops++;
         break;
       case DDS_OP_RTS: case DDS_OP_JEQ: case DDS_OP_JEQ4: case DDS_OP_KOF: case DDS_OP_DLC: case DDS_OP_PLC: case DDS_OP_PLM:
@@ -236,7 +236,7 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_delimited (dds_istream
 
 static bool dds_stream_extract_keyBO_from_data_pl_member (dds_istream_t * __restrict is, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, uint32_t m_id,
   uint32_t ops_offs_idx, uint32_t * __restrict ops_offs, const uint32_t * const __restrict op0, const uint32_t * const __restrict op0_type, const uint32_t * __restrict ops,
-  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs)
+  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs, enum dds_cdr_keyfield_order keyfield_order)
 {
   uint32_t insn, ops_csr = 0;
   bool found = false;
@@ -250,11 +250,11 @@ static bool dds_stream_extract_keyBO_from_data_pl_member (dds_istream_t * __rest
     {
       assert (DDS_OP (plm_ops[0]) == DDS_OP_PLC);
       plm_ops++; /* skip PLC to go to first PLM from base type */
-      found = dds_stream_extract_keyBO_from_data_pl_member (is, os, allocator, m_id, ops_offs_idx, ops_offs, op0, op0_type, plm_ops, n_keys, keys_remaining, keys, key_offs);
+      found = dds_stream_extract_keyBO_from_data_pl_member (is, os, allocator, m_id, ops_offs_idx, ops_offs, op0, op0_type, plm_ops, n_keys, keys_remaining, keys, key_offs, keyfield_order);
     }
     else if (ops[ops_csr + 1] == m_id)
     {
-      (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, plm_ops, true, true, n_keys, keys_remaining, keys, key_offs);
+      (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, plm_ops, true, true, n_keys, keys_remaining, keys, key_offs, keyfield_order);
       found = true;
       break;
     }
@@ -265,7 +265,7 @@ static bool dds_stream_extract_keyBO_from_data_pl_member (dds_istream_t * __rest
 
 static const uint32_t *dds_stream_extract_keyBO_from_data_pl (dds_istream_t * __restrict is, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator,
   uint32_t ops_offs_idx, uint32_t * __restrict ops_offs, const uint32_t * const __restrict op0, const uint32_t * const __restrict op0_type, const uint32_t * __restrict ops,
-  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs)
+  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs, enum dds_cdr_keyfield_order keyfield_order)
 {
   /* skip PLC op */
   ops++;
@@ -299,7 +299,7 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_pl (dds_istream_t * __
 
     /* If member not found or in case no more keys remaining to be found, skip the member
        in the input stream */
-    if (!dds_stream_extract_keyBO_from_data_pl_member (is, os, allocator, m_id, ops_offs_idx, ops_offs, op0, op0_type, ops, n_keys, keys_remaining, keys, key_offs))
+    if (!dds_stream_extract_keyBO_from_data_pl_member (is, os, allocator, m_id, ops_offs_idx, ops_offs, op0, op0_type, ops, n_keys, keys_remaining, keys, key_offs, keyfield_order))
     {
       is->m_index += msz;
       if (lc >= LENGTH_CODE_ALSO_NEXTINT)
@@ -316,7 +316,7 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_pl (dds_istream_t * __
 
 static const uint32_t *dds_stream_extract_keyBO_from_data1 (dds_istream_t * __restrict is, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator,
   uint32_t ops_offs_idx, uint32_t * __restrict ops_offs, const uint32_t * const __restrict op0, const uint32_t * const __restrict op0_type, const uint32_t * __restrict ops, bool mutable_member, bool mutable_member_or_parent,
-  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs)
+  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict keys, struct key_off_info * __restrict key_offs, enum dds_cdr_keyfield_order keyfield_order)
 {
   uint32_t insn;
   while ((insn = *ops) != DDS_OP_RTS)
@@ -324,27 +324,27 @@ static const uint32_t *dds_stream_extract_keyBO_from_data1 (dds_istream_t * __re
     switch (DDS_OP (insn))
     {
       case DDS_OP_ADR:
-        ops = dds_stream_extract_keyBO_from_data_adr (insn, is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, ops, mutable_member, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs);
+        ops = dds_stream_extract_keyBO_from_data_adr (insn, is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, ops, mutable_member, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs, keyfield_order);
         break;
       case DDS_OP_JSR:
-        (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, ops + DDS_OP_JUMP (insn), mutable_member, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs);
+        (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, ops_offs_idx, ops_offs, op0, op0_type, ops + DDS_OP_JUMP (insn), mutable_member, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs, keyfield_order);
         ops++;
         break;
       case DDS_OP_RTS: case DDS_OP_JEQ: case DDS_OP_JEQ4: case DDS_OP_KOF: case DDS_OP_PLM:
         abort ();
         break;
       case DDS_OP_DLC:
-        ops = dds_stream_extract_keyBO_from_data_delimited (is, os, allocator, ops_offs_idx, ops_offs, op0, ops, ops, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs);
+        ops = dds_stream_extract_keyBO_from_data_delimited (is, os, allocator, ops_offs_idx, ops_offs, op0, ops, ops, mutable_member_or_parent, n_keys, keys_remaining, keys, key_offs, keyfield_order);
         break;
       case DDS_OP_PLC:
-        ops = dds_stream_extract_keyBO_from_data_pl (is, os, allocator, ops_offs_idx, ops_offs, op0, ops, ops, n_keys, keys_remaining, keys, key_offs);
+        ops = dds_stream_extract_keyBO_from_data_pl (is, os, allocator, ops_offs_idx, ops_offs, op0, ops, ops, n_keys, keys_remaining, keys, key_offs, keyfield_order);
         break;
     }
   }
   return ops;
 }
 
-bool dds_stream_extract_keyBO_from_data (dds_istream_t * __restrict is, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const struct dds_cdrstream_desc * __restrict desc)
+bool dds_stream_extract_keyBO_from_data (dds_istream_t * __restrict is, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const struct dds_cdrstream_desc * __restrict desc, enum dds_cdr_keyfield_order keyfield_order)
 {
   bool ret = true;
   uint32_t keys_remaining = desc->keys.nkeys;
@@ -358,7 +358,7 @@ bool dds_stream_extract_keyBO_from_data (dds_istream_t * __restrict is, DDS_OSTR
   uint32_t ops_offs[DDS_CDRSTREAM_MAX_NESTING_DEPTH];
 
   uint32_t *ops = desc->ops.ops, *op0 = ops, *op0_type = ops;
-  (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, 0, ops_offs, op0, op0_type, ops, false, false, desc->keys.nkeys, &keys_remaining, desc->keys.keys, key_offs);
+  (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, 0, ops_offs, op0, op0_type, ops, false, false, desc->keys.nkeys, &keys_remaining, desc->keys.keys, key_offs, keyfield_order);
   if (keys_remaining > 0)
   {
     /* FIXME: stream_normalize should check for missing keys by implementing the

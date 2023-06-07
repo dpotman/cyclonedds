@@ -51,4 +51,8 @@
   (unsigned char)( (uint64_t)(v) >> 56)
 #endif
 
+#define SER_DHEADER(l) SER32(l)
+#define SER_EMHEADER(mu,lc,mid) SER32((mu ? (1 << 31) : 0) + (lc << 28) + (mid & 0x0fffffff))
+#define SER_NEXTINT(l) SER32(l)
+
 #endif /* DDSI_TEST_MEM_SER_H */

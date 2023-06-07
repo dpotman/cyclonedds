@@ -104,10 +104,10 @@ static const uint32_t *dds_stream_skip_adr (uint32_t insn, const uint32_t * __re
 static const uint32_t *dds_stream_skip_default (char * __restrict data, const struct dds_cdrstream_allocator * __restrict allocator, const uint32_t * __restrict ops);
 static const uint32_t *dds_stream_extract_key_from_data1 (dds_istream_t * __restrict is, dds_ostream_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator,
   uint32_t ops_offs_idx, uint32_t * __restrict ops_offs, const uint32_t * const __restrict op0, const uint32_t * const __restrict op0_type, const uint32_t * __restrict ops, bool mutable_member, bool mutable_member_or_parent,
-  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict key, struct key_off_info * __restrict key_offs);
+  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict key, struct key_off_info * __restrict key_offs, enum dds_cdr_keyfield_order keyfield_order);
 static const uint32_t *dds_stream_extract_keyBE_from_data1 (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator,
   uint32_t ops_offs_idx, uint32_t * __restrict ops_offs, const uint32_t * const __restrict op0, const uint32_t * const __restrict op0_type, const uint32_t * __restrict ops, bool mutable_member, bool mutable_member_or_parent,
-  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict key, struct key_off_info * __restrict key_offs);
+  uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict key, struct key_off_info * __restrict key_offs, enum dds_cdr_keyfield_order keyfield_order);
 static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static const uint32_t *dds_stream_read_impl (dds_istream_t * __restrict is, char * __restrict data, const struct dds_cdrstream_allocator * __restrict allocator, const uint32_t * __restrict ops, bool is_mutable_member);
 static const uint32_t *stream_free_sample_adr (uint32_t insn, void * __restrict data, const struct dds_cdrstream_allocator * __restrict allocator, const uint32_t * __restrict ops);
@@ -3546,7 +3546,7 @@ static void dds_stream_extract_key_from_data_skip_subtype (dds_istream_t * __res
     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: {
       uint32_t remain = UINT32_MAX;
       for (uint32_t i = 0; i < num; i++)
-        dds_stream_extract_key_from_data1 (is, NULL, NULL, 0, NULL, NULL, NULL, subops, false, false, remain, &remain, NULL, NULL);
+        dds_stream_extract_key_from_data1 (is, NULL, NULL, 0, NULL, NULL, NULL, subops, false, false, remain, &remain, NULL, NULL, DDS_CDR_KEYFIELD_ORDER_UNSET);
       break;
     }
     case DDS_OP_VAL_EXT: {

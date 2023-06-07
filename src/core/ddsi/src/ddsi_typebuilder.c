@@ -176,8 +176,8 @@ struct typebuilder_key_path {
 
 struct typebuilder_key
 {
-  uint32_t key_index;
-  uint32_t kof_idx;
+  uint32_t key_memberid_idx;  // index of this key field when ordered by member id;
+  uint32_t kof_idx;           // key offset in type ops
   struct typebuilder_key_path *path;
 };
 
@@ -1554,7 +1554,7 @@ static uint32_t add_to_key_size (uint32_t keysize, uint32_t field_size, bool dhe
   return sz;
 }
 
-static dds_return_t typebuilder_get_keys_push_ops (struct typebuilder_data *tbd, struct typebuilder_ops *ops, struct typebuilder_key const ***p_keys_by_id)
+static dds_return_t typebuilder_get_keys_push_ops (struct typebuilder_data *tbd, struct typebuilder_ops *ops)
 {
   dds_return_t ret;
   assert (tbd->n_keys > 0);
@@ -1562,18 +1562,26 @@ static dds_return_t typebuilder_get_keys_push_ops (struct typebuilder_data *tbd,
   struct typebuilder_key const **keys_by_id;
   if (!(keys_by_id = ddsrt_malloc (tbd->n_keys * sizeof (*keys_by_id))))
     return DDS_RETCODE_OUT_OF_RESOURCES;
-  *p_keys_by_id = keys_by_id;
 
+  // Get keys indexordered by member-id
   for (uint32_t k = 0; k < tbd->n_keys; k++)
     keys_by_id[k] = &tbd->keys[k];
   qsort ((struct typebuilder_key **) keys_by_id, tbd->n_keys, sizeof (*keys_by_id), key_id_cmp);
 
-  // key ops (sorted by member index)
   for (uint32_t k = 0; k < tbd->n_keys; k++)
   {
     struct typebuilder_key *key = &tbd->keys[k];
     assert (key->path && key->path->parts && key->path->n_parts);
-    key->key_index = k;
+
+    // store key index for member-id sort
+    for (uint32_t k_id = 0; k_id < tbd->n_keys; k_id++)
+    {
+      if (keys_by_id[k_id] == key)
+      {
+        key->key_memberid_idx = k_id;
+        break;
+      }
+    }
 
     key->kof_idx = ops->index;
     if ((ret = push_op_arg (ops, DDS_OP_KOF)) != 0)
@@ -1604,10 +1612,12 @@ static dds_return_t typebuilder_get_keys_push_ops (struct typebuilder_data *tbd,
     }
     OR_OP (key->kof_idx, n_key_offs);
   }
+
+  ddsrt_free (keys_by_id);
   return DDS_RETCODE_OK;
 
 err:
-  ddsrt_free ((void *) keys_by_id);
+  ddsrt_free (keys_by_id);
   return ret;
 }
 
@@ -1643,22 +1653,11 @@ static uint32_t typebuilder_get_keys_calc_size_accum_one (uint32_t keysize, cons
   }
 }
 
-static uint32_t typebuilder_get_keys_calc_size (const struct typebuilder_data *tbd, struct typebuilder_key const * const *keys_by_id, enum get_keys_calc_size_repr data_representation)
+static uint32_t typebuilder_get_keys_calc_size (const struct typebuilder_data *tbd, enum get_keys_calc_size_repr data_representation)
 {
   uint32_t keysz = 0;
-  switch (data_representation)
-  {
-    case GET_KEYS_CALC_SIZE_XCDR1:
-      // size XCDR1: using key definition order
-      for (uint32_t k = 0; k < tbd->n_keys; k++)
-        keysz = typebuilder_get_keys_calc_size_accum_one (keysz, &tbd->keys[k], data_representation);
-      break;
-    case GET_KEYS_CALC_SIZE_XCDR2:
-      // size XCDR2: using member id sort order
-      for (uint32_t k = 0; k < tbd->n_keys; k++)
-        keysz = typebuilder_get_keys_calc_size_accum_one (keysz, keys_by_id[k], data_representation);
-      break;
-  }
+  for (uint32_t k = 0; k < tbd->n_keys; k++)
+    keysz = typebuilder_get_keys_calc_size_accum_one (keysz, &tbd->keys[k], data_representation);
   return keysz;
 }
 
@@ -1689,18 +1688,18 @@ static char *typebuilder_get_keys_make_name (const struct typebuilder_key *key)
   return name;
 }
 
-static dds_return_t typebuilder_get_keys_build_descriptor (const struct typebuilder_data *tbd, struct typebuilder_key const * const *keys_by_id, struct dds_key_descriptor **key_desc)
+static dds_return_t typebuilder_get_keys_build_descriptor (const struct typebuilder_data *tbd, struct dds_key_descriptor **key_desc)
 {
-  // build key descriptor list (keys sorted by member id)
+  // build key descriptor list (keys sorted by definition order)
   if (!(*key_desc = ddsrt_malloc (tbd->n_keys * sizeof (**key_desc))))
     return DDS_RETCODE_OUT_OF_RESOURCES;
   for (uint32_t k = 0; k < tbd->n_keys; k++)
   {
-    struct typebuilder_key const * key = keys_by_id[k];
+    struct typebuilder_key *key = &tbd->keys[k];
     (*key_desc)[k] = (struct dds_key_descriptor) {
       .m_name = typebuilder_get_keys_make_name (key),
       .m_offset = key->kof_idx,
-      .m_idx = key->key_index
+      .m_idx = key->key_memberid_idx
     };
     if (!(*key_desc)[k].m_name)
     {
@@ -1721,20 +1720,18 @@ static dds_return_t typebuilder_get_keys (struct typebuilder_data *tbd, struct t
   if (tbd->n_keys == 0)
     return ret;
 
-  struct typebuilder_key const **keys_by_id;
-  if ((ret = typebuilder_get_keys_push_ops (tbd, ops, &keys_by_id)) != 0)
+  if ((ret = typebuilder_get_keys_push_ops (tbd, ops)) != 0)
     return ret;
 
-  const uint32_t keysz_xcdr1 = typebuilder_get_keys_calc_size (tbd, keys_by_id, GET_KEYS_CALC_SIZE_XCDR1);
-  const uint32_t keysz_xcdr2 = typebuilder_get_keys_calc_size (tbd, keys_by_id, GET_KEYS_CALC_SIZE_XCDR2);
+  const uint32_t keysz_xcdr1 = typebuilder_get_keys_calc_size (tbd, GET_KEYS_CALC_SIZE_XCDR1);
+  const uint32_t keysz_xcdr2 = typebuilder_get_keys_calc_size (tbd, GET_KEYS_CALC_SIZE_XCDR2);
   if (keysz_xcdr1 > 0 && keysz_xcdr1 <= DDS_FIXED_KEY_MAX_SIZE)
     tbd->fixed_key_xcdr1 = true;
   if (keysz_xcdr2 > 0 && keysz_xcdr2 <= DDS_FIXED_KEY_MAX_SIZE)
     tbd->fixed_key_xcdr2 = true;
 
-  // build key descriptor list (keys sorted by member id)
-  ret = typebuilder_get_keys_build_descriptor (tbd, keys_by_id, key_desc);
-  ddsrt_free ((void *) keys_by_id);
+  // build key descriptor list
+  ret = typebuilder_get_keys_build_descriptor (tbd, key_desc);
   return ret;
 }
 

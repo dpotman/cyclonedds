@@ -133,10 +133,10 @@ struct stack_type {
 
 struct key_meta_data {
   char *name;
-  uint32_t inst_offs;
-  uint32_t n_order;
-  uint32_t *order;
-  uint32_t key_idx;
+  uint32_t inst_offs;         /**< instruction offset in the instruction set */
+  uint32_t n_order;           /**< number or order entries (nesting level of key field) */
+  uint32_t *order;            /**< order of the key field in the containing aggregated type */
+  uint32_t key_memberid_idx;  /**< index of this key when sorting key fields by member id */
   uint32_t dims;
   uint32_t size;
   bool dheader;

@@ -53,6 +53,13 @@ enum dds_cdr_type_extensibility
   DDS_CDR_TYPE_EXT_MUTABLE = 2
 };
 
+enum dds_cdr_keyfield_order
+{
+  DDS_CDR_KEYFIELD_ORDER_UNSET,
+  DDS_CDR_KEYFIELD_ORDER_DEFINITION,
+  DDS_CDR_KEYFIELD_ORDER_MEMBERID
+};
+
 typedef struct dds_istream {
   const unsigned char *m_buffer;
   uint32_t m_size;          /* Buffer size */
@@ -199,13 +206,13 @@ void dds_stream_write_key (dds_ostream_t * __restrict os, const struct dds_cdrst
 void dds_stream_write_keyBE (dds_ostreamBE_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict sample, const struct dds_cdrstream_desc * __restrict type);
 
 /** @component cdr_serializer */
-DDS_EXPORT bool dds_stream_extract_key_from_data (dds_istream_t * __restrict is, dds_ostream_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const struct dds_cdrstream_desc * __restrict type);
+DDS_EXPORT bool dds_stream_extract_key_from_data (dds_istream_t * __restrict is, dds_ostream_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const struct dds_cdrstream_desc * __restrict type, enum dds_cdr_keyfield_order keyfield_order);
 
 /** @component cdr_serializer */
 DDS_EXPORT void dds_stream_extract_key_from_key (dds_istream_t * __restrict is, dds_ostream_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const struct dds_cdrstream_desc * __restrict type);
 
 /** @component cdr_serializer */
-DDS_EXPORT bool dds_stream_extract_keyBE_from_data (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const struct dds_cdrstream_desc * __restrict type);
+DDS_EXPORT bool dds_stream_extract_keyBE_from_data (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const struct dds_cdrstream_desc * __restrict type, enum dds_cdr_keyfield_order keyfield_order);
 
 /** @component cdr_serializer */
 DDS_EXPORT void dds_stream_extract_keyBE_from_key (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const struct dds_cdrstream_desc * __restrict type);

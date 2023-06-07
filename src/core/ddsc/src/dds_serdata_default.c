@@ -257,7 +257,7 @@ static bool gen_serdata_key (const struct dds_sertype_default *type, struct dds_
         dds_stream_write_key (&os, &dds_cdrstream_default_allocator, input, &type->type);
         break;
       case GSKIK_CDRSAMPLE:
-        if (!dds_stream_extract_key_from_data (input, &os, &dds_cdrstream_default_allocator, &type->type))
+        if (!dds_stream_extract_key_from_data (input, &os, &dds_cdrstream_default_allocator, &type->type, DDS_CDR_KEYFIELD_ORDER_DEFINITION))
           return false;
         break;
       case GSKIK_CDRKEY:
@@ -343,13 +343,6 @@ static struct dds_serdata_default *serdata_default_from_ser_common (const struct
   dds_istream_init (&is, actual_size, d->data, xcdr_version);
   if (!gen_serdata_key_from_cdr (&is, &d->key, tp, kind == SDK_KEY))
     goto err;
-  // for (int n = 0; n < d->key.keysize; n++) {
-  //   if (d->key.buftype == KEYBUFTYPE_DYNALLOC || d->key.buftype == KEYBUFTYPE_DYNALIAS)
-  //     printf("%02x ", d->key.u.dynbuf[n]);
-  //   else
-  //     printf("%02x ", d->key.u.stbuf[n]);
-  // }
-  // printf("\n");
   return d;
 
 err:
@@ -792,10 +785,10 @@ static void serdata_default_get_keyhash (const struct ddsi_serdata *serdata_comm
   if (xcdrv == DDSI_RTPS_CDR_ENC_VERSION_2)
     assert (os.x.m_index == d->key.keysize);
 
-  /* Cannot use is_topic_fixed_key here, because in case there is a bounded string
-     key field, it may contain a shorter string and fit in the 16 bytes */
+  /* Don't use the actual key size for checking if hashing is required,
+     but the worst-case key-size (see also XTypes spec 7.6.8 step 5.2) */
   uint32_t actual_keysz = os.x.m_index;
-  if (force_md5 || actual_keysz > DDS_FIXED_KEY_MAX_SIZE)
+  if (force_md5 || !is_topic_fixed_key (tp->type.flagset, xcdrv))
   {
     ddsrt_md5_state_t md5st;
     ddsrt_md5_init (&md5st);

@@ -30,24 +30,24 @@ CU_Test(idlc_descriptor, keys_nested)
     uint32_t n_keys;
     uint32_t n_key_offs; // number of key offset: the sum of (1 + number of nesting levels) for all keys
     bool keylist; // indicates if pragma keylist is used
-    uint32_t key_order[TEST_MAX_KEYS][TEST_MAX_KEY_OFFS]; // key order (used only when pragma keylist is used)
+    uint32_t key_order[TEST_MAX_KEYS][TEST_MAX_KEY_OFFS]; // key order scoped to containing type
     const char *key_name[TEST_MAX_KEYS];
-    uint32_t key_index[TEST_MAX_KEYS]; // key index as printed in the dds key descriptor, indicates the index (order 0..n) of the key in the CDR
+    uint32_t key_index[TEST_MAX_KEYS]; // key index when ordered by member-id
   } tests[] = {
     { "struct test { @key @id(2) long a; short b; }; ",
       1, 2, false, { { 2 } }, { "a" }, { 0 } },
     { "struct test { @key long a; @key short b; }; ",
       2, 4, false, { { 0 }, { 1 } }, { "a", "b" }, { 0, 1 } },
     { "@nested struct inner { @id(3) long i1; @id(1) short i2; }; struct outer { @key inner o1; }; ",
-      2, 6, false, { { 0, 1 }, { 0, 3 } }, { "o1.i2", "o1.i1" }, { 1, 0 } },
+      2, 6, false, { { 0, 3 }, { 0, 1 } }, { "o1.i1", "o1.i2" }, { 1, 0 } },
     { "@nested struct inner { long i1; @key short i2; }; struct outer { @key inner o1; }; ",
       1, 3, false, { { 0, 1 } }, { "o1.i2" }, { 0 } },
     { "@nested struct inner { @key @id(5) short i1; }; struct outer { @key @id(0) inner o1; @key @id(10) inner o2; }; ",
       2, 6, false, { { 0, 5 }, { 10, 5 } }, { "o1.i1", "o2.i1" }, { 0, 1 } },
     { "@nested struct inner { @key short i1; }; @nested struct mid { @key @id(3) char m1; @key @id(2) inner m2; @id(1) long m3; }; struct outer { @key @id(0) mid o1; @key @id(1) inner o2; }; ",
-      3, 10, false, { { 0, 2, 0 }, { 0, 3 }, { 1, 0 } }, { "o1.m2.i1", "o1.m1", "o2.i1" }, { 1, 0, 2 } },
+      3, 10, false, { { 0, 3 }, { 0, 2, 0 }, { 1, 0 } }, { "o1.m1", "o1.m2.i1", "o2.i1" }, { 1, 0, 2 } },
     { "@nested struct inner { char i1; @key char i2; }; struct outer { @key @id(3) inner o1; @key @id(2) short o2; }; ",
-      2, 5, false, { { 2 }, { 3, 1 } }, { "o2", "o1.i2" }, { 1, 0 } },
+      2, 5, false, { { 3, 1 }, { 2 } }, { "o1.i2", "o2" }, { 1, 0 } },
 
     { "struct test { long a; short b; }; \n#pragma keylist test a",
       1, 2, true, { { 0 } }, { "a" }, { 0 } },
@@ -106,7 +106,7 @@ CU_Test(idlc_descriptor, keys_nested)
       CU_ASSERT_PTR_NOT_NULL_FATAL (descriptor.keys[k].name);
       assert (descriptor.keys[k].name && tests[i].key_name[k]);
       CU_ASSERT_STRING_EQUAL_FATAL (descriptor.keys[k].name, tests[i].key_name[k]);
-      CU_ASSERT_EQUAL_FATAL (descriptor.keys[k].key_idx, tests[i].key_index[k]);
+      CU_ASSERT_EQUAL_FATAL (descriptor.keys[k].key_memberid_idx, tests[i].key_index[k]);
     }
 
     descriptor_fini (&descriptor);
@@ -220,7 +220,7 @@ CU_Test(idlc_descriptor, key_size)
     { "@topic struct test { @key @id(0) char b; @key @id(1) double a; @key @id(2) float c; }; ",
       false, true, VAR, 16 }, // key size XCDR1: 1 + 7 (pad) + 8 + 4 / XCDR2: 1 + 3 (pad) + 8 + 4
     { "@topic struct test { @key @id(0) char c1; @key @id(2) char c2; @key @id(4) char c3; @key @id(1) long l1; @key @id(3) long l2; }; ",
-      true, false, 12, VAR }, // key size XCDR1: 1 + 1 + 1 + 1 (pad) + 4 + 4 / XCDR2: 1 + 3 (pad) + 4 + 1 + 3 (pad) + 4 + 1
+      true, true, 12, 12 }, // key size XCDR1: 1 + 1 + 1 + 1 (pad) + 4 + 4 / XCDR2: 1 + 1 + 1 + 1 (pad) + 4 + 4
     { "enum e { E0, E1 }; @topic struct test { @key e a; }; ",
       true, true, 4, 4 }, // key size: 4
     { "@bit_bound(8) enum e { E0, E1 }; @topic struct test { @key e a; }; ",
@@ -330,7 +330,7 @@ CU_Test(idlc_descriptor, keys_inheritance)
       3, { "parent.a1", "parent.b1.a2", "parent.b1.b2" } },
     /* single inheritance, key fields reversed by @id */
     { "@nested struct test_base { @key @id(1) long a; @key @id(0) short b; }; @topic struct test : test_base { @id(2) long c; };",
-      2, { "parent.b", "parent.a" } },
+      2, { "parent.a", "parent.b" } },
     /* single inheritance appendable struct, one key field */
     { "@nested @appendable struct test_base { @key long a; short b; }; @topic @appendable struct test : test_base { long c; };",
       1, { "parent.a" } },
@@ -345,7 +345,7 @@ CU_Test(idlc_descriptor, keys_inheritance)
       3, { "a1", "b1.a2", "b1.b2" } },
     /* single inheritance, mutable types, key fields reversed by @id */
     { "@nested @mutable struct test_base { @key @id(1) long a; @key @id(0) short b; }; @topic @mutable struct test : test_base { @id(2) long c; };",
-      2, { "b", "a" } },
+      2, { "a", "b" } },
   };
 
   idl_retcode_t ret;

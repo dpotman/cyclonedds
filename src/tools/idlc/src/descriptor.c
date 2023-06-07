@@ -2225,7 +2225,6 @@ static idl_retcode_t descriptor_init_keys(const idl_pstate_t *pstate, struct con
       descriptor->keys[key_index].inst_offs = i;
       descriptor->keys[key_index].order = idl_calloc(offs_len, sizeof (*descriptor->keys[key_index].order));
       descriptor->keys[key_index].n_order = offs_len;
-      descriptor->keys[key_index].key_idx = key_index;
       key_index++;
     } else {
       assert(inst->type == KEY_OFFSET_VAL);
@@ -2242,12 +2241,22 @@ static idl_retcode_t descriptor_init_keys(const idl_pstate_t *pstate, struct con
   for (uint32_t k = 0; k < descriptor->n_keys; k++)
     descriptor->keysz_xcdr1 = add_to_key_size(descriptor->keysz_xcdr1, descriptor->keys[k].size, false, descriptor->keys[k].dims, descriptor->keys[k].align, XCDR1_MAX_ALIGN);
 
-  // sort keys by member id (scoped within the containing aggregated type)
-  qsort(descriptor->keys, descriptor->n_keys, sizeof (*descriptor->keys), key_meta_data_cmp);
-
-  // calculate key size for XCDR2 keys (ordered by member id)
+  // calculate key size for XCDR2 keys (also by definition order; member-id order is only used for keyhash calculation)
   for (uint32_t k = 0; k < descriptor->n_keys; k++)
     descriptor->keysz_xcdr2 = add_to_key_size(descriptor->keysz_xcdr2, descriptor->keys[k].size, descriptor->keys[k].dheader, descriptor->keys[k].dims, descriptor->keys[k].align, XCDR2_MAX_ALIGN);
+
+  // sort keys by member id (scoped within the containing aggregated type)
+  struct key_meta_data *keys_by_memberid = idl_malloc (descriptor->n_keys * sizeof (*keys_by_memberid));
+  memcpy (keys_by_memberid, descriptor->keys, descriptor->n_keys * sizeof (*keys_by_memberid));
+  qsort(keys_by_memberid, descriptor->n_keys, sizeof (*keys_by_memberid), key_meta_data_cmp);
+
+  for (uint32_t k_def = 0; k_def < descriptor->n_keys; k_def++)
+  {
+    for (uint32_t k_id = 0; k_id < descriptor->n_keys; k_id++)
+      if (strcmp (descriptor->keys[k_def].name, keys_by_memberid[k_id].name) == 0)
+        descriptor->keys[k_def].key_memberid_idx = k_id;
+  }
+  idl_free (keys_by_memberid);
 
   return IDL_RETCODE_OK;
 }
@@ -2280,7 +2289,7 @@ static int print_keys(FILE *fp, struct descriptor *descriptor, uint32_t offset)
   sep = "";
   fmt = "%s  { \"%s\", %"PRIu32", %"PRIu32" }";
   for (uint32_t k=0; k < descriptor->n_keys; k++) {
-    if (idl_fprintf(fp, fmt, sep, descriptor->keys[k].name, offset + descriptor->keys[k].inst_offs, descriptor->keys[k].key_idx) < 0)
+    if (idl_fprintf(fp, fmt, sep, descriptor->keys[k].name, offset + descriptor->keys[k].inst_offs, descriptor->keys[k].key_memberid_idx) < 0)
       goto err_print;
     sep = ",\n";
   }
@@ -2451,7 +2460,7 @@ static int print_cdrstream_descriptor(FILE *fp, struct descriptor *descriptor, u
     const char *sep = "";
     const char *keyfmt = "%s      { %"PRIu32", %"PRIu32" }";
     for (uint32_t k=0; k < descriptor->n_keys; k++) {
-      if (idl_fprintf(fp, keyfmt, sep, offset + descriptor->keys[k].inst_offs, descriptor->keys[k].key_idx) < 0)
+      if (idl_fprintf(fp, keyfmt, sep, offset + descriptor->keys[k].inst_offs, descriptor->keys[k].key_memberid_idx) < 0)
         return -1;
       sep = ",\n";
     }
