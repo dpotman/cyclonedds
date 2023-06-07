@@ -245,19 +245,19 @@ static bool gen_serdata_key (const struct dds_sertype_default *type, struct dds_
     // Force the key in the serdata object to be serialized in XCDR2 format
     dds_ostream_t os;
     dds_ostream_init (&os, &dds_cdrstream_default_allocator, 0, DDSI_RTPS_CDR_ENC_VERSION_2);
-    if (is_topic_fixed_key(desc->flagset, DDSI_RTPS_CDR_ENC_VERSION_2))
-    {
-      // FIXME: there are more cases where we don't have to allocate memory
-      os.m_buffer = kh->u.stbuf;
-      os.m_size = DDS_FIXED_KEY_MAX_SIZE;
-    }
+    // if (is_topic_fixed_key(desc->flagset, DDSI_RTPS_CDR_ENC_VERSION_2))
+    // {
+    //   // FIXME: there are more cases where we don't have to allocate memory
+    //   os.m_buffer = kh->u.stbuf;
+    //   os.m_size = DDS_FIXED_KEY_MAX_SIZE;
+    // }
     switch (input_kind)
     {
       case GSKIK_SAMPLE:
         dds_stream_write_key (&os, &dds_cdrstream_default_allocator, input, &type->type);
         break;
       case GSKIK_CDRSAMPLE:
-        if (!dds_stream_extract_key_from_data (input, &os, &dds_cdrstream_default_allocator, &type->type, DDS_CDR_KEYFIELD_ORDER_DEFINITION))
+        if (!dds_stream_extract_key_from_data (input, &os, &dds_cdrstream_default_allocator, &type->type))
           return false;
         break;
       case GSKIK_CDRKEY:
@@ -268,13 +268,13 @@ static bool gen_serdata_key (const struct dds_sertype_default *type, struct dds_
     }
     assert (os.m_index < (1u << 30));
     kh->keysize = os.m_index & SERDATA_DEFAULT_KEYSIZE_MASK;
-    if (is_topic_fixed_key (desc->flagset, DDSI_RTPS_CDR_ENC_VERSION_2))
-      kh->buftype = KEYBUFTYPE_STATIC;
-    else
-    {
+    // if (is_topic_fixed_key (desc->flagset, DDSI_RTPS_CDR_ENC_VERSION_2))
+    //   kh->buftype = KEYBUFTYPE_STATIC;
+    // else
+    // {
       kh->buftype = KEYBUFTYPE_DYNALLOC;
       kh->u.dynbuf = ddsrt_realloc (os.m_buffer, os.m_index); // don't waste bytes FIXME: maybe should be willing to waste a little
-    }
+    // }
   }
   return true;
 }

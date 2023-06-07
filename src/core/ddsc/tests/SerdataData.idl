@@ -79,9 +79,7 @@ struct SerdataKeyArr {
 // };
 
 
-/*
- Nested aggregated types
-*/
+// Nested aggregated types
 
 @final
 struct SerdataKeyOrderFinalNestedMutable {
@@ -116,4 +114,54 @@ struct SerdataKeyOrderMutableNestedFinal {
     @id(3) @key uint8 x;
     @id(2) uint8 y;
     @id(1) @key SerdataKeyOrder z;
+};
+
+// Implicit key members in nested type
+
+@final @nested
+struct SerdataKeyNestedFinalImplicitSubtype {
+    @id(3) uint8 x;
+    @id(2) uint8 y;
+    @id(1) SerdataKeyOrder z;
+};
+@final
+struct SerdataKeyNestedFinalImplicit {
+    @id(3) @key SerdataKeyNestedFinalImplicitSubtype d;
+    @id(2) SerdataKeyNestedFinalImplicitSubtype e;
+    @id(1) @key uint32 f;
+};
+
+
+@final @nested
+struct SerdataKeyNestedFinalImplicit2Subtype3 {
+    uint8 x;
+    uint8 y;
+};
+@final @nested
+struct SerdataKeyNestedFinalImplicit2Subtype2 {
+    @key SerdataKeyNestedFinalImplicit2Subtype3 e;
+    SerdataKeyNestedFinalImplicit2Subtype3 f;
+};
+@final @nested
+struct SerdataKeyNestedFinalImplicit2Subtype1 {
+    SerdataKeyNestedFinalImplicit2Subtype2 c;
+    SerdataKeyNestedFinalImplicit2Subtype2 d;
+};
+@final
+struct SerdataKeyNestedFinalImplicit2 {
+    @key SerdataKeyNestedFinalImplicit2Subtype1 a;
+    SerdataKeyNestedFinalImplicit2Subtype1 b;
+};
+
+@mutable @nested
+struct SerdataKeyNestedMutableImplicitSubtype {
+    @id(3) uint8 x;
+    @id(2) uint8 y;
+    @id(1) SerdataKeyOrder z;
+};
+@appendable
+struct SerdataKeyNestedMutableImplicit {
+    @id(3) @key SerdataKeyNestedMutableImplicitSubtype d;
+    @id(2) SerdataKeyNestedMutableImplicitSubtype e;
+    @id(1) @key uint32 f;
 };

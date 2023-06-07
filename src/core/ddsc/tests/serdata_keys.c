@@ -238,9 +238,45 @@ static void *init_SerdataKeyArr (void)
 //   return sample;
 // }
 
+static void *init_SerdataKeyNestedFinalImplicit (void)
+{
+  SerdataKeyNestedFinalImplicit *sample = ddsrt_malloc (sizeof (*sample));
+  sample->d = (SerdataKeyNestedFinalImplicitSubtype) { .x = 1, .y = 2, .z = { .a = 3, .b = 4, .c = 5 } };
+  sample->e = (SerdataKeyNestedFinalImplicitSubtype) { .x = 11, .y = 12, .z = { .a = 13, .b = 14, .c = 15 } };
+  sample->f = 20;
+  return sample;
+}
+
+static void *init_SerdataKeyNestedFinalImplicit2 (void)
+{
+  SerdataKeyNestedFinalImplicit2 *sample = ddsrt_malloc (sizeof (*sample));
+  sample->a = (SerdataKeyNestedFinalImplicit2Subtype1) { .c = { .e = { .x = 1, .y = 2 }, .f = { .x = 3, .y = 4 } }, .d = { .e = { .x = 5, .y = 6 }, .f = { .x = 7, .y = 8 } } };
+  sample->b = (SerdataKeyNestedFinalImplicit2Subtype1) { .c = { .e = { .x = 11, .y = 12 }, .f = { .x = 13, .y = 14 } }, .d = { .e = { .x = 15, .y = 16 }, .f = { .x = 17, .y = 18 } } };
+  return sample;
+}
+
+static void *init_SerdataKeyNestedMutableImplicit (void)
+{
+  SerdataKeyNestedMutableImplicit *sample = ddsrt_malloc (sizeof (*sample));
+  sample->d = (SerdataKeyNestedMutableImplicitSubtype) { .x = 1, .y = 2, .z = { .a = 3, .b = 4, .c = 5 } };
+  sample->e = (SerdataKeyNestedMutableImplicitSubtype) { .x = 11, .y = 12, .z = { .a = 13, .b = 14, .c = 15 } };
+  sample->f = 20;
+  return sample;
+}
 
 typedef void * (*init_fn) (void);
 typedef unsigned char raw[];
+
+static const unsigned char *serdata_default_keybuf (const struct dds_serdata_default *d)
+{
+  assert(d->key.buftype != KEYBUFTYPE_UNSET);
+  return (d->key.buftype == KEYBUFTYPE_STATIC) ? d->key.u.stbuf : d->key.u.dynbuf;
+}
+
+static size_t alignN(const size_t off, const size_t align)
+{
+  return (off + align - 1) & ~(align - 1);
+}
 
 static void print_cdr (const struct dds_serdata_default *sd, const unsigned char *exp_cdr, size_t exp_cdr_sz)
 {
@@ -404,39 +440,39 @@ CU_Test(ddsc_serdata, key_serialization)
       (raw){
         1,0,0,0,
         SER32(5),'t','e','s','t','\0',
-        0,0,0
-      }, 16,
+        0,0,0 // padding
+      }, 13,
       (raw){
         1,0,0,0,
         SER32(5),'t','e','s','t','\0',
-        0,0,0
-      }, 16,
+        0,0,0 // padding
+      }, 13,
     },
     { &SerdataKeyStringBounded_desc, init_SerdataKeyStringBounded,
       (raw){
         1,0,0,0,
         SER32(3),'t','s','\0',
-        0
-      }, 12,
+        0 // padding
+      }, 11,
       (raw){
         1,0,0,0,
         SER32(3),'t','s','\0',
-        0
-      }, 12,
+        0 // padding
+      }, 11,
     },
     { &SerdataKeyStringAppendable_desc, init_SerdataKeyStringAppendable,
       (raw){
         SER_DHEADER(13),
         1,0,0,0,
         SER32(5),'t','e','s','t','\0',
-        0,0,0
-      }, 20,
+        0,0,0 // padding
+      }, 17,
       (raw){
         SER_DHEADER(13),
         1,0,0,0,
         SER32(5),'t','e','s','t','\0',
-        0,0,0
-      }, 20,
+        0,0,0 // padding
+      }, 17,
     },
     { &SerdataKeyStringBoundedAppendable_desc, init_SerdataKeyStringBoundedAppendable,
       (raw){
@@ -469,6 +505,78 @@ CU_Test(ddsc_serdata, key_serialization)
     //     SER32(3),'t','s','\0'
     //   }, 14,
     // }
+    { &SerdataKeyNestedFinalImplicit_desc, init_SerdataKeyNestedFinalImplicit,
+      (raw){
+        // d
+        1,2,
+          3,4,
+          SER64(5),
+        // e
+        11,12,
+          13,14,
+          SER64(15),
+        // f
+        20,0,0,0
+      }, 28,
+      (raw){
+        // d
+        1,2,
+          3,0,
+          SER64(5),
+        // f
+        20,0,0,0
+      }, 16,
+    },
+    { &SerdataKeyNestedFinalImplicit2_desc, init_SerdataKeyNestedFinalImplicit2,
+      (raw){
+        // a
+        1,2,3,4,
+        5,6,7,8,
+        // b
+        11,12,13,14,
+        15,16,17,18
+      }, 16,
+      (raw){
+        // a
+        1,2,
+        5,6
+      }, 4,
+    },
+    { &SerdataKeyNestedMutableImplicit_desc, init_SerdataKeyNestedMutableImplicit,
+      (raw){
+        SER_DHEADER(84),
+        // d
+        SER_DHEADER(36),
+        SER_EMHEADER(1,0,3),1,0,0,0,
+        SER_EMHEADER(1,0,2),2,0,0,0,
+        SER_EMHEADER(1,4,1),SER_NEXTINT(12),
+          3,4,0,0,
+          SER64(5),
+        // e
+        SER_DHEADER(36),
+        /* FIXME: for these 3 members the must-understand bit is set because the
+            type is also used as key. Is this correct, or shouldn't the bit be set
+            in when used as non-key? */
+        SER_EMHEADER(1,0,3),11,0,0,0,
+        SER_EMHEADER(1,0,2),12,0,0,0,
+        SER_EMHEADER(1,4,1),SER_NEXTINT(12),
+          13,14,0,0,
+          SER64(15),
+        // f
+        20,0,0,0
+      }, 88,
+      (raw){
+        SER_DHEADER(44),
+        // d
+        SER_DHEADER(36),
+        SER_EMHEADER(1,0,3),1,0,0,0,
+        SER_EMHEADER(1,0,2),2,0,0,0,
+        SER_EMHEADER(1,4,1),SER_NEXTINT(12),
+          3,0,0,0,
+          SER64(5),
+        20,0,0,0
+      }, 48,
+    },
   };
 
   for (uint32_t test_index = 0; test_index < sizeof (tests) / sizeof (tests[0]); test_index++)
@@ -488,22 +596,40 @@ CU_Test(ddsc_serdata, key_serialization)
     CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
 
     void *sample = tests[test_index].init ();
-    enum ddsi_serdata_kind sdk[2] = { SDK_DATA, SDK_KEY };
-    for (uint32_t k = 0; k < sizeof (sdk) / sizeof (sdk[0]); k++)
+
+    // Create SDK_DATA sertype from sample
     {
-      struct dds_serdata_default *sd = (struct dds_serdata_default *) ddsi_serdata_from_sample (sertype, sdk[k], sample);
+      struct dds_serdata_default *sd = (struct dds_serdata_default *) ddsi_serdata_from_sample (sertype, SDK_DATA, sample);
       CU_ASSERT_FATAL (sd != NULL);
 
-      bool is_data = (sdk[k] == SDK_DATA);
-      const unsigned char *exp_cdr = is_data ? tests[test_index].expected_data : tests[test_index].expected_key;
-      size_t exp_cdr_sz = is_data ? tests[test_index].expected_data_sz : tests[test_index].expected_key_sz;
-      printf ("%s ", is_data ? "Data" : "Key");
-      print_cdr (sd, exp_cdr, exp_cdr_sz);
-
-      CU_ASSERT_EQUAL (exp_cdr_sz, sd->pos);
-      int cmp = memcmp (sd->data, exp_cdr, exp_cdr_sz);
+      size_t exp_sz_aligned = alignN (tests[test_index].expected_data_sz, 4);
+      printf ("Data: ");
+      print_cdr (sd, tests[test_index].expected_data, exp_sz_aligned);
+      CU_ASSERT_EQUAL (exp_sz_aligned, sd->pos);
+      int cmp = memcmp (sd->data, tests[test_index].expected_data, exp_sz_aligned);
       CU_ASSERT_EQUAL (cmp, 0);
 
+      CU_ASSERT_EQUAL (sd->key.keysize, tests[test_index].expected_key_sz);
+      int cmp_key = memcmp (serdata_default_keybuf (sd), tests[test_index].expected_key, tests[test_index].expected_key_sz);
+      CU_ASSERT_EQUAL (cmp_key, 0);
+      ddsi_serdata_unref (&sd->c);
+    }
+
+    // Create SDK_KEY sertype from sample
+    {
+      struct dds_serdata_default *sd = (struct dds_serdata_default *) ddsi_serdata_from_sample (sertype, SDK_KEY, sample);
+      CU_ASSERT_FATAL (sd != NULL);
+
+      size_t exp_sz_aligned = alignN (tests[test_index].expected_key_sz, 4);
+      printf ("Key: ");
+      print_cdr (sd, tests[test_index].expected_key, exp_sz_aligned);
+      CU_ASSERT_EQUAL (exp_sz_aligned, sd->pos);
+      int cmp = memcmp (sd->data, tests[test_index].expected_key, exp_sz_aligned);
+      CU_ASSERT_EQUAL (cmp, 0);
+
+      CU_ASSERT_EQUAL (sd->key.keysize, tests[test_index].expected_key_sz);
+      int cmp_key = memcmp (serdata_default_keybuf (sd), tests[test_index].expected_key, tests[test_index].expected_key_sz);
+      CU_ASSERT_EQUAL (cmp_key, 0);
       ddsi_serdata_unref (&sd->c);
     }
 
