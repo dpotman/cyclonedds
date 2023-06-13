@@ -210,7 +210,23 @@ static bool dds_stream_extract_keyBO_from_data_pl_member (dds_istream_t * __rest
     }
     else if (ops[ops_csr + 1] == m_id)
     {
+      uint32_t lc = get_length_code (plm_ops);
+      assert (lc <= LENGTH_CODE_ALSO_NEXTINT8);
+      uint32_t data_offs = (lc != LENGTH_CODE_NEXTINT) ? dds_os_reserve4BO (os, allocator) : dds_os_reserve8BO (os, allocator);
+
       (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, op0, plm_ops, true, true, n_keys, keys_remaining, keys);
+
+      /* add emheader with data length code and flags and optionally the serialized size of the data */
+      uint32_t em_hdr = 0;
+      em_hdr |= EMHEADER_FLAG_MUSTUNDERSTAND;
+      em_hdr |= lc << 28;
+      em_hdr |= m_id & EMHEADER_MEMBERID_MASK;
+
+      uint32_t *em_hdr_ptr = (uint32_t *) (((struct dds_ostream *)os)->m_buffer + data_offs - (lc == LENGTH_CODE_NEXTINT ? 8 : 4));
+      em_hdr_ptr[0] = to_BO4u (em_hdr);
+      if (lc == LENGTH_CODE_NEXTINT)
+        em_hdr_ptr[1] = to_BO4u (((struct dds_ostream *)os)->m_index - data_offs);  /* member size in next_int field in emheader */
+
       found = true;
       break;
     }
@@ -228,6 +244,11 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_pl (dds_istream_t * __
 
   /* read DHEADER */
   uint32_t pl_sz = dds_is_get4 (is), pl_offs = is->m_index;
+
+  /* At least one of the members of this aggregated type is part of the key,
+     so we need to add the dheader for this mutable type */
+  uint32_t delimited_offs_os = dds_os_reserve4BO (os, allocator);
+
   while (is->m_index - pl_offs < pl_sz)
   {
     /* read EMHEADER and next_int */
@@ -266,6 +287,9 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_pl (dds_istream_t * __
   /* skip all PLM-memberid pairs */
   while (ops[0] != DDS_OP_RTS)
     ops += 2;
+
+  /* add dheader in os */
+  *((uint32_t *) (((struct dds_ostream *)os)->m_buffer + delimited_offs_os - 4)) = to_BO4u (((struct dds_ostream *)os)->m_index - delimited_offs_os);
 
   return ops;
 }
@@ -307,9 +331,16 @@ bool dds_stream_extract_keyBO_from_data (dds_istream_t * __restrict is, DDS_OSTR
   if (keys_remaining == 0)
     return ret;
 
-  uint32_t *ops = desc->ops.ops, *op0 = ops;
-  (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, op0, ops, false, false, desc->keys.nkeys, &keys_remaining, desc->keys.keys);
+  // FIXME: if no key members in mutable types
+  // uint32_t *ops = desc->ops.ops, *op0 = ops;
+  // (void) dds_stream_extract_keyBO_from_data1 (is, os, allocator, op0, ops, false, false, desc->keys.nkeys, &keys_remaining, desc->keys.keys);
 
+  void *data = allocator->malloc (desc->size);
+  memset (data, 0, desc->size);
+  (void) dds_stream_read (is, data, allocator, desc->ops.ops);
+  dds_stream_write_keyBO (os, allocator, data, desc);
+  dds_stream_free_sample (data, allocator, desc->ops.ops);
+  allocator->free (data);
 
   // for (uint32_t i = 0; i < desc->keys.nkeys; i++)
   // {

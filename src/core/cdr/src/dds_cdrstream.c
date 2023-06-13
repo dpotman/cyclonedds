@@ -101,7 +101,7 @@ static const uint32_t *dds_stream_extract_key_from_data1 (dds_istream_t * __rest
 static const uint32_t *dds_stream_extract_keyBE_from_data1 (dds_istream_t * __restrict is, dds_ostreamBE_t * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator,
   const uint32_t * const __restrict op0, const uint32_t * __restrict ops, bool mutable_member, bool mutable_member_or_parent,
   uint32_t n_keys, uint32_t * __restrict keys_remaining, const dds_cdrstream_desc_key_t * __restrict key);
-static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static const uint32_t *dds_stream_read_impl (dds_istream_t * __restrict is, char * __restrict data, const struct dds_cdrstream_allocator * __restrict allocator, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only);
 static const uint32_t *stream_free_sample_adr (uint32_t insn, void * __restrict data, const struct dds_cdrstream_allocator * __restrict allocator, const uint32_t * __restrict ops);
 static const uint32_t *dds_stream_skip_adr_default (uint32_t insn, char * __restrict data, const struct dds_cdrstream_allocator * __restrict allocator, const uint32_t * __restrict ops);
@@ -920,6 +920,7 @@ static void dds_stream_skip_string (dds_istream_t * __restrict is)
   dds_stream_skip_forward (is, length, 1);
 }
 
+#if 0
 #ifndef NDEBUG
 static bool insn_key_ok_p (uint32_t insn)
 {
@@ -929,6 +930,7 @@ static bool insn_key_ok_p (uint32_t insn)
             || DDS_OP_TYPE (insn) == DDS_OP_VAL_EXT // allow fields in nested structs as key
           ));
 }
+#endif
 #endif
 
 static uint32_t read_union_discriminant (dds_istream_t * __restrict is, uint32_t insn)
@@ -1625,7 +1627,7 @@ static inline const uint32_t *dds_stream_read_adr (uint32_t insn, dds_istream_t 
 
   const bool is_key = (insn & DDS_OP_FLAG_KEY);
   if (key_only && !is_key)
-    return dds_stream_skip_adr_default (insn, data, allocator, ops);
+    return dds_stream_skip_adr (insn, ops);
 
   if (op_type_external (insn))
     dds_stream_alloc_external (ops, insn, &addr, allocator);
@@ -2448,8 +2450,8 @@ static bool read_and_normalize_collection_dheader (bool * __restrict has_dheader
   }
 }
 
-static const uint32_t *normalize_seq (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
-static const uint32_t *normalize_seq (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn)
+static const uint32_t *normalize_seq (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn, bool key_only) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+static const uint32_t *normalize_seq (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn, bool key_only)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
   uint32_t bound_op = seq_is_bounded (DDS_OP_TYPE (insn)) ? 1 : 0;
@@ -2503,7 +2505,7 @@ static const uint32_t *normalize_seq (char * __restrict data, uint32_t * __restr
       const uint32_t jmp = DDS_OP_ADR_JMP (ops[3 + bound_op]);
       uint32_t const * const jsr_ops = ops + DDS_OP_ADR_JSR (ops[3 + bound_op]);
       for (uint32_t i = 0; i < num; i++)
-        if (stream_normalize_data_impl (data, off, size1, bswap, xcdr_version, jsr_ops, false) == NULL)
+        if (stream_normalize_data_impl (data, off, size1, bswap, xcdr_version, jsr_ops, false, key_only) == NULL)
           return NULL;
       ops += jmp ? jmp : (4 + bound_op); /* FIXME: why would jmp be 0? */
       break;
@@ -2518,8 +2520,8 @@ static const uint32_t *normalize_seq (char * __restrict data, uint32_t * __restr
   return ops;
 }
 
-static const uint32_t *normalize_arr (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
-static const uint32_t *normalize_arr (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn)
+static const uint32_t *normalize_arr (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn, bool key_only) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+static const uint32_t *normalize_arr (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn, bool key_only)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
   bool has_dheader;
@@ -2561,7 +2563,7 @@ static const uint32_t *normalize_arr (char * __restrict data, uint32_t * __restr
       const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
       uint32_t const * const jsr_ops = ops + DDS_OP_ADR_JSR (ops[3]);
       for (uint32_t i = 0; i < num; i++)
-        if (stream_normalize_data_impl (data, off, size1, bswap, xcdr_version, jsr_ops, false) == NULL)
+        if (stream_normalize_data_impl (data, off, size1, bswap, xcdr_version, jsr_ops, false, key_only) == NULL)
           return NULL;
       ops += jmp ? jmp : 5;
       break;
@@ -2618,8 +2620,8 @@ static bool normalize_uni_disc (uint32_t * __restrict val, char * __restrict dat
   return false;
 }
 
-static const uint32_t *normalize_uni (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
-static const uint32_t *normalize_uni (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn)
+static const uint32_t *normalize_uni (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn, bool key_only) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+static const uint32_t *normalize_uni (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint32_t insn, bool key_only)
 {
   uint32_t disc;
   if (!normalize_uni_disc (&disc, data, off, size, bswap, insn, ops))
@@ -2639,7 +2641,7 @@ static const uint32_t *normalize_uni (char * __restrict data, uint32_t * __restr
       case DDS_OP_VAL_STR: if (!normalize_string (data, off, size, bswap, SIZE_MAX)) return NULL; break;
       case DDS_OP_VAL_ENU: if (!normalize_enum (data, off, size, bswap, jeq_op[0], jeq_op[3])) return NULL; break;
       case DDS_OP_VAL_BST: case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: case DDS_OP_VAL_BMK:
-        if (stream_normalize_data_impl (data, off, size, bswap, xcdr_version, jeq_op + DDS_OP_ADR_JSR (jeq_op[0]), false) == NULL)
+        if (stream_normalize_data_impl (data, off, size, bswap, xcdr_version, jeq_op + DDS_OP_ADR_JSR (jeq_op[0]), false, key_only) == NULL)
           return NULL;
         break;
       case DDS_OP_VAL_EXT:
@@ -2650,8 +2652,8 @@ static const uint32_t *normalize_uni (char * __restrict data, uint32_t * __restr
   return ops;
 }
 
-static const uint32_t *stream_normalize_adr (uint32_t insn, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
-static const uint32_t *stream_normalize_adr (uint32_t insn, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member)
+static const uint32_t *stream_normalize_adr (uint32_t insn, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+static const uint32_t *stream_normalize_adr (uint32_t insn, char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only)
 {
   if (op_type_optional (insn))
   {
@@ -2664,6 +2666,11 @@ static const uint32_t *stream_normalize_adr (uint32_t insn, char * __restrict da
     if (!present)
       return dds_stream_skip_adr (insn, ops);
   }
+
+  const bool is_key = (insn & DDS_OP_FLAG_KEY);
+  if (key_only && !is_key)
+    return dds_stream_skip_adr (insn, ops);
+
   switch (DDS_OP_TYPE (insn))
   {
     case DDS_OP_VAL_BLN: if (!normalize_bool (data, off, size)) return NULL; ops += 2; break;
@@ -2673,9 +2680,9 @@ static const uint32_t *stream_normalize_adr (uint32_t insn, char * __restrict da
     case DDS_OP_VAL_8BY: if (!normalize_uint64 (data, off, size, bswap, xcdr_version)) return NULL; ops += 2; break;
     case DDS_OP_VAL_STR: if (!normalize_string (data, off, size, bswap, SIZE_MAX)) return NULL; ops += 2; break;
     case DDS_OP_VAL_BST: if (!normalize_string (data, off, size, bswap, ops[2])) return NULL; ops += 3; break;
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: ops = normalize_seq (data, off, size, bswap, xcdr_version, ops, insn); if (!ops) return NULL; break;
-    case DDS_OP_VAL_ARR: ops = normalize_arr (data, off, size, bswap, xcdr_version, ops, insn); if (!ops) return NULL; break;
-    case DDS_OP_VAL_UNI: ops = normalize_uni (data, off, size, bswap, xcdr_version, ops, insn); if (!ops) return NULL; break;
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: ops = normalize_seq (data, off, size, bswap, xcdr_version, ops, insn, key_only); if (!ops) return NULL; break;
+    case DDS_OP_VAL_ARR: ops = normalize_arr (data, off, size, bswap, xcdr_version, ops, insn, key_only); if (!ops) return NULL; break;
+    case DDS_OP_VAL_UNI: ops = normalize_uni (data, off, size, bswap, xcdr_version, ops, insn, key_only); if (!ops) return NULL; break;
     case DDS_OP_VAL_ENU: if (!normalize_enum (data, off, size, bswap, insn, ops[2])) return NULL; ops += 3; break;
     case DDS_OP_VAL_BMK: if (!normalize_bitmask (data, off, size, bswap, xcdr_version, insn, ops[2], ops[3])) return NULL; ops += 4; break;
     case DDS_OP_VAL_EXT: {
@@ -2686,7 +2693,7 @@ static const uint32_t *stream_normalize_adr (uint32_t insn, char * __restrict da
       if (op_type_base (insn) && jsr_ops[0] == DDS_OP_DLC)
         jsr_ops++;
 
-      if (stream_normalize_data_impl (data, off, size, bswap, xcdr_version, jsr_ops, false) == NULL)
+      if (stream_normalize_data_impl (data, off, size, bswap, xcdr_version, jsr_ops, false, key_only) == NULL)
         return NULL;
       ops += jmp ? jmp : 3;
       break;
@@ -2698,8 +2705,8 @@ static const uint32_t *stream_normalize_adr (uint32_t insn, char * __restrict da
   return ops;
 }
 
-static const uint32_t *stream_normalize_delimited (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
-static const uint32_t *stream_normalize_delimited (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops)
+static const uint32_t *stream_normalize_delimited (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool key_only) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+static const uint32_t *stream_normalize_delimited (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool key_only)
 {
   uint32_t delimited_sz;
   if (!read_and_normalize_uint32 (&delimited_sz, data, off, size, bswap))
@@ -2720,11 +2727,11 @@ static const uint32_t *stream_normalize_delimited (char * __restrict data, uint3
     switch (DDS_OP (insn))
     {
       case DDS_OP_ADR:
-        if ((ops = stream_normalize_adr (insn, data, off, size1, bswap, xcdr_version, ops, false)) == NULL)
+        if ((ops = stream_normalize_adr (insn, data, off, size1, bswap, xcdr_version, ops, false, key_only)) == NULL)
           return NULL;
         break;
       case DDS_OP_JSR:
-        if (stream_normalize_data_impl (data, off, size1, bswap, xcdr_version, ops + DDS_OP_JUMP (insn), false) == NULL)
+        if (stream_normalize_data_impl (data, off, size1, bswap, xcdr_version, ops + DDS_OP_JUMP (insn), false, key_only) == NULL)
           return NULL;
         ops++;
         break;
@@ -2759,8 +2766,8 @@ enum normalize_pl_member_result {
   NPMR_ERROR // found the data, but normalization failed
 };
 
-static enum normalize_pl_member_result dds_stream_normalize_pl_member (char * __restrict data, uint32_t m_id, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
-static enum normalize_pl_member_result dds_stream_normalize_pl_member (char * __restrict data, uint32_t m_id, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops)
+static enum normalize_pl_member_result dds_stream_normalize_pl_member (char * __restrict data, uint32_t m_id, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool key_only) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+static enum normalize_pl_member_result dds_stream_normalize_pl_member (char * __restrict data, uint32_t m_id, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool key_only)
 {
   uint32_t insn, ops_csr = 0;
   enum normalize_pl_member_result result = NPMR_NOT_FOUND;
@@ -2773,11 +2780,11 @@ static enum normalize_pl_member_result dds_stream_normalize_pl_member (char * __
     {
       assert (DDS_OP (plm_ops[0]) == DDS_OP_PLC);
       plm_ops++; /* skip PLC to go to first PLM from base type */
-      result = dds_stream_normalize_pl_member (data, m_id, off, size, bswap, xcdr_version, plm_ops);
+      result = dds_stream_normalize_pl_member (data, m_id, off, size, bswap, xcdr_version, plm_ops, key_only);
     }
     else if (ops[ops_csr + 1] == m_id)
     {
-      if (stream_normalize_data_impl (data, off, size, bswap, xcdr_version, plm_ops, true))
+      if (stream_normalize_data_impl (data, off, size, bswap, xcdr_version, plm_ops, true, key_only))
         result = NPMR_FOUND;
       else
         result = NPMR_ERROR;
@@ -2788,8 +2795,8 @@ static enum normalize_pl_member_result dds_stream_normalize_pl_member (char * __
   return result;
 }
 
-static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
-static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops)
+static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool key_only) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool key_only)
 {
   /* skip PLC op */
   ops++;
@@ -2849,7 +2856,7 @@ static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * _
       return normalize_error_ops ();
     // don't allow member values that exceed its declared size
     const uint32_t size2 = *off + msz;
-    switch (dds_stream_normalize_pl_member (data, m_id, off, size2, bswap, xcdr_version, ops))
+    switch (dds_stream_normalize_pl_member (data, m_id, off, size2, bswap, xcdr_version, ops, key_only))
     {
       case NPMR_NOT_FOUND:
         /* FIXME: the caller should be able to differentiate between a sample that
@@ -2877,8 +2884,8 @@ static const uint32_t *stream_normalize_pl (char * __restrict data, uint32_t * _
   return ops;
 }
 
-static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member) ddsrt_attribute_warn_unused_result ddsrt_nonnull ((1, 2, 6));
-static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member)
+static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only) ddsrt_attribute_warn_unused_result ddsrt_nonnull ((1, 2, 6));
+static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only)
 {
   uint32_t insn;
   while ((insn = *ops) != DDS_OP_RTS)
@@ -2886,12 +2893,12 @@ static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint3
     switch (DDS_OP (insn))
     {
       case DDS_OP_ADR: {
-        if ((ops = stream_normalize_adr (insn, data, off, size, bswap, xcdr_version, ops, is_mutable_member)) == NULL)
+        if ((ops = stream_normalize_adr (insn, data, off, size, bswap, xcdr_version, ops, is_mutable_member, key_only)) == NULL)
           return NULL;
         break;
       }
       case DDS_OP_JSR: {
-        if (stream_normalize_data_impl (data, off, size, bswap, xcdr_version, ops + DDS_OP_JUMP (insn), is_mutable_member) == NULL)
+        if (stream_normalize_data_impl (data, off, size, bswap, xcdr_version, ops + DDS_OP_JUMP (insn), is_mutable_member, key_only) == NULL)
           return NULL;
         ops++;
         break;
@@ -2903,14 +2910,14 @@ static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint3
       case DDS_OP_DLC: {
         if (xcdr_version != DDSI_RTPS_CDR_ENC_VERSION_2)
           return normalize_error_ops ();
-        if ((ops = stream_normalize_delimited (data, off, size, bswap, xcdr_version, ops)) == NULL)
+        if ((ops = stream_normalize_delimited (data, off, size, bswap, xcdr_version, ops, key_only)) == NULL)
           return NULL;
         break;
       }
       case DDS_OP_PLC: {
         if (xcdr_version != DDSI_RTPS_CDR_ENC_VERSION_2)
           return normalize_error_ops ();
-        if ((ops = stream_normalize_pl (data, off, size, bswap, xcdr_version, ops)) == NULL)
+        if ((ops = stream_normalize_pl (data, off, size, bswap, xcdr_version, ops, key_only)) == NULL)
           return NULL;
         break;
       }
@@ -2921,44 +2928,47 @@ static const uint32_t *stream_normalize_data_impl (char * __restrict data, uint3
 
 const uint32_t *dds_stream_normalize_data (char * __restrict data, uint32_t * __restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops)
 {
-  return stream_normalize_data_impl (data, off, size, bswap, xcdr_version, ops, false);
+  return stream_normalize_data_impl (data, off, size, bswap, xcdr_version, ops, false, false);
 }
 
-static bool stream_normalize_key_impl (void * __restrict data, uint32_t size, uint32_t *offs, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint16_t key_offset_count, const uint32_t * key_offset_insn) ddsrt_attribute_warn_unused_result ddsrt_nonnull ((1, 3, 6));
-static bool stream_normalize_key_impl (void * __restrict data, uint32_t size, uint32_t *offs, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint16_t key_offset_count, const uint32_t * key_offset_insn)
-{
-  uint32_t insn = ops[0];
-  assert (insn_key_ok_p (insn));
-  switch (DDS_OP_TYPE (insn))
-  {
-    case DDS_OP_VAL_BLN: if (!normalize_bool (data, offs, size)) return false; break;
-    case DDS_OP_VAL_1BY: if (!normalize_uint8 (offs, size)) return false; break;
-    case DDS_OP_VAL_2BY: if (!normalize_uint16 (data, offs, size, bswap)) return false; break;
-    case DDS_OP_VAL_4BY: if (!normalize_uint32 (data, offs, size, bswap)) return false; break;
-    case DDS_OP_VAL_ENU: if (!normalize_enum (data, offs, size, bswap, insn, ops[2])) return false; break;
-    case DDS_OP_VAL_BMK: if (!normalize_bitmask (data, offs, size, bswap, xcdr_version, insn, ops[2], ops[3])) return false; break;
-    case DDS_OP_VAL_8BY: if (!normalize_uint64 (data, offs, size, bswap, xcdr_version)) return false; break;
-    case DDS_OP_VAL_STR: if (!normalize_string (data, offs, size, bswap, SIZE_MAX)) return false; break;
-    case DDS_OP_VAL_BST: if (!normalize_string (data, offs, size, bswap, ops[2])) return false; break;
-    case DDS_OP_VAL_ARR: if (!normalize_arr (data, offs, size, bswap, xcdr_version, ops, insn)) return false; break;
-    case DDS_OP_VAL_EXT: {
-      assert (key_offset_count > 0);
-      const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]) + *key_offset_insn;
-      if (!stream_normalize_key_impl (data, size, offs, bswap, xcdr_version, jsr_ops, --key_offset_count, ++key_offset_insn))
-        return false;
-      break;
-    }
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
-      abort ();
-      break;
-  }
-  return true;
-}
+// static bool stream_normalize_key_impl (void * __restrict data, uint32_t size, uint32_t *offs, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint16_t key_offset_count, const uint32_t * key_offset_insn) ddsrt_attribute_warn_unused_result ddsrt_nonnull ((1, 3, 6));
+// static bool stream_normalize_key_impl (void * __restrict data, uint32_t size, uint32_t *offs, bool bswap, uint32_t xcdr_version, const uint32_t * __restrict ops, uint16_t key_offset_count, const uint32_t * key_offset_insn)
+// {
+//   uint32_t insn = ops[0];
+//   assert (insn_key_ok_p (insn));
+//   switch (DDS_OP_TYPE (insn))
+//   {
+//     case DDS_OP_VAL_BLN: if (!normalize_bool (data, offs, size)) return false; break;
+//     case DDS_OP_VAL_1BY: if (!normalize_uint8 (offs, size)) return false; break;
+//     case DDS_OP_VAL_2BY: if (!normalize_uint16 (data, offs, size, bswap)) return false; break;
+//     case DDS_OP_VAL_4BY: if (!normalize_uint32 (data, offs, size, bswap)) return false; break;
+//     case DDS_OP_VAL_ENU: if (!normalize_enum (data, offs, size, bswap, insn, ops[2])) return false; break;
+//     case DDS_OP_VAL_BMK: if (!normalize_bitmask (data, offs, size, bswap, xcdr_version, insn, ops[2], ops[3])) return false; break;
+//     case DDS_OP_VAL_8BY: if (!normalize_uint64 (data, offs, size, bswap, xcdr_version)) return false; break;
+//     case DDS_OP_VAL_STR: if (!normalize_string (data, offs, size, bswap, SIZE_MAX)) return false; break;
+//     case DDS_OP_VAL_BST: if (!normalize_string (data, offs, size, bswap, ops[2])) return false; break;
+//     case DDS_OP_VAL_ARR: if (!normalize_arr (data, offs, size, bswap, xcdr_version, ops, insn, true)) return false; break;
+//     case DDS_OP_VAL_EXT: {
+//       assert (key_offset_count > 0);
+//       const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]) + *key_offset_insn;
+//       if (!stream_normalize_key_impl (data, size, offs, bswap, xcdr_version, jsr_ops, --key_offset_count, ++key_offset_insn))
+//         return false;
+//       break;
+//     }
+//     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
+//       abort ();
+//       break;
+//   }
+//   return true;
+// }
 
 static bool stream_normalize_key (void * __restrict data, uint32_t size, bool bswap, uint32_t xcdr_version, const struct dds_cdrstream_desc * __restrict desc, uint32_t *actual_size) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 static bool stream_normalize_key (void * __restrict data, uint32_t size, bool bswap, uint32_t xcdr_version, const struct dds_cdrstream_desc * __restrict desc, uint32_t *actual_size)
 {
   uint32_t offs = 0;
+  if (stream_normalize_data_impl (data, &offs, size, bswap, xcdr_version, desc->ops.ops, false, true) == NULL)
+    return false;
+#if 0
   for (uint32_t i = 0; i < desc->keys.nkeys; i++)
   {
     const uint32_t *op = desc->ops.ops + desc->keys.keys[i].ops_offs;
@@ -2980,6 +2990,7 @@ static bool stream_normalize_key (void * __restrict data, uint32_t size, bool bs
         break;
     }
   }
+#endif
   *actual_size = offs;
   return true;
 }
@@ -2991,7 +3002,7 @@ bool dds_stream_normalize (void * __restrict data, uint32_t size, bool bswap, ui
     return normalize_error_bool ();
   else if (just_key)
     return stream_normalize_key (data, size, bswap, xcdr_version, desc, actual_size);
-  else if (!stream_normalize_data_impl (data, &off, size, bswap, xcdr_version, desc->ops.ops, false))
+  else if (!stream_normalize_data_impl (data, &off, size, bswap, xcdr_version, desc->ops.ops, false, false))
     return false;
   else
   {
@@ -3945,9 +3956,9 @@ static bool prtf_simple_array (char * __restrict *buf, size_t * __restrict bufsi
   return prtf (buf, bufsize, "}");
 }
 
-static const uint32_t *dds_stream_print_sample1 (char * __restrict *buf, size_t * __restrict bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool add_braces, bool is_mutable_member);
+static const uint32_t *dds_stream_print_sample1 (char * __restrict *buf, size_t * __restrict bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool add_braces, bool is_mutable_member, bool key_only);
 
-static const uint32_t *prtf_seq (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, uint32_t insn)
+static const uint32_t *prtf_seq (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, uint32_t insn, bool key_only)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
   uint32_t bound_op = seq_is_bounded (DDS_OP_TYPE (insn)) ? 1 : 0;
@@ -3982,7 +3993,7 @@ static const uint32_t *prtf_seq (char * __restrict *buf, size_t *bufsize, dds_is
       {
         if (i > 0)
           (void) prtf (buf, bufsize, ",");
-        cont = dds_stream_print_sample1 (buf, bufsize, is, jsr_ops, subtype == DDS_OP_VAL_STU, false) != NULL;
+        cont = dds_stream_print_sample1 (buf, bufsize, is, jsr_ops, subtype == DDS_OP_VAL_STU, false, key_only) != NULL;
       }
       (void) prtf (buf, bufsize, "}");
       return ops + (jmp ? jmp : (4 + bound_op)); /* FIXME: why would jmp be 0? */
@@ -3995,7 +4006,7 @@ static const uint32_t *prtf_seq (char * __restrict *buf, size_t *bufsize, dds_is
   return NULL;
 }
 
-static const uint32_t *prtf_arr (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, uint32_t insn)
+static const uint32_t *prtf_arr (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, uint32_t insn, bool key_only)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
   if (is_dheader_needed (subtype, is->m_xcdr_version))
@@ -4020,7 +4031,7 @@ static const uint32_t *prtf_arr (char * __restrict *buf, size_t *bufsize, dds_is
       for (uint32_t i = 0; cont && i < num; i++)
       {
         if (i > 0) (void) prtf (buf, bufsize, ",");
-        cont = dds_stream_print_sample1 (buf, bufsize, is, jsr_ops, subtype == DDS_OP_VAL_STU, false) != NULL;
+        cont = dds_stream_print_sample1 (buf, bufsize, is, jsr_ops, subtype == DDS_OP_VAL_STU, false, key_only) != NULL;
       }
       (void) prtf (buf, bufsize, "}");
       return ops + (jmp ? jmp : 5);
@@ -4033,7 +4044,7 @@ static const uint32_t *prtf_arr (char * __restrict *buf, size_t *bufsize, dds_is
   return NULL;
 }
 
-static const uint32_t *prtf_uni (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, uint32_t insn)
+static const uint32_t *prtf_uni (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, uint32_t insn, bool key_only)
 {
   const uint32_t disc = read_union_discriminant (is, insn);
   uint32_t const * const jeq_op = find_union_case (ops, disc);
@@ -4049,7 +4060,7 @@ static const uint32_t *prtf_uni (char * __restrict *buf, size_t *bufsize, dds_is
         (void) prtf_simple (buf, bufsize, is, valtype, DDS_OP_FLAGS (jeq_op[0]));
         break;
       case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: case DDS_OP_VAL_BMK:
-        (void) dds_stream_print_sample1 (buf, bufsize, is, jeq_op + DDS_OP_ADR_JSR (jeq_op[0]), valtype == DDS_OP_VAL_STU, false);
+        (void) dds_stream_print_sample1 (buf, bufsize, is, jeq_op + DDS_OP_ADR_JSR (jeq_op[0]), valtype == DDS_OP_VAL_STU, false, key_only);
         break;
       case DDS_OP_VAL_EXT: {
         abort (); /* not supported, use UNI instead */
@@ -4060,13 +4071,17 @@ static const uint32_t *prtf_uni (char * __restrict *buf, size_t *bufsize, dds_is
   return ops;
 }
 
-static const uint32_t * dds_stream_print_adr (char * __restrict *buf, size_t * __restrict bufsize, uint32_t insn, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool is_mutable_member)
+static const uint32_t * dds_stream_print_adr (char * __restrict *buf, size_t * __restrict bufsize, uint32_t insn, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only)
 {
   if (!stream_is_member_present (insn, is, is_mutable_member))
   {
     (void) prtf (buf, bufsize, "NULL");
     return dds_stream_skip_adr (insn, ops);
   }
+
+  const bool is_key = (insn & DDS_OP_FLAG_KEY);
+  if (key_only && !is_key)
+    return dds_stream_skip_adr (insn, ops);
   switch (DDS_OP_TYPE (insn))
   {
     case DDS_OP_VAL_BLN: case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
@@ -4081,13 +4096,13 @@ static const uint32_t * dds_stream_print_adr (char * __restrict *buf, size_t * _
       ops += 3 + (DDS_OP_TYPE (insn) == DDS_OP_VAL_BMK ? 1 : 0);
       break;
     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ:
-      ops = prtf_seq (buf, bufsize, is, ops, insn);
+      ops = prtf_seq (buf, bufsize, is, ops, insn, key_only);
       break;
     case DDS_OP_VAL_ARR:
-      ops = prtf_arr (buf, bufsize, is, ops, insn);
+      ops = prtf_arr (buf, bufsize, is, ops, insn, key_only);
       break;
     case DDS_OP_VAL_UNI:
-      ops = prtf_uni (buf, bufsize, is, ops, insn);
+      ops = prtf_uni (buf, bufsize, is, ops, insn, key_only);
       break;
     case DDS_OP_VAL_EXT: {
       const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
@@ -4095,7 +4110,7 @@ static const uint32_t * dds_stream_print_adr (char * __restrict *buf, size_t * _
       /* skip DLC instruction for base type, DHEADER is not in the data for base types */
       if (op_type_base (insn) && jsr_ops[0] == DDS_OP_DLC)
         jsr_ops++;
-      if (dds_stream_print_sample1 (buf, bufsize, is, jsr_ops, true, false) == NULL)
+      if (dds_stream_print_sample1 (buf, bufsize, is, jsr_ops, true, false, key_only) == NULL)
         return NULL;
       ops += jmp ? jmp : 3;
       break;
@@ -4107,7 +4122,7 @@ static const uint32_t * dds_stream_print_adr (char * __restrict *buf, size_t * _
   return ops;
 }
 
-static const uint32_t *prtf_delimited (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops)
+static const uint32_t *prtf_delimited (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool key_only)
 {
   uint32_t delimited_sz = dds_is_get4 (is), delimited_offs = is->m_index, insn;
   bool needs_comma = false;
@@ -4123,11 +4138,11 @@ static const uint32_t *prtf_delimited (char * __restrict *buf, size_t *bufsize, 
     {
       case DDS_OP_ADR:
         /* skip fields that are not in serialized data for appendable type */
-        if ((ops = (is->m_index - delimited_offs < delimited_sz) ? dds_stream_print_adr (buf, bufsize, insn, is, ops, false) : dds_stream_skip_adr (insn, ops)) == NULL)
+        if ((ops = (is->m_index - delimited_offs < delimited_sz) ? dds_stream_print_adr (buf, bufsize, insn, is, ops, false, key_only) : dds_stream_skip_adr (insn, ops)) == NULL)
           return NULL;
         break;
       case DDS_OP_JSR:
-        if (dds_stream_print_sample1 (buf, bufsize, is, ops + DDS_OP_JUMP (insn), false, false) == NULL)
+        if (dds_stream_print_sample1 (buf, bufsize, is, ops + DDS_OP_JUMP (insn), false, false, key_only) == NULL)
           return NULL;
         ops++;
         break;
@@ -4143,7 +4158,7 @@ static const uint32_t *prtf_delimited (char * __restrict *buf, size_t *bufsize, 
   return ops;
 }
 
-static bool prtf_plm (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, uint32_t m_id, const uint32_t * __restrict ops)
+static bool prtf_plm (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, uint32_t m_id, const uint32_t * __restrict ops, bool key_only)
 {
   uint32_t insn, ops_csr = 0;
   bool found = false;
@@ -4156,11 +4171,11 @@ static bool prtf_plm (char * __restrict *buf, size_t *bufsize, dds_istream_t * _
     {
       assert (DDS_OP (plm_ops[0]) == DDS_OP_PLC);
       plm_ops++; /* skip PLC to go to first PLM from base type */
-      found = prtf_plm (buf, bufsize, is, m_id, plm_ops);
+      found = prtf_plm (buf, bufsize, is, m_id, plm_ops, key_only);
     }
     else if (ops[ops_csr + 1] == m_id)
     {
-      (void) dds_stream_print_sample1 (buf, bufsize, is, plm_ops, true, true);
+      (void) dds_stream_print_sample1 (buf, bufsize, is, plm_ops, true, true, key_only);
       found = true;
       break;
     }
@@ -4169,7 +4184,7 @@ static bool prtf_plm (char * __restrict *buf, size_t *bufsize, dds_istream_t * _
   return found;
 }
 
-static const uint32_t *prtf_pl (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops)
+static const uint32_t *prtf_pl (char * __restrict *buf, size_t *bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool key_only)
 {
   /* skip PLC op */
   ops++;
@@ -4204,7 +4219,7 @@ static const uint32_t *prtf_pl (char * __restrict *buf, size_t *bufsize, dds_ist
     }
 
     /* find member and deserialize */
-    if (!prtf_plm (buf, bufsize, is, m_id, ops))
+    if (!prtf_plm (buf, bufsize, is, m_id, ops, key_only))
     {
       is->m_index += msz;
       if (lc >= LENGTH_CODE_ALSO_NEXTINT)
@@ -4219,7 +4234,7 @@ static const uint32_t *prtf_pl (char * __restrict *buf, size_t *bufsize, dds_ist
   return ops;
 }
 
-static const uint32_t * dds_stream_print_sample1 (char * __restrict *buf, size_t * __restrict bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool add_braces, bool is_mutable_member)
+static const uint32_t * dds_stream_print_sample1 (char * __restrict *buf, size_t * __restrict bufsize, dds_istream_t * __restrict is, const uint32_t * __restrict ops, bool add_braces, bool is_mutable_member, bool key_only)
 {
   uint32_t insn;
   bool cont = true;
@@ -4234,10 +4249,10 @@ static const uint32_t * dds_stream_print_sample1 (char * __restrict *buf, size_t
     switch (DDS_OP (insn))
     {
       case DDS_OP_ADR:
-        ops = dds_stream_print_adr (buf, bufsize, insn, is, ops, is_mutable_member);
+        ops = dds_stream_print_adr (buf, bufsize, insn, is, ops, is_mutable_member, key_only);
         break;
       case DDS_OP_JSR:
-        cont = dds_stream_print_sample1 (buf, bufsize, is, ops + DDS_OP_JUMP (insn), true, is_mutable_member) != NULL;
+        cont = dds_stream_print_sample1 (buf, bufsize, is, ops + DDS_OP_JUMP (insn), true, is_mutable_member, key_only) != NULL;
         ops++;
         break;
       case DDS_OP_RTS: case DDS_OP_JEQ: case DDS_OP_JEQ4: case DDS_OP_KOF: case DDS_OP_PLM:
@@ -4245,11 +4260,11 @@ static const uint32_t * dds_stream_print_sample1 (char * __restrict *buf, size_t
         break;
       case DDS_OP_DLC:
         assert (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2);
-        ops = prtf_delimited (buf, bufsize, is, ops);
+        ops = prtf_delimited (buf, bufsize, is, ops, key_only);
         break;
       case DDS_OP_PLC:
         assert (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2);
-        ops = prtf_pl (buf, bufsize, is, ops);
+        ops = prtf_pl (buf, bufsize, is, ops, key_only);
         break;
     }
   }
@@ -4260,39 +4275,41 @@ static const uint32_t * dds_stream_print_sample1 (char * __restrict *buf, size_t
 
 size_t dds_stream_print_sample (dds_istream_t * __restrict is, const struct dds_cdrstream_desc * __restrict desc, char * __restrict buf, size_t bufsize)
 {
-  (void) dds_stream_print_sample1 (&buf, &bufsize, is, desc->ops.ops, true, false);
+  (void) dds_stream_print_sample1 (&buf, &bufsize, is, desc->ops.ops, true, false, false);
   return bufsize;
 }
 
-static void dds_stream_print_key_impl (dds_istream_t * __restrict is, const uint32_t *ops, uint16_t key_offset_count, const uint32_t * key_offset_insn,
-  char * __restrict *buf, size_t * __restrict bufsize, bool *cont)
-{
-  uint32_t insn = *ops;
-  assert (insn_key_ok_p (insn));
-  assert (cont);
-  switch (DDS_OP_TYPE (insn))
-  {
-    case DDS_OP_VAL_BLN: case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: case DDS_OP_VAL_ENU:
-    case DDS_OP_VAL_STR: case DDS_OP_VAL_BST: case DDS_OP_VAL_BMK:
-      *cont = prtf_simple (buf, bufsize, is, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn));
-      break;
-    case DDS_OP_VAL_ARR:
-      *cont = prtf_arr (buf, bufsize, is, ops, insn);
-      break;
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
-      abort ();
-      break;
-    case DDS_OP_VAL_EXT:
-      assert (key_offset_count > 0);
-      const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]) + *key_offset_insn;
-      dds_stream_print_key_impl (is, jsr_ops, --key_offset_count, ++key_offset_insn, buf, bufsize, cont);
-      break;
-  }
-}
+// static void dds_stream_print_key_impl (dds_istream_t * __restrict is, const uint32_t *ops, uint16_t key_offset_count, const uint32_t * key_offset_insn,
+//   char * __restrict *buf, size_t * __restrict bufsize, bool *cont)
+// {
+//   uint32_t insn = *ops;
+//   assert (insn_key_ok_p (insn));
+//   assert (cont);
+//   switch (DDS_OP_TYPE (insn))
+//   {
+//     case DDS_OP_VAL_BLN: case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY: case DDS_OP_VAL_ENU:
+//     case DDS_OP_VAL_STR: case DDS_OP_VAL_BST: case DDS_OP_VAL_BMK:
+//       *cont = prtf_simple (buf, bufsize, is, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn));
+//       break;
+//     case DDS_OP_VAL_ARR:
+//       *cont = prtf_arr (buf, bufsize, is, ops, insn);
+//       break;
+//     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU:
+//       abort ();
+//       break;
+//     case DDS_OP_VAL_EXT:
+//       assert (key_offset_count > 0);
+//       const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]) + *key_offset_insn;
+//       dds_stream_print_key_impl (is, jsr_ops, --key_offset_count, ++key_offset_insn, buf, bufsize, cont);
+//       break;
+//   }
+// }
 
 size_t dds_stream_print_key (dds_istream_t * __restrict is, const struct dds_cdrstream_desc * __restrict desc, char * __restrict buf, size_t bufsize)
 {
-  bool cont = prtf (&buf, &bufsize, ":k:{");
+  (void) prtf (&buf, &bufsize, ":k:{");
+  (void) dds_stream_print_sample1 (&buf, &bufsize, is, desc->ops.ops, true, false, true);
+#if 0
   bool needs_comma = false;
   for (uint32_t i = 0; cont && i < desc->keys.nkeys; i++)
   {
@@ -4316,6 +4333,7 @@ size_t dds_stream_print_key (dds_istream_t * __restrict is, const struct dds_cdr
         break;
     }
   }
+#endif
   (void) prtf (&buf, &bufsize, "}");
   return bufsize;
 }
