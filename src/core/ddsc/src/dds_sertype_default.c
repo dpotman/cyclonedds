@@ -312,7 +312,12 @@ dds_return_t dds_sertype_default_init (const struct dds_domain *domain, struct d
   st->serpool = domain->serpool;
   st->type.size = desc->m_size;
   st->type.align = desc->m_align;
-  st->type.flagset = desc->m_flagset;
+
+  /* Get the flagset from the descriptor, except for the key related flags that are calculated
+     using the CDR stream serializer */
+  st->type.flagset = desc->m_flagset & ~DDS_CDR_CALCULATED_FLAGS;
+  st->type.flagset |= dds_stream_key_flags (desc->m_ops, NULL, NULL);
+
   st->type.keys.nkeys = desc->m_nkeys;
   st->type.keys.keys = ddsrt_malloc (st->type.keys.nkeys  * sizeof (*st->type.keys.keys));
   for (uint32_t i = 0; i < st->type.keys.nkeys; i++)

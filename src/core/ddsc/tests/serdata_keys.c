@@ -278,7 +278,7 @@ static size_t alignN(const size_t off, const size_t align)
   return (off + align - 1) & ~(align - 1);
 }
 
-static void print_cdr (const struct dds_serdata_default *sd, const unsigned char *exp_cdr, size_t exp_cdr_sz)
+static void print_check_cdr (const struct dds_serdata_default *sd, const unsigned char *exp_cdr, size_t exp_cdr_sz)
 {
   printf("CDR (expected/actual):\n");
   for (uint32_t i = 0; i < exp_cdr_sz; i++)
@@ -302,13 +302,19 @@ CU_Test(ddsc_serdata, key_serialization)
     init_fn init;
     const unsigned char * expected_data;
     size_t expected_data_sz;
-    const unsigned char * expected_key;
-    size_t expected_key_sz;
+    const unsigned char * expected_key_xcdrv1;
+    size_t expected_key_sz_xcdrv1;
+    const unsigned char * expected_key_xcdrv2;
+    size_t expected_key_sz_xcdrv2;
   } tests[] = {
     { &SerdataKeyOrder_desc, init_SerdataKeyOrder,
       (raw){
         1,2,0,0,SER64(3)
       }, 12,
+      (raw){
+        1,0,0,0,0,0,0,0,
+        SER64(3)
+        }, 16,
       (raw){
         1,0,0,0,SER64(3)
         }, 12
@@ -318,6 +324,10 @@ CU_Test(ddsc_serdata, key_serialization)
         1,2,0,0,SER64(3)
       }, 12,
       (raw){
+        1,0,0,0,0,0,0,0,
+        SER64(3)
+      }, 16,
+      (raw){
         1,0,0,0,SER64(3)
       }, 12
     },
@@ -325,6 +335,10 @@ CU_Test(ddsc_serdata, key_serialization)
       (raw){
         1,2,0,0,SER64(3)
       }, 12,
+      (raw){
+        1,0,0,0,0,0,0,0,
+        SER64(3)
+      }, 16,
       (raw){
         1,0,0,0,SER64(3)
       }, 12
@@ -334,6 +348,7 @@ CU_Test(ddsc_serdata, key_serialization)
         SER_DHEADER(12),1,2,0,0,
         SER64(3)
       }, 16,
+      NULL, 0, // not supported
       (raw){
         SER_DHEADER(12),1,0,0,0,
         SER64(3)
@@ -346,6 +361,7 @@ CU_Test(ddsc_serdata, key_serialization)
         SER_EMHEADER(0,0,2),2,0,0,0,
         SER_EMHEADER(1,3,1),SER64(3)
       }, 32,
+      NULL, 0, // not supported
       (raw){
         SER_DHEADER(20),
         SER_EMHEADER(1,0,3),1,0,0,0,
@@ -360,12 +376,13 @@ CU_Test(ddsc_serdata, key_serialization)
           SER_EMHEADER(0,0,2),2,0,0,0,
           SER_EMHEADER(1,3,1),SER64(3)
       }, 36,
+      NULL, 0, // not supported
       (raw){
         10,0,0,0,
           SER_DHEADER(20),
           SER_EMHEADER(1,0,3),1,0,0,0,
           SER_EMHEADER(1,3,1),SER64(3)
-      }, 28,
+      }, 28
     },
     { &SerdataKeyOrderAppendableNestedMutable_desc, init_SerdataKeyOrderAppendableNestedMutable,
       (raw){
@@ -375,12 +392,13 @@ CU_Test(ddsc_serdata, key_serialization)
           SER_EMHEADER(0,0,2),2,0,0,0,
           SER_EMHEADER(1,3,1),SER64(3)
       }, 40,
+      NULL, 0, // not supported
       (raw){
         SER_DHEADER(28),10,0,0,0,
           SER_DHEADER(20),
           SER_EMHEADER(1,0,3),1,0,0,0,
           SER_EMHEADER(1,3,1),SER64(3)
-      }, 32,
+      }, 32
     },
     { &SerdataKeyOrderMutableNestedMutable_desc, init_SerdataKeyOrderMutableNestedMutable,
       (raw){
@@ -393,6 +411,7 @@ CU_Test(ddsc_serdata, key_serialization)
           SER_EMHEADER(0,0,2),2,0,0,0,
           SER_EMHEADER(1,3,1),SER64(3)
       }, 60,
+      NULL, 0, // not supported
       (raw){
         SER_DHEADER(40),
         SER_EMHEADER(1,0,3),10,0,0,0,
@@ -400,7 +419,7 @@ CU_Test(ddsc_serdata, key_serialization)
           SER_DHEADER(20),
           SER_EMHEADER(1,0,3),1,0,0,0,
           SER_EMHEADER(1,3,1),SER64(3)
-      }, 44,
+      }, 44
     },
     { &SerdataKeyOrderMutableNestedAppendable_desc, init_SerdataKeyOrderMutableNestedAppendable,
       (raw){
@@ -411,13 +430,14 @@ CU_Test(ddsc_serdata, key_serialization)
           SER_DHEADER(12),1,2,0,0,
           SER64(3)
       }, 44,
+      NULL, 0, // not supported
       (raw){
         SER_DHEADER(32),
         SER_EMHEADER(1,0,3),10,0,0,0,
         SER_EMHEADER(1,4,1),SER_NEXTINT(16),
           SER_DHEADER(12),1,0,0,0,
           SER64(3)
-      }, 36,
+      }, 36
     },
     { &SerdataKeyOrderMutableNestedFinal_desc, init_SerdataKeyOrderMutableNestedFinal,
       (raw){
@@ -428,13 +448,14 @@ CU_Test(ddsc_serdata, key_serialization)
           1,2,0,0,
           SER64(3)
       }, 40,
+      NULL, 0, // not supported
       (raw){
         SER_DHEADER(28),
         SER_EMHEADER(1,0,3),10,0,0,0,
         SER_EMHEADER(1,4,1),SER_NEXTINT(12),
           1,0,0,0,
           SER64(3)
-      }, 32,
+      }, 32
     },
     { &SerdataKeyString_desc, init_SerdataKeyString,
       (raw){
@@ -447,6 +468,11 @@ CU_Test(ddsc_serdata, key_serialization)
         SER32(5),'t','e','s','t','\0',
         0,0,0 // padding
       }, 13,
+      (raw){
+        1,0,0,0,
+        SER32(5),'t','e','s','t','\0',
+        0,0,0 // padding
+      }, 13
     },
     { &SerdataKeyStringBounded_desc, init_SerdataKeyStringBounded,
       (raw){
@@ -459,6 +485,11 @@ CU_Test(ddsc_serdata, key_serialization)
         SER32(3),'t','s','\0',
         0 // padding
       }, 11,
+      (raw){
+        1,0,0,0,
+        SER32(3),'t','s','\0',
+        0 // padding
+      }, 11
     },
     { &SerdataKeyStringAppendable_desc, init_SerdataKeyStringAppendable,
       (raw){
@@ -473,6 +504,12 @@ CU_Test(ddsc_serdata, key_serialization)
         SER32(5),'t','e','s','t','\0',
         0,0,0 // padding
       }, 17,
+      (raw){
+        SER_DHEADER(13),
+        1,0,0,0,
+        SER32(5),'t','e','s','t','\0',
+        0,0,0 // padding
+      }, 17
     },
     { &SerdataKeyStringBoundedAppendable_desc, init_SerdataKeyStringBoundedAppendable,
       (raw){
@@ -480,6 +517,7 @@ CU_Test(ddsc_serdata, key_serialization)
         1,0,0,0,
         SER32(4),'t','s','t','\0'
       }, 16,
+      NULL, 0, // not supported
       (raw){
         SER_DHEADER(12),
         1,0,0,0,
@@ -493,6 +531,9 @@ CU_Test(ddsc_serdata, key_serialization)
       (raw){
         0,1,2,3,4,5,6,7,8,9,10,11
       }, 12,
+      (raw){
+        0,1,2,3,4,5,6,7,8,9,10,11
+      }, 12
     },
     // TODO: not supported
     // { &SerdataKeyArrStrBounded_desc, init_SerdataKeyArrStrBounded,
@@ -504,6 +545,10 @@ CU_Test(ddsc_serdata, key_serialization)
     //     SER32(3),'t','s','\0',
     //     SER32(3),'t','s','\0'
     //   }, 14,
+    //   (raw){
+    //     SER32(3),'t','s','\0',
+    //     SER32(3),'t','s','\0'
+    //   }, 14
     // }
     { &SerdataKeyNestedFinalImplicit_desc, init_SerdataKeyNestedFinalImplicit,
       (raw){
@@ -521,11 +566,19 @@ CU_Test(ddsc_serdata, key_serialization)
       (raw){
         // d
         1,2,
+          3,0,0,0,0,0,
+          SER64(5),
+        // f
+        20,0,0,0
+      }, 20,
+      (raw){
+        // d
+        1,2,
           3,0,
           SER64(5),
         // f
         20,0,0,0
-      }, 16,
+      }, 16
     },
     { &SerdataKeyNestedFinalImplicit2_desc, init_SerdataKeyNestedFinalImplicit2,
       (raw){
@@ -541,6 +594,11 @@ CU_Test(ddsc_serdata, key_serialization)
         1,2,
         5,6
       }, 4,
+      (raw){
+        // a
+        1,2,
+        5,6
+      }, 4
     },
     { &SerdataKeyNestedMutableImplicit_desc, init_SerdataKeyNestedMutableImplicit,
       (raw){
@@ -565,6 +623,7 @@ CU_Test(ddsc_serdata, key_serialization)
         // f
         20,0,0,0
       }, 88,
+      NULL, 0, // not supported
       (raw){
         SER_DHEADER(44),
         // d
@@ -575,66 +634,83 @@ CU_Test(ddsc_serdata, key_serialization)
           3,0,0,0,
           SER64(5),
         20,0,0,0
-      }, 48,
+      }, 48
     },
   };
 
+  static dds_data_representation_id_t data_repr[2] = { DDS_DATA_REPRESENTATION_XCDR1, DDS_DATA_REPRESENTATION_XCDR2 };
+
   for (uint32_t test_index = 0; test_index < sizeof (tests) / sizeof (tests[0]); test_index++)
   {
-    printf ("\ntest type %s\n", tests[test_index].desc->m_typename);
     dds_entity_t participant = create_pp (0);
-    dds_qos_t *qos = dds_create_qos ();
-    dds_qset_data_representation (qos, 1, (dds_data_representation_id_t[]) { DDS_DATA_REPRESENTATION_XCDR2 });
 
-    char topic_name[100];
-    create_unique_topic_name ("ddsc_serdata", topic_name, sizeof (topic_name));
-    dds_entity_t tp = dds_create_topic (participant, tests[test_index].desc, topic_name, qos, NULL);
-    dds_delete_qos (qos);
-
-    const struct ddsi_sertype *sertype;
-    dds_return_t ret = dds_get_entity_sertype (tp, &sertype);
-    CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
-
-    void *sample = tests[test_index].init ();
-
-    // Create SDK_DATA sertype from sample
+    for (uint32_t dr = 0; dr < sizeof (data_repr) / sizeof (data_repr[0]); dr++)
     {
-      struct dds_serdata_default *sd = (struct dds_serdata_default *) ddsi_serdata_from_sample (sertype, SDK_DATA, sample);
-      CU_ASSERT_FATAL (sd != NULL);
+      printf ("\ntest type %s (XCDRv%u)\n", tests[test_index].desc->m_typename, dr + 1);
+      if (dds_stream_minimum_xcdr_version (tests[test_index].desc->m_ops) == DDSI_RTPS_CDR_ENC_VERSION_1
+          || data_repr[dr] == DDS_DATA_REPRESENTATION_XCDR2)
+      {
+        dds_qos_t *qos = dds_create_qos ();
+        dds_qset_data_representation (qos, 1, (dds_data_representation_id_t[]) { data_repr[dr] });
 
-      size_t exp_sz_aligned = alignN (tests[test_index].expected_data_sz, 4);
-      printf ("Data: ");
-      print_cdr (sd, tests[test_index].expected_data, exp_sz_aligned);
-      CU_ASSERT_EQUAL (exp_sz_aligned, sd->pos);
-      int cmp = memcmp (sd->data, tests[test_index].expected_data, exp_sz_aligned);
-      CU_ASSERT_EQUAL (cmp, 0);
+        char topic_name[100];
+        create_unique_topic_name ("ddsc_serdata", topic_name, sizeof (topic_name));
+        dds_entity_t tp = dds_create_topic (participant, tests[test_index].desc, topic_name, qos, NULL);
+        dds_delete_qos (qos);
 
-      CU_ASSERT_EQUAL (sd->key.keysize, tests[test_index].expected_key_sz);
-      int cmp_key = memcmp (serdata_default_keybuf (sd), tests[test_index].expected_key, tests[test_index].expected_key_sz);
-      CU_ASSERT_EQUAL (cmp_key, 0);
-      ddsi_serdata_unref (&sd->c);
-    }
+        const struct ddsi_sertype *sertype;
+        dds_return_t ret = dds_get_entity_sertype (tp, &sertype);
+        CU_ASSERT_EQUAL_FATAL (ret, DDS_RETCODE_OK);
 
-    // Create SDK_KEY sertype from sample
-    {
-      struct dds_serdata_default *sd = (struct dds_serdata_default *) ddsi_serdata_from_sample (sertype, SDK_KEY, sample);
-      CU_ASSERT_FATAL (sd != NULL);
+        void *sample = tests[test_index].init ();
 
-      size_t exp_sz_aligned = alignN (tests[test_index].expected_key_sz, 4);
-      printf ("Key: ");
-      print_cdr (sd, tests[test_index].expected_key, exp_sz_aligned);
-      CU_ASSERT_EQUAL (exp_sz_aligned, sd->pos);
-      int cmp = memcmp (sd->data, tests[test_index].expected_key, exp_sz_aligned);
-      CU_ASSERT_EQUAL (cmp, 0);
+        // Create SDK_DATA sertype from sample
+        {
+          struct dds_serdata_default *sd = (struct dds_serdata_default *) ddsi_serdata_from_sample (sertype, SDK_DATA, sample);
+          CU_ASSERT_FATAL (sd != NULL);
 
-      CU_ASSERT_EQUAL (sd->key.keysize, tests[test_index].expected_key_sz);
-      int cmp_key = memcmp (serdata_default_keybuf (sd), tests[test_index].expected_key, tests[test_index].expected_key_sz);
-      CU_ASSERT_EQUAL (cmp_key, 0);
-      ddsi_serdata_unref (&sd->c);
-    }
+          if (data_repr[dr] == DDS_DATA_REPRESENTATION_XCDR2)
+          {
+            size_t exp_sz_aligned = alignN (tests[test_index].expected_data_sz, 4);
+            printf ("Data: ");
+            print_check_cdr (sd, tests[test_index].expected_data, exp_sz_aligned);
+            CU_ASSERT_EQUAL (exp_sz_aligned, sd->pos);
+            int cmp = memcmp (sd->data, tests[test_index].expected_data, exp_sz_aligned);
+            CU_ASSERT_EQUAL (cmp, 0);
+          }
 
-    dds_sample_free (sample, tests[test_index].desc, DDS_FREE_ALL);
+          // key in sd must be translated into XCDRv2 key, so also check when testing data representation XCDR1
+          CU_ASSERT_EQUAL (sd->key.keysize, tests[test_index].expected_key_sz_xcdrv2);
+          int cmp_key = memcmp (serdata_default_keybuf (sd), tests[test_index].expected_key_xcdrv2, tests[test_index].expected_key_sz_xcdrv2);
+          CU_ASSERT_EQUAL (cmp_key, 0);
+          ddsi_serdata_unref (&sd->c);
+        }
+
+        // Create SDK_KEY sertype from sample
+        {
+          struct dds_serdata_default *sd = (struct dds_serdata_default *) ddsi_serdata_from_sample (sertype, SDK_KEY, sample);
+          CU_ASSERT_FATAL (sd != NULL);
+
+          size_t exp_sz = data_repr[dr] == DDS_DATA_REPRESENTATION_XCDR1 ? tests[test_index].expected_key_sz_xcdrv1 : tests[test_index].expected_key_sz_xcdrv2;
+          const unsigned char *exp_data = data_repr[dr] == DDS_DATA_REPRESENTATION_XCDR1 ? tests[test_index].expected_key_xcdrv1 : tests[test_index].expected_key_xcdrv2;
+          size_t exp_sz_aligned = alignN (exp_sz, 4);
+          printf ("Key: ");
+          print_check_cdr (sd, exp_data, exp_sz_aligned);
+          CU_ASSERT_EQUAL (exp_sz_aligned, sd->pos);
+          int cmp = memcmp (sd->data, exp_data, exp_sz_aligned);
+          CU_ASSERT_EQUAL (cmp, 0);
+
+          // key in sd's keybuf should be translated into xcdrv2
+          CU_ASSERT_EQUAL (sd->key.keysize, tests[test_index].expected_key_sz_xcdrv2);
+          int cmp_key = memcmp (serdata_default_keybuf (sd), tests[test_index].expected_key_xcdrv2, tests[test_index].expected_key_sz_xcdrv2);
+          CU_ASSERT_EQUAL (cmp_key, 0);
+          ddsi_serdata_unref (&sd->c);
+        }
+
+        dds_sample_free (sample, tests[test_index].desc, DDS_FREE_ALL);
+      }
+    } // iterate data representations
     dds_delete (DDS_CYCLONEDDS_HANDLE);
-  }
+  } // iterate tests
 }
 

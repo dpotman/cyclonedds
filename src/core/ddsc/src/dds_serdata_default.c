@@ -245,12 +245,12 @@ static bool gen_serdata_key (const struct dds_sertype_default *type, struct dds_
     // Force the key in the serdata object to be serialized in XCDR2 format
     dds_ostream_t os;
     dds_ostream_init (&os, &dds_cdrstream_default_allocator, 0, DDSI_RTPS_CDR_ENC_VERSION_2);
-    // if (is_topic_fixed_key(desc->flagset, DDSI_RTPS_CDR_ENC_VERSION_2))
-    // {
-    //   // FIXME: there are more cases where we don't have to allocate memory
-    //   os.m_buffer = kh->u.stbuf;
-    //   os.m_size = DDS_FIXED_KEY_MAX_SIZE;
-    // }
+    if (is_topic_fixed_key(desc->flagset, DDSI_RTPS_CDR_ENC_VERSION_2))
+    {
+      // FIXME: there are more cases where we don't have to allocate memory
+      os.m_buffer = kh->u.stbuf;
+      os.m_size = DDS_FIXED_KEY_MAX_SIZE;
+    }
     switch (input_kind)
     {
       case GSKIK_SAMPLE:
@@ -268,13 +268,13 @@ static bool gen_serdata_key (const struct dds_sertype_default *type, struct dds_
     }
     assert (os.m_index < (1u << 30));
     kh->keysize = os.m_index & SERDATA_DEFAULT_KEYSIZE_MASK;
-    // if (is_topic_fixed_key (desc->flagset, DDSI_RTPS_CDR_ENC_VERSION_2))
-    //   kh->buftype = KEYBUFTYPE_STATIC;
-    // else
-    // {
+    if (is_topic_fixed_key (desc->flagset, DDSI_RTPS_CDR_ENC_VERSION_2))
+      kh->buftype = KEYBUFTYPE_STATIC;
+    else
+    {
       kh->buftype = KEYBUFTYPE_DYNALLOC;
       kh->u.dynbuf = ddsrt_realloc (os.m_buffer, os.m_index); // don't waste bytes FIXME: maybe should be willing to waste a little
-    // }
+    }
   }
   return true;
 }
@@ -432,6 +432,7 @@ static struct ddsi_serdata *serdata_default_from_ser_iov_nokey (const struct dds
 static struct ddsi_serdata *serdata_default_from_keyhash_cdr (const struct ddsi_sertype *tpcmn, const ddsi_keyhash_t *keyhash)
 {
   const struct dds_sertype_default *tp = (const struct dds_sertype_default *)tpcmn;
+  // FIXME: fixed key check must be done for keys in member-id order
   if (!is_topic_fixed_key (tp->type.flagset, DDSI_RTPS_CDR_ENC_VERSION_2))
   {
     /* keyhash is MD5 of a key value, so impossible to turn into a key value */
@@ -788,6 +789,8 @@ static void serdata_default_get_keyhash (const struct ddsi_serdata *serdata_comm
   /* Don't use the actual key size for checking if hashing is required,
      but the worst-case key-size (see also XTypes spec 7.6.8 step 5.2) */
   uint32_t actual_keysz = os.x.m_index;
+
+  // FIXME: use member-id order!
   if (force_md5 || !is_topic_fixed_key (tp->type.flagset, xcdrv))
   {
     ddsrt_md5_state_t md5st;

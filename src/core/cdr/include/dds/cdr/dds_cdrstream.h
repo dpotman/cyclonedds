@@ -41,6 +41,9 @@ that encodes the number of padding bytes needed after the end of the serialized
 payload in order to reach the next 4-byte aligned offset. */
 #define DDS_CDR_HDR_PADDING_MASK 0x3
 
+
+#define DDS_CDR_CALCULATED_FLAGS (DDS_TOPIC_FIXED_KEY | DDS_TOPIC_FIXED_KEY_XCDR2 | DDS_TOPIC_KEY_APPENDABLE | DDS_TOPIC_KEY_MUTABLE)
+
 struct dds_cdr_header {
   unsigned short identifier;
   unsigned short options;
@@ -234,6 +237,9 @@ uint16_t dds_stream_minimum_xcdr_version (const uint32_t * __restrict ops);
 
 /** @component cdr_serializer */
 uint32_t dds_stream_type_nesting_depth (const uint32_t * __restrict ops);
+
+/** @component cdr_serializer */
+uint32_t dds_stream_key_flags (const uint32_t * __restrict ops, uint32_t *keysz_xcdrv1, uint32_t *keysz_xcdrv2);
 
 /** @component cdr_serializer */
 bool dds_stream_extensibility (const uint32_t * __restrict ops, enum dds_cdr_type_extensibility *ext);

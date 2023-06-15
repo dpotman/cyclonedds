@@ -22,6 +22,8 @@ idlc_generate(TARGET DataRepresentationTypes FILES DataRepresentationTypes.idl W
 idlc_generate(TARGET MinXcdrVersion FILES MinXcdrVersion.idl)
 idlc_generate(TARGET CdrStreamOptimize FILES CdrStreamOptimize.idl WARNINGS no-implicit-extensibility)
 idlc_generate(TARGET CdrStreamSkipDefault FILES CdrStreamSkipDefault.idl)
+idlc_generate(TARGET CdrStreamKeySize FILES CdrStreamKeySize.idl)
+idlc_generate(TARGET CdrStreamKeyExt FILES CdrStreamKeyExt.idl)
 idlc_generate(TARGET SerdataData FILES SerdataData.idl)
 if(ENABLE_TYPE_DISCOVERY)
   idlc_generate(TARGET XSpace FILES XSpace.idl XSpaceEnum.idl XSpaceMustUnderstand.idl XSpaceTypeConsistencyEnforcement.idl WARNINGS no-implicit-extensibility no-inherit-appendable)
@@ -134,7 +136,7 @@ if(ENABLE_SHM)
 endif()
 
 target_link_libraries(cunit_ddsc PRIVATE
-  RoundTrip Space TypesArrayKey WriteTypes InstanceHandleTypes RWData CreateWriter DataRepresentationTypes MinXcdrVersion CdrStreamOptimize CdrStreamSkipDefault SerdataData ddsc)
+  RoundTrip Space TypesArrayKey WriteTypes InstanceHandleTypes RWData CreateWriter DataRepresentationTypes MinXcdrVersion CdrStreamOptimize CdrStreamSkipDefault CdrStreamKeySize CdrStreamKeyExt SerdataData ddsc)
 
 if(ENABLE_TYPE_DISCOVERY)
   target_link_libraries(cunit_ddsc PRIVATE

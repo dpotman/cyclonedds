@@ -8,7 +8,7 @@
 //
 // SPDX-License-Identifier: EPL-2.0 OR BSD-3-Clause
 
-static const uint32_t *dds_stream_write_implBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only);
+static const uint32_t *dds_stream_write_implBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool is_mutable_member, enum cdr_data_kind cdr_kind);
 
 static inline bool dds_stream_write_bool_valueBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const uint8_t val)
 {
@@ -181,7 +181,7 @@ static bool dds_stream_write_bitmask_arrBO (DDS_OSTREAM_T * __restrict os, const
   return true;
 }
 
-static const uint32_t *dds_stream_write_seqBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict addr, const uint32_t * __restrict ops, uint32_t insn, bool key_only)
+static const uint32_t *dds_stream_write_seqBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict addr, const uint32_t * __restrict ops, uint32_t insn, enum cdr_data_kind cdr_kind)
 {
   const dds_sequence_t * const seq = (const dds_sequence_t *) addr;
   uint32_t offs = 0, xcdrv = ((struct dds_ostream *)os)->m_xcdr_version;
@@ -265,7 +265,7 @@ static const uint32_t *dds_stream_write_seqBO (DDS_OSTREAM_T * __restrict os, co
         uint32_t const * const jsr_ops = ops + DDS_OP_ADR_JSR (ops[3 + bound_op]);
         const char *ptr = (const char *) seq->_buffer;
         for (uint32_t i = 0; i < num; i++)
-          if (!dds_stream_write_implBO (os, allocator, ptr + i * elem_size, jsr_ops, false, key_only))
+          if (!dds_stream_write_implBO (os, allocator, ptr + i * elem_size, jsr_ops, false, cdr_kind))
             return NULL;
         ops += (jmp ? jmp : (4 + bound_op)); /* FIXME: why would jmp be 0? */
         break;
@@ -283,7 +283,7 @@ static const uint32_t *dds_stream_write_seqBO (DDS_OSTREAM_T * __restrict os, co
   return ops;
 }
 
-static const uint32_t *dds_stream_write_arrBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict addr, const uint32_t * __restrict ops, uint32_t insn, bool key_only)
+static const uint32_t *dds_stream_write_arrBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict addr, const uint32_t * __restrict ops, uint32_t insn, enum cdr_data_kind cdr_kind)
 {
   const enum dds_stream_typecode subtype = DDS_OP_SUBTYPE (insn);
   uint32_t offs = 0, xcdrv = ((struct dds_ostream *)os)->m_xcdr_version;
@@ -341,7 +341,7 @@ static const uint32_t *dds_stream_write_arrBO (DDS_OSTREAM_T * __restrict os, co
       const uint32_t jmp = DDS_OP_ADR_JMP (ops[3]);
       const uint32_t elem_size = ops[4];
       for (uint32_t i = 0; i < num; i++)
-        if (!dds_stream_write_implBO (os, allocator, addr + i * elem_size, jsr_ops, false, key_only))
+        if (!dds_stream_write_implBO (os, allocator, addr + i * elem_size, jsr_ops, false, cdr_kind))
           return NULL;
       ops += (jmp ? jmp : 5);
       break;
@@ -393,7 +393,7 @@ static bool dds_stream_write_union_discriminantBO (DDS_OSTREAM_T * __restrict os
   return true;
 }
 
-static const uint32_t *dds_stream_write_uniBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict discaddr, const char * __restrict baseaddr, const uint32_t * __restrict ops, uint32_t insn, bool key_only)
+static const uint32_t *dds_stream_write_uniBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict discaddr, const char * __restrict baseaddr, const uint32_t * __restrict ops, uint32_t insn, enum cdr_data_kind cdr_kind)
 {
   uint32_t disc;
   if (!dds_stream_write_union_discriminantBO (os, allocator, ops, insn, discaddr, &disc))
@@ -432,7 +432,7 @@ static const uint32_t *dds_stream_write_uniBO (DDS_OSTREAM_T * __restrict os, co
       case DDS_OP_VAL_STR: dds_stream_write_stringBO (os, allocator, *(const char **) valaddr); break;
       case DDS_OP_VAL_BST: dds_stream_write_stringBO (os, allocator, (const char *) valaddr); break;
       case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: case DDS_OP_VAL_ARR: case DDS_OP_VAL_UNI: case DDS_OP_VAL_STU: case DDS_OP_VAL_BMK:
-        if (!dds_stream_write_implBO (os, allocator, valaddr, jeq_op + DDS_OP_ADR_JSR (jeq_op[0]), false, key_only))
+        if (!dds_stream_write_implBO (os, allocator, valaddr, jeq_op + DDS_OP_ADR_JSR (jeq_op[0]), false, cdr_kind))
           return NULL;
         break;
       case DDS_OP_VAL_EXT:
@@ -443,14 +443,14 @@ static const uint32_t *dds_stream_write_uniBO (DDS_OSTREAM_T * __restrict os, co
   return ops;
 }
 
-static const uint32_t *dds_stream_write_adrBO (uint32_t insn, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only)
+static const uint32_t *dds_stream_write_adrBO (uint32_t insn, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool is_mutable_member, enum cdr_data_kind cdr_kind)
 {
   const void *addr = data + ops[1];
   if (op_type_external (insn) || op_type_optional (insn) || DDS_OP_TYPE (insn) == DDS_OP_VAL_STR)
     addr = *(char **) addr;
 
   const bool is_key = (insn & DDS_OP_FLAG_KEY);
-  if (key_only && !is_key)
+  if (cdr_kind == CDR_KIND_KEY && !is_key)
     return dds_stream_skip_adr (insn, ops);
 
   if (op_type_optional (insn))
@@ -485,9 +485,9 @@ static const uint32_t *dds_stream_write_adrBO (uint32_t insn, DDS_OSTREAM_T * __
       break;
     case DDS_OP_VAL_STR: dds_stream_write_stringBO (os, allocator, (const char *) addr); ops += 2; break;
     case DDS_OP_VAL_BST: dds_stream_write_stringBO (os, allocator, (const char *) addr); ops += 3; break;
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: ops = dds_stream_write_seqBO (os, allocator, addr, ops, insn, key_only); break;
-    case DDS_OP_VAL_ARR: ops = dds_stream_write_arrBO (os, allocator, addr, ops, insn, key_only); break;
-    case DDS_OP_VAL_UNI: ops = dds_stream_write_uniBO (os, allocator, addr, data, ops, insn, key_only); break;
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: ops = dds_stream_write_seqBO (os, allocator, addr, ops, insn, cdr_kind); break;
+    case DDS_OP_VAL_ARR: ops = dds_stream_write_arrBO (os, allocator, addr, ops, insn, cdr_kind); break;
+    case DDS_OP_VAL_UNI: ops = dds_stream_write_uniBO (os, allocator, addr, data, ops, insn, cdr_kind); break;
     case DDS_OP_VAL_EXT: {
       const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
       const uint32_t jmp = DDS_OP_ADR_JMP (ops[2]);
@@ -498,7 +498,7 @@ static const uint32_t *dds_stream_write_adrBO (uint32_t insn, DDS_OSTREAM_T * __
         jsr_ops++;
 
       /* don't forward is_mutable_member, subtype can have other extensibility */
-      if (!dds_stream_write_implBO (os, allocator, addr, jsr_ops, false, key_only))
+      if (!dds_stream_write_implBO (os, allocator, addr, jsr_ops, false, cdr_kind))
         return NULL;
       ops += jmp ? jmp : 3;
       break;
@@ -508,10 +508,10 @@ static const uint32_t *dds_stream_write_adrBO (uint32_t insn, DDS_OSTREAM_T * __
   return ops;
 }
 
-static const uint32_t *dds_stream_write_delimitedBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool key_only)
+static const uint32_t *dds_stream_write_delimitedBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, enum cdr_data_kind cdr_kind)
 {
   uint32_t offs = dds_os_reserve4BO (os, allocator);
-  if (!(ops = dds_stream_write_implBO (os, allocator, data, ops + 1, false, key_only)))
+  if (!(ops = dds_stream_write_implBO (os, allocator, data, ops + 1, false, cdr_kind)))
     return NULL;
 
   /* add dheader, which is the serialized size of the data */
@@ -519,7 +519,7 @@ static const uint32_t *dds_stream_write_delimitedBO (DDS_OSTREAM_T * __restrict 
   return ops;
 }
 
-static bool dds_stream_write_pl_memberBO (uint32_t mid, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool key_only)
+static bool dds_stream_write_pl_memberBO (uint32_t mid, DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, enum cdr_data_kind cdr_kind)
 {
   assert (!(mid & ~EMHEADER_MEMBERID_MASK));
 
@@ -528,13 +528,13 @@ static bool dds_stream_write_pl_memberBO (uint32_t mid, DDS_OSTREAM_T * __restri
   bool is_key = flags & (DDS_OP_FLAG_MU | DDS_OP_FLAG_KEY);
   bool must_understand = flags & (DDS_OP_FLAG_MU | DDS_OP_FLAG_KEY);
 
-  if (key_only && !is_key)
+  if (cdr_kind == CDR_KIND_KEY && !is_key)
     return true;
 
   uint32_t lc = get_length_code (ops);
   assert (lc <= LENGTH_CODE_ALSO_NEXTINT8);
   uint32_t data_offs = (lc != LENGTH_CODE_NEXTINT) ? dds_os_reserve4BO (os, allocator) : dds_os_reserve8BO (os, allocator);
-  if (!(dds_stream_write_implBO (os, allocator, data, ops, true, key_only)))
+  if (!(dds_stream_write_implBO (os, allocator, data, ops, true, cdr_kind)))
     return false;
 
   /* add emheader with data length code and flags and optionally the serialized size of the data */
@@ -551,7 +551,7 @@ static bool dds_stream_write_pl_memberBO (uint32_t mid, DDS_OSTREAM_T * __restri
   return true;
 }
 
-static const uint32_t *dds_stream_write_pl_memberlistBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool key_only)
+static const uint32_t *dds_stream_write_pl_memberlistBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, enum cdr_data_kind cdr_kind)
 {
   uint32_t insn;
   while (ops && (insn = *ops) != DDS_OP_RTS)
@@ -565,13 +565,13 @@ static const uint32_t *dds_stream_write_pl_memberlistBO (DDS_OSTREAM_T * __restr
         {
           assert (plm_ops[0] == DDS_OP_PLC);
           plm_ops++; /* skip PLC op to go to first PLM for the base type */
-          if (!dds_stream_write_pl_memberlistBO (os, allocator, data, plm_ops, key_only))
+          if (!dds_stream_write_pl_memberlistBO (os, allocator, data, plm_ops, cdr_kind))
             return NULL;
         }
         else if (is_member_present (data, plm_ops))
         {
           uint32_t member_id = ops[1];
-          if (!dds_stream_write_pl_memberBO (member_id, os, allocator, data, plm_ops, key_only))
+          if (!dds_stream_write_pl_memberBO (member_id, os, allocator, data, plm_ops, cdr_kind))
             return NULL;
         }
         ops += 2;
@@ -585,7 +585,7 @@ static const uint32_t *dds_stream_write_pl_memberlistBO (DDS_OSTREAM_T * __restr
   return ops;
 }
 
-static const uint32_t *dds_stream_write_plBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool key_only)
+static const uint32_t *dds_stream_write_plBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, enum cdr_data_kind cdr_kind)
 {
   /* skip PLC op */
   ops++;
@@ -595,14 +595,14 @@ static const uint32_t *dds_stream_write_plBO (DDS_OSTREAM_T * __restrict os, con
   uint32_t data_offs = ((struct dds_ostream *)os)->m_index;
 
   /* write members, including members from base types */
-  ops = dds_stream_write_pl_memberlistBO (os, allocator, data, ops, key_only);
+  ops = dds_stream_write_pl_memberlistBO (os, allocator, data, ops, cdr_kind);
 
   /* write serialized size in dheader */
   *((uint32_t *) (((struct dds_ostream *)os)->m_buffer + data_offs - 4)) = to_BO4u (((struct dds_ostream *)os)->m_index - data_offs);
   return ops;
 }
 
-static const uint32_t *dds_stream_write_implBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool is_mutable_member, bool key_only)
+static const uint32_t *dds_stream_write_implBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops, bool is_mutable_member, enum cdr_data_kind cdr_kind)
 {
   uint32_t insn;
   while (ops && (insn = *ops) != DDS_OP_RTS)
@@ -610,10 +610,10 @@ static const uint32_t *dds_stream_write_implBO (DDS_OSTREAM_T * __restrict os, c
     switch (DDS_OP (insn))
     {
       case DDS_OP_ADR:
-        ops = dds_stream_write_adrBO (insn, os, allocator, data, ops, is_mutable_member, key_only);
+        ops = dds_stream_write_adrBO (insn, os, allocator, data, ops, is_mutable_member, cdr_kind);
         break;
       case DDS_OP_JSR:
-        if (!dds_stream_write_implBO (os, allocator, data, ops + DDS_OP_JUMP (insn), is_mutable_member, key_only))
+        if (!dds_stream_write_implBO (os, allocator, data, ops + DDS_OP_JUMP (insn), is_mutable_member, cdr_kind))
           return NULL;
         ops++;
         break;
@@ -622,11 +622,11 @@ static const uint32_t *dds_stream_write_implBO (DDS_OSTREAM_T * __restrict os, c
         break;
       case DDS_OP_DLC:
         assert (((struct dds_ostream *)os)->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2);
-        ops = dds_stream_write_delimitedBO (os, allocator, data, ops, key_only);
+        ops = dds_stream_write_delimitedBO (os, allocator, data, ops, cdr_kind);
         break;
       case DDS_OP_PLC:
         assert (((struct dds_ostream *)os)->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2);
-        ops = dds_stream_write_plBO (os, allocator, data, ops, key_only);
+        ops = dds_stream_write_plBO (os, allocator, data, ops, cdr_kind);
         break;
     }
   }
@@ -635,5 +635,5 @@ static const uint32_t *dds_stream_write_implBO (DDS_OSTREAM_T * __restrict os, c
 
 const uint32_t *dds_stream_writeBO (DDS_OSTREAM_T * __restrict os, const struct dds_cdrstream_allocator * __restrict allocator, const char * __restrict data, const uint32_t * __restrict ops)
 {
-  return dds_stream_write_implBO (os, allocator, data, ops, false, false);
+  return dds_stream_write_implBO (os, allocator, data, ops, false, CDR_KIND_DATA);
 }
