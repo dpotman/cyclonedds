@@ -20,12 +20,12 @@ extern "C" {
 
 /** @component read_data */
 struct dds_read_collect_sample_arg {
-  uint32_t first_of_inst_idx;             /**< first index in ptrs/infos for current instance (initially 0) **/
-  uint32_t next_idx;                      /**< next index in ptrs/infos to be filled (initially 0) **/
-  dds_instance_handle_t last_iid;         /**< last seen instance handle (initially 0) **/
-  void **ptrs;                            /**< array of pointers to samples/serdatas to be filled **/
-  dds_sample_info_t *infos;               /**< array of sample infos to be filled **/
-  struct dds_loan_manager *loan_manager;  /**< loan manager to be used for loaned sample administration **/
+  uint32_t first_of_inst_idx;       /**< first index in ptrs/infos for current instance (initially 0) **/
+  uint32_t next_idx;                /**< next index in ptrs/infos to be filled (initially 0) **/
+  dds_instance_handle_t last_iid;   /**< last seen instance handle (initially 0) **/
+  void **ptrs;                      /**< array of pointers to samples/serdatas to be filled **/
+  dds_sample_info_t *infos;         /**< array of sample infos to be filled **/
+  struct dds_loan_pool *loan_pool;  /**< loan pool to be used for loaned sample administration **/
 };
 
 /** @brief Initialize the sample collector state
@@ -35,9 +35,9 @@ struct dds_read_collect_sample_arg {
  * @param[in] ptrs array of pointers to samples to be filled (collect_sample)
  *            or array to be filled with pointers-to-serdata (collect_sample_refs)
  * @param[in] infos array of sample infos to be filled
- * @param[in] loan_manager
+ * @param[in] loan_pool
  */
-void dds_read_collect_sample_arg_init (struct dds_read_collect_sample_arg *arg, void **ptrs, dds_sample_info_t *infos, struct dds_loan_manager *loan_manager);
+void dds_read_collect_sample_arg_init (struct dds_read_collect_sample_arg *arg, void **ptrs, dds_sample_info_t *infos, struct dds_loan_pool *loan_pool);
 
 /** @brief Sample collector that deserializes the samples into ptrs[i]
  * @component read_data

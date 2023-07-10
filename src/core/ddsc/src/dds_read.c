@@ -25,14 +25,14 @@
 #include "dds__loan.h"
 #include "dds__heap_loan.h"
 
-void dds_read_collect_sample_arg_init (struct dds_read_collect_sample_arg *arg, void **ptrs, dds_sample_info_t *infos, struct dds_loan_manager *loan_manager)
+void dds_read_collect_sample_arg_init (struct dds_read_collect_sample_arg *arg, void **ptrs, dds_sample_info_t *infos, struct dds_loan_pool *loan_pool)
 {
   arg->first_of_inst_idx = 0;
   arg->next_idx = 0;
   arg->last_iid = 0;
   arg->ptrs = ptrs;
   arg->infos = infos;
-  arg->loan_manager = loan_manager;
+  arg->loan_pool = loan_pool;
 }
 
 static void dds_read_patch_generations (dds_sample_info_t *si, uint32_t last_of_inst)
@@ -93,7 +93,7 @@ dds_return_t dds_read_collect_sample_loan (void *varg, const dds_sample_info_t *
 
   if (ret == DDS_RETCODE_OK)
   {
-    if ((ret = dds_loan_manager_add_loan (arg->loan_manager, ls)) == DDS_RETCODE_OK)
+    if ((ret = dds_loan_pool_add_loan (arg->loan_pool, ls)) == DDS_RETCODE_OK)
     {
       arg->ptrs[arg->next_idx] = ls->sample_ptr;
       ret = dds_read_collect_sample (varg, si, st, sd);
@@ -401,9 +401,9 @@ dds_return_t dds_return_reader_loan (dds_reader *rd, void **buf, int32_t bufsz)
   dds_loaned_sample_t *loan;
   for (int32_t s = 0; s < bufsz && ret == DDS_RETCODE_OK; s++)
   {
-    if (buf[s] != NULL && (loan = dds_loan_manager_find_loan (rd->m_loans, buf[s])) != NULL)
+    if (buf[s] != NULL && (loan = dds_loan_pool_find_loan (rd->m_loans, buf[s])) != NULL)
     {
-      dds_loan_manager_remove_loan (loan);
+      dds_loan_pool_remove_loan (loan);
       dds_loaned_sample_unref (loan);
       buf[s] = NULL;
     }
