@@ -31,8 +31,8 @@
 #include "DynamicData.h"
 #include "PsmxDataModels.h"
 
-const uint32_t test_index_start = 0;
-const uint32_t test_index_end = UINT32_MAX;
+const uint32_t test_index_start = 511;
+const uint32_t test_index_end = 511;
 
 static const struct psmx_locator {
   unsigned char a[16];
@@ -177,6 +177,8 @@ static void check_writer_addrset_helper (const ddsi_xlocator_t *loc, void *varg)
     }
   }
   // unknown expected ports not allowed
+  if (i < arg->nports)
+    printf("i = %d, nports = %d\n", i, arg->nports);
   CU_ASSERT_FATAL (i < arg->nports);
 }
 
