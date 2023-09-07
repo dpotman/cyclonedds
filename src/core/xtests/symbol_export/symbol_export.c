@@ -988,6 +988,7 @@ int main (int argc, char **argv)
 #endif
 
   // ddsrt/heap.h
+  ddsrt_allocation_ops_t ao = {0,0,0,0};
   ddsrt_malloc (1);
   ddsrt_malloc_s (1);
   ddsrt_calloc (1, 1);
@@ -995,6 +996,7 @@ int main (int argc, char **argv)
   ddsrt_realloc (ptr, 1);
   ddsrt_realloc_s (ptr, 1);
   ddsrt_free (ptr);
+  ddsrt_set_allocator(ao);
 
   // ddsrt/string.h
   ddsrt_strcasecmp (ptr, ptr);
