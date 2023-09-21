@@ -381,7 +381,7 @@ static struct dds_serdata_default *serdata_default_from_ser_common (const struct
   }
 
   const bool needs_bswap = !DDSI_RTPS_CDR_ENC_IS_NATIVE (d->hdr.identifier);
-  d->hdr.identifier = DDSI_RTPS_CDR_ENC_TO_NATIVE (d->hdr.identifier);
+  d->hdr.identifier = (unsigned short) DDSI_RTPS_CDR_ENC_TO_NATIVE (d->hdr.identifier);
   const uint32_t pad = ddsrt_fromBE2u (d->hdr.options) & DDS_CDR_HDR_PADDING_MASK;
   const uint32_t xcdr_version = ddsi_sertype_enc_id_xcdr_version (d->hdr.identifier);
   const uint32_t encoding_format = ddsi_sertype_enc_id_enc_format (d->hdr.identifier);
@@ -428,7 +428,7 @@ static struct dds_serdata_default *serdata_default_from_ser_iov_common (const st
     serdata_default_append_blob (&d, iov[i].iov_len, iov[i].iov_base);
 
   const bool needs_bswap = !DDSI_RTPS_CDR_ENC_IS_NATIVE (d->hdr.identifier);
-  d->hdr.identifier = DDSI_RTPS_CDR_ENC_TO_NATIVE (d->hdr.identifier);
+  d->hdr.identifier = (unsigned short) DDSI_RTPS_CDR_ENC_TO_NATIVE (d->hdr.identifier);
   const uint32_t pad = ddsrt_fromBE2u (d->hdr.options) & 2;
   const uint32_t xcdr_version = ddsi_sertype_enc_id_xcdr_version (d->hdr.identifier);
   const uint32_t encoding_format = ddsi_sertype_enc_id_enc_format (d->hdr.identifier);

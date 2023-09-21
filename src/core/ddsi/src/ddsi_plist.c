@@ -592,7 +592,7 @@ static dds_return_t ser_type_consistency (struct ddsi_xmsg *xmsg, ddsi_parameter
   (void) context_kind;
   dds_type_consistency_enforcement_qospolicy_t const * const x = deser_generic_src (src, &srcoff, plist_alignof (dds_type_consistency_enforcement_qospolicy_t));
   char * const p = ddsi_xmsg_addpar_bo (xmsg, pid, 8, bo);
-  const uint16_t kind = ddsrt_toBO2u (bo, (uint16_t) x->kind);
+  const uint16_t kind = (uint16_t) ddsrt_toBO2u (bo, (uint16_t) x->kind);
   memcpy (p, &kind, 2);
   size_t offs = sizeof (kind);
   p[offs + 0] = x->ignore_sequence_bounds;
@@ -1776,7 +1776,7 @@ static bool print_generic1 (char * __restrict *buf, size_t * __restrict bufsize,
       }
       case XE1: case XE2: case XE3: { /* enum */
         enum xe3_prototype const * const x = deser_generic_src (src, &srcoff, plist_alignof (enum xe3_prototype));
-        if (!prtf (buf, bufsize, "%s%"PRIu32, sep, *x))
+        if (!prtf (buf, bufsize, "%s%"PRIu32, sep, (uint32_t) *x))
           return false;
         srcoff += sizeof (*x);
         break;

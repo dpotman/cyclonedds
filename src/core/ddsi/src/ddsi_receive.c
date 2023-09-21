@@ -339,7 +339,7 @@ static bool set_sampleinfo_bswap (struct ddsi_rsample_info *sampleinfo, struct d
   {
     if (!DDSI_RTPS_CDR_ENC_IS_VALID(hdr->identifier))
       return false;
-    sampleinfo->bswap = !DDSI_RTPS_CDR_ENC_IS_NATIVE(hdr->identifier);
+    sampleinfo->bswap = DDSI_RTPS_CDR_ENC_IS_NATIVE(hdr->identifier) ? 0 : 1;
   }
   return true;
 }
