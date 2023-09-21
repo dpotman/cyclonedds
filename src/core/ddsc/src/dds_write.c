@@ -268,7 +268,7 @@ static dds_return_t deliver_data_any (struct ddsi_thread_state * const thrst, st
             loan->metadata->statusinfo == d->a.statusinfo &&
             memcmp (&loan->metadata->guid, &ddsi_wr->e.guid, sizeof (loan->metadata->guid)) == 0);
     struct dds_psmx_endpoint * const endpoint = loan->loan_origin.psmx_endpoint;
-    ret = endpoint->ops.write (endpoint, d->a.loan);
+    ret = (endpoint->ops.write) (endpoint, d->a.loan);
   }
 done:
   ddsi_tkmap_instance_unref (ddsi_wr->e.gv->m_tkmap, tk);
@@ -715,7 +715,7 @@ dds_return_t dds_write_impl (dds_writer *wr, const void *data, dds_time_t tstamp
     memcpy (&md->guid, &ddsi_wr->e.guid, sizeof (md->guid));
     md->timestamp = d->timestamp.v;
     md->statusinfo = d->statusinfo;
-    ret = endpoint->ops.write (endpoint, loan);
+    ret = (endpoint->ops.write) (endpoint, loan);
   }
 
 unref_serdata:
