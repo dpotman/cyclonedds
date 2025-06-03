@@ -2429,10 +2429,8 @@ static void adjust_sequence_buffer (dds_sequence_t *seq, const struct dds_cdrstr
   }
 }
 
-static bool stream_is_member_present (uint32_t insn, dds_istream_t *is, bool is_mutable_member)
+static bool stream_is_member_present (dds_istream_t *is, uint32_t *param_len)
 {
-  if (!op_type_optional (insn) || is_mutable_member)
-    return true;
   if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1)
   {
     uint32_t phdr = dds_is_get4 (is);
@@ -2446,10 +2444,14 @@ static bool stream_is_member_present (uint32_t insn, dds_istream_t *is, bool is_
     {
       plen = (uint32_t) (phdr & DDS_XCDR1_PL_SHORT_LEN_MASK);
     }
+    *param_len = plen;
     return plen > 0;
   }
   else
+  {
+    *param_len = 0;
     return dds_is_get1 (is);
+  }
 }
 
 static const uint32_t *initialize_and_skip_sequence (dds_sequence_t *seq, uint32_t insn, const uint32_t *ops, enum sample_data_state sample_state)
@@ -2763,32 +2765,46 @@ static inline const uint32_t *dds_stream_read_adr (uint32_t insn, dds_istream_t 
   if (cdr_kind == CDR_KIND_KEY && !is_key)
     return dds_stream_skip_adr (insn, ops);
 
-  if (!stream_is_member_present (insn, is, is_mutable_member))
-    return stream_skip_member (insn, data, addr, allocator, ops, sample_state);
+  dds_istream_t is1 = *is;
+  uint32_t param_len = 0;
+  if (op_type_optional (insn) && !is_mutable_member)
+  {
+    if (!stream_is_member_present (is, &param_len))
+    {
+      is->m_index += param_len; // param_len is 0 for XCDR2
+      return stream_skip_member (insn, data, addr, allocator, ops, sample_state);
+    }
+    if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1)
+    {
+      is1.m_buffer += is1.m_index;
+      is1.m_index = 0;
+      is1.m_size = param_len;
+    }
+  }
 
   if (op_type_external (insn))
     dds_stream_alloc_external (ops, insn, &addr, allocator, &sample_state);
 
   switch (DDS_OP_TYPE (insn))
   {
-    case DDS_OP_VAL_BLN: case DDS_OP_VAL_1BY: *((uint8_t *) addr) = dds_is_get1 (is); ops += 2; break;
-    case DDS_OP_VAL_2BY: *((uint16_t *) addr) = dds_is_get2 (is); ops += 2; break;
-    case DDS_OP_VAL_4BY: *((uint32_t *) addr) = dds_is_get4 (is); ops += 2; break;
-    case DDS_OP_VAL_8BY: *((uint64_t *) addr) = dds_is_get8 (is); ops += 2; break;
-    case DDS_OP_VAL_WCHAR: *((wchar_t *) addr) = (wchar_t) dds_is_get2 (is); ops += 2; break;
-    case DDS_OP_VAL_STR: *((char **) addr) = dds_stream_reuse_string (is, *((char **) addr), allocator, sample_state); ops += 2; break;
-    case DDS_OP_VAL_WSTR: *((wchar_t **) addr) = dds_stream_reuse_wstring (is, *((wchar_t **) addr), allocator, sample_state); ops += 2; break;
-    case DDS_OP_VAL_BST: (void) dds_stream_reuse_string_bound (is, (char *) addr, ops[2]); ops += 3; break;
-    case DDS_OP_VAL_BWSTR: (void) dds_stream_reuse_wstring_bound (is, (wchar_t *) addr, ops[2]); ops += 3; break;
-    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: ops = dds_stream_read_seq (is, addr, allocator, ops, insn, cdr_kind, sample_state); break;
-    case DDS_OP_VAL_ARR: ops = dds_stream_read_arr (is, addr, allocator, ops, insn, cdr_kind, sample_state); break;
-    case DDS_OP_VAL_UNI: ops = dds_stream_read_uni (is, addr, data, allocator, ops, insn, cdr_kind, sample_state); break;
+    case DDS_OP_VAL_BLN: case DDS_OP_VAL_1BY: *((uint8_t *) addr) = dds_is_get1 (&is1); ops += 2; break;
+    case DDS_OP_VAL_2BY: *((uint16_t *) addr) = dds_is_get2 (&is1); ops += 2; break;
+    case DDS_OP_VAL_4BY: *((uint32_t *) addr) = dds_is_get4 (&is1); ops += 2; break;
+    case DDS_OP_VAL_8BY: *((uint64_t *) addr) = dds_is_get8 (&is1); ops += 2; break;
+    case DDS_OP_VAL_WCHAR: *((wchar_t *) addr) = (wchar_t) dds_is_get2 (&is1); ops += 2; break;
+    case DDS_OP_VAL_STR: *((char **) addr) = dds_stream_reuse_string (&is1, *((char **) addr), allocator, sample_state); ops += 2; break;
+    case DDS_OP_VAL_WSTR: *((wchar_t **) addr) = dds_stream_reuse_wstring (&is1, *((wchar_t **) addr), allocator, sample_state); ops += 2; break;
+    case DDS_OP_VAL_BST: (void) dds_stream_reuse_string_bound (&is1, (char *) addr, ops[2]); ops += 3; break;
+    case DDS_OP_VAL_BWSTR: (void) dds_stream_reuse_wstring_bound (&is1, (wchar_t *) addr, ops[2]); ops += 3; break;
+    case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ: ops = dds_stream_read_seq (&is1, addr, allocator, ops, insn, cdr_kind, sample_state); break;
+    case DDS_OP_VAL_ARR: ops = dds_stream_read_arr (&is1, addr, allocator, ops, insn, cdr_kind, sample_state); break;
+    case DDS_OP_VAL_UNI: ops = dds_stream_read_uni (&is1, addr, data, allocator, ops, insn, cdr_kind, sample_state); break;
     case DDS_OP_VAL_ENU: {
       switch (DDS_OP_TYPE_SZ (insn))
       {
-        case 1: *((uint32_t *) addr) = dds_is_get1 (is); break;
-        case 2: *((uint32_t *) addr) = dds_is_get2 (is); break;
-        case 4: *((uint32_t *) addr) = dds_is_get4 (is); break;
+        case 1: *((uint32_t *) addr) = dds_is_get1 (&is1); break;
+        case 2: *((uint32_t *) addr) = dds_is_get2 (&is1); break;
+        case 4: *((uint32_t *) addr) = dds_is_get4 (&is1); break;
         default: abort ();
       }
       ops += 3;
@@ -2797,10 +2813,10 @@ static inline const uint32_t *dds_stream_read_adr (uint32_t insn, dds_istream_t 
     case DDS_OP_VAL_BMK: {
       switch (DDS_OP_TYPE_SZ (insn))
       {
-        case 1: *((uint8_t *) addr) = dds_is_get1 (is); break;
-        case 2: *((uint16_t *) addr) = dds_is_get2 (is); break;
-        case 4: *((uint32_t *) addr) = dds_is_get4 (is); break;
-        case 8: *((uint64_t *) addr) = dds_is_get8 (is); break;
+        case 1: *((uint8_t *) addr) = dds_is_get1 (&is1); break;
+        case 2: *((uint16_t *) addr) = dds_is_get2 (&is1); break;
+        case 4: *((uint32_t *) addr) = dds_is_get4 (&is1); break;
+        case 8: *((uint64_t *) addr) = dds_is_get8 (&is1); break;
         default: abort ();
       }
       ops += 4;
@@ -2815,12 +2831,18 @@ static inline const uint32_t *dds_stream_read_adr (uint32_t insn, dds_istream_t 
       if (op_type_base (insn) && jsr_ops[0] == DDS_OP_DLC)
         jsr_ops++;
 
-      (void) dds_stream_read_impl (is, addr, allocator, jsr_ops, false, cdr_kind, sample_state);
+      (void) dds_stream_read_impl (&is1, addr, allocator, jsr_ops, false, cdr_kind, sample_state);
       ops += jmp ? jmp : 3;
       break;
     }
     case DDS_OP_VAL_STU: abort(); break; /* op type STU only supported as subtype */
   }
+
+  if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1 && op_type_optional (insn) && !is_mutable_member)
+    is->m_index += param_len;
+  else
+    is->m_index = is1.m_index;
+
   return ops;
 }
 
@@ -3013,10 +3035,11 @@ static const uint32_t *dds_stream_skip_default (char * restrict data, const stru
   return ops;
 }
 
+
 static const uint32_t *dds_stream_read_delimited (dds_istream_t *is, char * restrict data, const struct dds_cdrstream_allocator *allocator, const uint32_t *ops, enum cdr_data_kind cdr_kind, enum sample_data_state sample_state)
 {
-  uint32_t delimited_sz = dds_is_get4 (is), delimited_offs = is->m_index, insn;
-  ops++;
+  uint32_t delimited_offs = is->m_index, insn, delimited_sz = is->m_size - is->m_index;
+  ops++; // skip DLC op
   while ((insn = *ops) != DDS_OP_RTS)
   {
     switch (DDS_OP (insn))
@@ -3141,10 +3164,21 @@ static const uint32_t *dds_stream_read_impl (dds_istream_t *is, char * restrict 
       case DDS_OP_RTS: case DDS_OP_JEQ: case DDS_OP_JEQ4: case DDS_OP_KOF: case DDS_OP_PLM: case DDS_OP_MID:
         abort ();
         break;
-      case DDS_OP_DLC:
-        assert (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2);
-        ops = dds_stream_read_delimited (is, data, allocator, ops, cdr_kind, sample_state);
+      case DDS_OP_DLC: {
+        dds_istream_t is1 = *is;
+        if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2)
+        {
+          uint32_t delimited_sz = dds_is_get4 (is);
+          is1.m_size = is->m_index + delimited_sz;
+          is1.m_index = is->m_index;
+
+          is->m_index += delimited_sz;
+        }
+        ops = dds_stream_read_delimited (&is1, data, allocator, ops, cdr_kind, sample_state);
+        if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1)
+          is->m_index = is1.m_index;
         break;
+      }
       case DDS_OP_PLC:
         assert (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2);
         ops = dds_stream_read_xcdr2_pl (is, data, allocator, ops, cdr_kind, sample_state);
@@ -5554,33 +5588,47 @@ static const uint32_t * dds_stream_print_adr (char **buf, size_t *bufsize, uint3
   if (cdr_kind == CDR_KIND_KEY && !is_key)
     return dds_stream_skip_adr (insn, ops);
 
-  if (!stream_is_member_present (insn, is, is_mutable_member))
+  dds_istream_t is1 = *is;
+  if (op_type_optional (insn) && !is_mutable_member)
   {
-    (void) prtf (buf, bufsize, "NULL");
-    return dds_stream_skip_adr (insn, ops);
+    uint32_t param_len;
+    if (!stream_is_member_present (is, &param_len))
+    {
+      (void) prtf (buf, bufsize, "NULL");
+      is->m_index += param_len; // param_len is 0 for XCDR2
+      return dds_stream_skip_adr (insn, ops);
+    }
+    if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1)
+    {
+      is1.m_buffer += is1.m_index;
+      is1.m_index = 0;
+      is1.m_size = param_len;
+
+      is->m_index += param_len;
+    }
   }
 
   switch (DDS_OP_TYPE (insn))
   {
     case DDS_OP_VAL_BLN: case DDS_OP_VAL_1BY: case DDS_OP_VAL_2BY: case DDS_OP_VAL_4BY: case DDS_OP_VAL_8BY:
     case DDS_OP_VAL_STR: case DDS_OP_VAL_WSTR: case DDS_OP_VAL_WCHAR:
-      if (!prtf_simple (buf, bufsize, is, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn)))
+      if (!prtf_simple (buf, bufsize, &is1, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn)))
         return NULL;
       ops += 2;
       break;
     case DDS_OP_VAL_BST: case DDS_OP_VAL_BWSTR: case DDS_OP_VAL_ENU: case DDS_OP_VAL_BMK:
-      if (!prtf_simple (buf, bufsize, is, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn)))
+      if (!prtf_simple (buf, bufsize, &is1, DDS_OP_TYPE (insn), DDS_OP_FLAGS (insn)))
         return NULL;
       ops += 3 + (DDS_OP_TYPE (insn) == DDS_OP_VAL_BMK ? 1 : 0);
       break;
     case DDS_OP_VAL_SEQ: case DDS_OP_VAL_BSQ:
-      ops = prtf_seq (buf, bufsize, is, ops, insn, cdr_kind);
+      ops = prtf_seq (buf, bufsize, &is1, ops, insn, cdr_kind);
       break;
     case DDS_OP_VAL_ARR:
-      ops = prtf_arr (buf, bufsize, is, ops, insn, cdr_kind);
+      ops = prtf_arr (buf, bufsize, &is1, ops, insn, cdr_kind);
       break;
     case DDS_OP_VAL_UNI:
-      ops = prtf_uni (buf, bufsize, is, ops, insn, cdr_kind);
+      ops = prtf_uni (buf, bufsize, &is1, ops, insn, cdr_kind);
       break;
     case DDS_OP_VAL_EXT: {
       const uint32_t *jsr_ops = ops + DDS_OP_ADR_JSR (ops[2]);
@@ -5588,7 +5636,7 @@ static const uint32_t * dds_stream_print_adr (char **buf, size_t *bufsize, uint3
       /* skip DLC instruction for base type, DHEADER is not in the data for base types */
       if (op_type_base (insn) && jsr_ops[0] == DDS_OP_DLC)
         jsr_ops++;
-      if (dds_stream_print_sample1 (buf, bufsize, is, jsr_ops, true, false, cdr_kind) == NULL)
+      if (dds_stream_print_sample1 (buf, bufsize, &is1, jsr_ops, true, false, cdr_kind) == NULL)
         return NULL;
       ops += jmp ? jmp : 3;
       break;
@@ -5597,6 +5645,10 @@ static const uint32_t * dds_stream_print_adr (char **buf, size_t *bufsize, uint3
       abort (); /* op type STU only supported as subtype */
       break;
   }
+
+  if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_2)
+    is->m_index += is1.m_index;
+
   return ops;
 }
 

@@ -128,10 +128,23 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dd
   assert (DDS_OP (insn) == DDS_OP_ADR);
   const enum dds_stream_typecode type = DDS_OP_TYPE (insn);
   const bool is_key = (insn & DDS_OP_FLAG_KEY) && (os != NULL);
-  if (!stream_is_member_present (insn, is, mutable_member))
+
+  uint32_t param_len = 0;
+  dds_istream_t is1 = *is;
+  if (op_type_optional (insn) && !mutable_member)
   {
-    assert (!is_key);
-    return dds_stream_skip_adr (insn, ops);
+    if (!stream_is_member_present (is, &param_len))
+    {
+      assert (!is_key);
+      is->m_index += param_len; // param_len is 0 for XCDR2
+      return dds_stream_skip_adr (insn, ops);
+    }
+    if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1)
+    {
+      is1.m_buffer += is1.m_index;
+      is1.m_index = 0;
+      is1.m_size = param_len;
+    }
   }
 
   if (type == DDS_OP_VAL_EXT)
@@ -161,6 +174,12 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dd
     else
       ops = dds_stream_extract_key_from_data_skip_adr (is, ops, type);
   }
+
+  if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1 && op_type_optional (insn) && !mutable_member)
+    is->m_index += param_len;
+  else
+    is->m_index = is1.m_index;
+
   return ops;
 }
 
