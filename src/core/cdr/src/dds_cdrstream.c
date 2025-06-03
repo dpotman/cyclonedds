@@ -28,13 +28,14 @@ typedef struct restrict_ostream_base {
   uint32_t m_size;          /* Buffer size */
   uint32_t m_index;         /* Read/write offset from start of buffer */
   uint32_t m_xcdr_version;  /* XCDR version to use for serializing data */
+  uint32_t m_align_off;
 } restrict_ostream_base_t;
 
-// We cast a dds_ostream(|BE|LE)_t * to a restrict_ostream(|BE|LE)_t *, so a
-// minimal verification that the memory layout is the same seems like a good
-// idea.
+// We memcpy a dds_ostream(|BE|LE)_t * to a restrict_ostream(|BE|LE)_t *, so
+// a minimal verification that the memory layout of a dds_ostream is a prefix
+// of that of restrict_ostream seems like a good idea.
 DDSRT_STATIC_ASSERT(
-  sizeof (restrict_ostream_base_t) == sizeof (dds_ostream_t) &&
+  sizeof (restrict_ostream_base_t) >= sizeof (dds_ostream_t) &&
   offsetof (restrict_ostream_base_t, m_buffer) == offsetof (dds_ostream_t, m_buffer) &&
   offsetof (restrict_ostream_base_t, m_size) == offsetof (dds_ostream_t, m_size) &&
   offsetof (restrict_ostream_base_t, m_index) == offsetof (dds_ostream_t, m_index) &&
@@ -296,7 +297,7 @@ static void dds_cdr_alignto (dds_istream_t *is, align_t a)
 
 static uint32_t dds_cdr_alignto_clear_and_resize_base (restrict_ostream_base_t *os, const struct dds_cdrstream_allocator *allocator, align_t a, uint32_t extra)
 {
-  const uint32_t m = os->m_index % ALIGN(a);
+  const uint32_t m = (os->m_index - os->m_align_off) % ALIGN(a);
   if (m == 0)
   {
     dds_cdr_resize (os, allocator, extra);
