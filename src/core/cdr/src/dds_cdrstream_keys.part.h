@@ -119,7 +119,12 @@ static bool dds_stream_write_keyBO_restrict (RESTRICT_OSTREAM_T *os, enum dds_cd
 
 bool dds_stream_write_keyBO (DDS_OSTREAM_T *os, enum dds_cdr_key_serialization_kind ser_kind, const struct dds_cdrstream_allocator *allocator, const char *sample, const struct dds_cdrstream_desc *desc)
 {
-  return dds_stream_write_keyBO_restrict ((RESTRICT_OSTREAM_T *) os, ser_kind, allocator, sample, desc);
+  RESTRICT_OSTREAM_T ros;
+  memcpy (&ros, os, sizeof (*os));
+  ros.x.m_align_off = 0;
+  const bool ret = dds_stream_write_keyBO_restrict (&ros, ser_kind, allocator, sample, desc);
+  memcpy (os, &ros, sizeof (*os));
+  return ret;
 }
 
 static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dds_istream_t *is, RESTRICT_OSTREAM_T *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const uint32_t *ops, bool mutable_member, bool mutable_member_or_parent, uint32_t n_keys, uint32_t * restrict keys_remaining)
@@ -396,7 +401,12 @@ static bool dds_stream_extract_keyBO_from_data_restrict (dds_istream_t *is, REST
 
 bool dds_stream_extract_keyBO_from_data (dds_istream_t *is, DDS_OSTREAM_T *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc *desc)
 {
-  return dds_stream_extract_keyBO_from_data_restrict (is, (RESTRICT_OSTREAM_T *) os, allocator, desc);
+  RESTRICT_OSTREAM_T ros;
+  memcpy (&ros, os, sizeof (*os));
+  ros.x.m_align_off = 0;
+  const bool ret = dds_stream_extract_keyBO_from_data_restrict (is, &ros, allocator, desc);
+  memcpy (os, &ros, sizeof (*os));
+  return ret;
 }
 
 static void dds_stream_extract_keyBO_from_key_impl (dds_istream_t *is, RESTRICT_OSTREAM_T *os, enum dds_cdr_key_serialization_kind ser_kind, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc *desc)
@@ -451,8 +461,12 @@ void dds_stream_extract_keyBO_from_key (dds_istream_t *is, DDS_OSTREAM_T *os, en
      In case any key field is in an appendable or mutable type, or in case a serialized
      key for a keyhash is required (in member-id order), extract and write the key
      in two steps. Otherwise, extract the output CDR in a single step. */
+  RESTRICT_OSTREAM_T ros;
+  memcpy (&ros, os, sizeof (*os));
+  ros.x.m_align_off = 0;
   if ((desc->flagset & (DDS_TOPIC_KEY_APPENDABLE | DDS_TOPIC_KEY_MUTABLE | DDS_TOPIC_KEY_SEQUENCE | DDS_TOPIC_KEY_ARRAY_NONPRIM)) || ser_kind == DDS_CDR_KEY_SERIALIZATION_KEYHASH)
-    dds_stream_extract_keyBO_from_key_impl (is, (RESTRICT_OSTREAM_T *) os, ser_kind, allocator, desc);
+    dds_stream_extract_keyBO_from_key_impl (is, &ros, ser_kind, allocator, desc);
   else
-    dds_stream_extract_keyBO_from_key_optimized (is, (RESTRICT_OSTREAM_T *) os, allocator, desc);
+    dds_stream_extract_keyBO_from_key_optimized (is, &ros, allocator, desc);
+  memcpy (os, &ros, sizeof (*os));
 }
