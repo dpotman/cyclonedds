@@ -3898,16 +3898,16 @@ static const uint32_t *normalize_uni (char * restrict data, uint32_t * restrict 
 }
 
 enum normalize_xcdr1_paramheader_result {
-  NPHR1_NOT_FOUND,
-  NPHR1_NOT_PRESENT,
-  NPHR1_PRESENT,
-  NPHR1_ERROR // found the member, but normalization failed
+  NPHR1_NOT_FOUND,   // unknown memberid, param_length and must_understand set
+  NPHR1_NOT_PRESENT, // known memberid, param_length = 0, must_understand set
+  NPHR1_PRESENT,     // known memberid, param_length != 0, must_understand set
+  NPHR1_ERROR        // normalization failed; param_length and must_understand undefined
 };
 
+ddsrt_nonnull_all
 static enum normalize_xcdr1_paramheader_result stream_read_normalize_xcdr1_paramheader (char * restrict data, uint32_t * restrict off, uint32_t size, bool bswap, uint32_t *param_length, bool *must_understand, const struct dds_cdrstream_desc_mid_table *mid_table, const uint32_t *adr_op)
 {
   uint32_t phdr, phdr_mid, plen;
-  bool pmu;
   if (!read_and_normalize_uint32 (&phdr, data, off, size, bswap))
     return NPHR1_ERROR;
   if ((phdr & DDS_XCDR1_PL_SHORT_PID_MASK) == DDS_XCDR1_PL_SHORT_PID_EXTENDED)
@@ -3927,24 +3927,38 @@ static enum normalize_xcdr1_paramheader_result stream_read_normalize_xcdr1_param
     if (pid & DDS_XCDR1_PL_LONG_FLAG_IMPL_EXT)
       return NPHR1_ERROR;
     phdr_mid = pid & DDS_XCDR1_PL_LONG_MID_MASK;
-    pmu = (pid & DDS_XCDR1_PL_LONG_FLAG_MU);
+    *must_understand = (pid & DDS_XCDR1_PL_LONG_FLAG_MU);
 
     // Read the extended parameter length
     if (!read_and_normalize_uint32 (&plen, data, off, size, bswap))
       return NPHR1_ERROR;
+    *param_length = plen;
+    // reject if fewer than plen bytes remain in the input
+    if (plen > size - *off)
+    {
+      normalize_error ();
+      return NPHR1_ERROR;
+    }
   }
   else
   {
     // Short header
-    pmu = (phdr & DDS_XCDR1_PL_SHORT_FLAG_MU);
+    *must_understand = (phdr & DDS_XCDR1_PL_SHORT_FLAG_MU);
+    plen = (uint32_t) (phdr & DDS_XCDR1_PL_SHORT_LEN_MASK);
+    *param_length = plen;
+    // reject if fewer than plen bytes remain in the input
+    if (plen > size - *off)
+    {
+      normalize_error ();
+      return NPHR1_ERROR;
+    }
 
     uint32_t pid = (phdr & DDS_XCDR1_PL_SHORT_PID_MASK);
     if (pid == DDS_XCDR1_PL_SHORT_PID_LIST_END)
       return NPHR1_ERROR;
-    // if (pid >= 0x3F04 && pid <= 0x3FFF)
-    //   TODO: reserved value
+    if (pid >= 0x3F04 && pid <= 0x3FFF) // reserved value
+      return NPHR1_NOT_FOUND;
     phdr_mid = pid;
-    plen = (uint32_t) (phdr & DDS_XCDR1_PL_SHORT_LEN_MASK);
   }
 
   uint32_t adr_mid;
@@ -3952,11 +3966,6 @@ static enum normalize_xcdr1_paramheader_result stream_read_normalize_xcdr1_param
     return NPHR1_NOT_FOUND;
   if (adr_mid != phdr_mid)
     return NPHR1_ERROR;
-
-  if (param_length)
-    *param_length = plen;
-  if (must_understand)
-    *must_understand = pmu;
 
   return plen > 0 ? NPHR1_PRESENT : NPHR1_NOT_PRESENT;
 }
@@ -4009,49 +4018,75 @@ static const uint32_t *stream_normalize_adr (uint32_t insn, char * restrict data
 
   if (!op_type_optional (insn) || is_mutable_member)
   {
-    ops = stream_normalize_adr_impl (insn, data, off, size, bswap, xcdr_version, mid_table, ops, cdr_kind);
+    return stream_normalize_adr_impl (insn, data, off, size, bswap, xcdr_version, mid_table, ops, cdr_kind);
   }
-  else
+  else if (xcdr_version != DDSI_RTPS_CDR_ENC_VERSION_1)
   {
-    if (xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1)
+    bool present = true;
+    if (!read_and_normalize_bool (&present, data, off, size))
+      return NULL;
+    if (!present)
+      return dds_stream_skip_adr (insn, ops);
+    else
+      return stream_normalize_adr_impl (insn, data, off, size, bswap, xcdr_version, mid_table, ops, cdr_kind);
+  }
+  else // xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1
+  {
+    assert (mid_table != NULL);
+    uint32_t param_length = 0;
+    bool must_understand = false;
+    switch (stream_read_normalize_xcdr1_paramheader (data, off, size, bswap, &param_length, &must_understand, mid_table, ops))
     {
-      assert (mid_table != NULL);
-      uint32_t param_length = 0;
-      bool must_understand;
-      switch (stream_read_normalize_xcdr1_paramheader (data, off, size, bswap, &param_length, &must_understand, mid_table, ops))
-      {
-        case NPHR1_PRESENT: {
-          uint32_t off0 = *off;
-          if ((ops = stream_normalize_adr_impl (insn, data, off, size, bswap, xcdr_version, mid_table, ops, cdr_kind)) == NULL)
-            return NULL;
-          if ((*off - off0) != param_length)
-            return NULL;
-          break;
-        }
-        case NPHR1_NOT_FOUND:
-          if (param_length > size - *off)
-            return NULL;
-          *off += param_length;
-          /* fall through */
-        case NPHR1_NOT_PRESENT:
-          ops = dds_stream_skip_adr (insn, ops);
-          break;
-        case NPHR1_ERROR:
+      case NPHR1_ERROR:
+        return NULL;
+      case NPHR1_NOT_FOUND:
+        if (must_understand) // must_understand and unknown means we have to reject the input
           return NULL;
+        *off += param_length;
+        /* fall through */
+      case NPHR1_NOT_PRESENT:
+        ops = dds_stream_skip_adr (insn, ops);
+        break;
+      case NPHR1_PRESENT: {
+        // alignment rules madness: XCDR1 serialization of optionals/mutable shifts
+        // reference position, so int64/float64 alignment is no longer always at
+        // multiple of 8:
+        //
+        //    Member of mutable aggregated type (structure, union), version 1 encoding
+        //    using short PL encoding when both M.id <= 2^14 and M.value.ssize <= 2^16
+        //    (24) XCDR[1] << {M : MMEMBER} =
+        //        XCDR
+        //        << ALIGN(4)
+        //        << { FLAG_I + FLAG_M + M.id : UInt16 }
+        //        << { M.value.ssize : UInt16 }
+        //        << PUSH( ORIGIN=0 )
+        //        << { M.value : M.value.type }
+        //
+        //    Member of mutable aggregated type (structure, union), version 1 encoding
+        //    using long PL encoding
+        //    (25) XCDR[1] << {M : MMEMBER} =
+        //        XCDR
+        //        << ALIGN(4)
+        //        << { FLAG_I + FLAG_M + PID_EXTENDED : UInt16 }
+        //        << { slength=8 : UInt16 }
+        //        << { M.id : UInt32 }
+        //        << { M.value.ssize : UInt32 }
+        //        << PUSH( ORIGIN=0 )
+        //        << { M.value : M.value.type }
+        //
+        // (with a presumed-missing POP(ORIGIN) at the end of both)
+        const uint32_t input_offset = *off;
+        uint32_t off1 = 0;
+        if ((ops = stream_normalize_adr_impl (insn, data + input_offset, &off1, param_length, bswap, xcdr_version, mid_table, ops, cdr_kind)) == NULL)
+          return NULL;
+        assert (off1 <= param_length);
+        // move forward by parameter length, ignoring any extraneous bytes
+        *off += param_length;
+        break;
       }
     }
-    else
-    {
-      bool present = true;
-      if (!read_and_normalize_bool (&present, data, off, size))
-        return NULL;
-      if (!present)
-        ops = dds_stream_skip_adr (insn, ops);
-      else
-        ops = stream_normalize_adr_impl (insn, data, off, size, bswap, xcdr_version, mid_table, ops, cdr_kind);
-    }
+    return ops;
   }
-  return ops;
 }
 
 static const uint32_t *stream_normalize_delimited (char * restrict data, uint32_t * restrict off, uint32_t size, bool bswap, uint32_t xcdr_version, const struct dds_cdrstream_desc_mid_table *mid_table, const uint32_t *ops, enum cdr_data_kind cdr_kind) ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
