@@ -163,7 +163,7 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dd
       jsr_ops++;
 
     /* only in case the ADR|EXT has the key flag set, pass the actual ostream, otherwise skip the EXT type by passing NULL for ostream */
-    (void) dds_stream_extract_keyBO_from_data1 (is, is_key ? os : NULL, allocator, mid_table, jsr_ops, false, mutable_member_or_parent, n_keys, keys_remaining);
+    (void) dds_stream_extract_keyBO_from_data1 (&is1, is_key ? os : NULL, allocator, mid_table, jsr_ops, false, mutable_member_or_parent, n_keys, keys_remaining);
     ops += jmp ? jmp : 3;
   }
   else
@@ -172,12 +172,12 @@ static const uint32_t *dds_stream_extract_keyBO_from_data_adr (uint32_t insn, dd
     {
       assert (*keys_remaining > 0);
       assert (os != NULL);
-      dds_stream_extract_keyBO_from_key_prim_op (is, os, allocator, mid_table, ops, 0, NULL);
+      dds_stream_extract_keyBO_from_key_prim_op (&is1, os, allocator, mid_table, ops, 0, NULL);
       ops = dds_stream_skip_adr (insn, ops);
       (*keys_remaining)--;
     }
     else
-      ops = dds_stream_extract_key_from_data_skip_adr (is, ops, type);
+      ops = dds_stream_extract_key_from_data_skip_adr (&is1, ops, type);
   }
 
   if (is->m_xcdr_version == DDSI_RTPS_CDR_ENC_VERSION_1 && op_type_optional (insn) && !mutable_member)
