@@ -2551,7 +2551,10 @@ static bool eq_CdrStreamWstring_t5 (const void *va, const void *vb)
 #define UTF16(x_) 16,x_
 #define WSTR0 32,0
 #define WSTR(...) 32,(2*DDSRT_COUNT_ARGS(__VA_ARGS__)), DDSRT_FOREACH_WRAP(UTF16, COMMA, __VA_ARGS__)
+#define PAD4 32,0
 #define PAD2 16,0
+#define PAD1 8,0
+#define PAD3 PAD1, PAD2
 #define DHDR(...) 32,(SERSIZE(__VA_ARGS__)), __VA_ARGS__
 
 #define CSEQ0 { ._length = 0, ._buffer = NULL }
@@ -2697,33 +2700,47 @@ CU_Test (ddsc_cdrstream, check_wstring_normalize)
 
 #define PHDR(pid,plen) 16,(pid),16,(plen)
 #define PHDR_EXT(pid,plen) PHDR(DDS_XCDR1_PL_SHORT_PID_EXTENDED, 8), 32,(pid), 32,(plen)
+#define D(n) (&CdrStreamParamHeader_ ## n ## _desc)
 
 CU_Test (ddsc_cdrstream, check_xcdr1_param_normalize)
 {
   const struct {
+    const dds_topic_descriptor_t *desc;
     bool valid;
     uint32_t cdrsize;
     const uint8_t *cdr;
   } tests[] = {
-    { false, CDR(PHDR(0, 4), 8,1) },    // insufficient data (len 4 in header, 1 byte present)
-    { false, CDR(PHDR(1, 4), 32,1) },   // incorrect member id 1 (should be 0)
-    { false, CDR(PHDR(0, 2), 16,1) },   // incorrect member length (member is int32)
-    { true,  CDR(PHDR(0, 4), 32,1) },   // valid, present
-    { true,  CDR(PHDR(0, 0)) },         // valid, not present
+    { D(t1), false, CDR(PHDR(0, 4), 8,1) },    // insufficient data (len 4 in header, 1 byte present)
+    { D(t1), false, CDR(PHDR(1, 4), 32,1) },   // incorrect member id 1 (should be 0)
+    { D(t1), false, CDR(PHDR(0, 2), 16,1) },   // incorrect member length (member is int32)
+    { D(t1), true,  CDR(PHDR(0, 4), 32,1) },   // valid, present
+    { D(t1), true,  CDR(PHDR(0, 0)) },         // valid, not present
 
-    { false, CDR(PHDR(DDS_XCDR1_PL_SHORT_PID_EXTENDED, 6), 32,0, 32,4, 32,1) },   // extended header: incorrect slen for extended header (should be 8)
-    { false, CDR(PHDR(~DDS_XCDR1_PL_SHORT_FLAG_MU & DDS_XCDR1_PL_SHORT_PID_EXTENDED, 8), 32,0, 32,4, 32,1) },   // extended header: MU flag missing
-    { false, CDR(PHDR_EXT(1, 4), 32,1) },   // extended header: incorrect member id
-    { false, CDR(PHDR_EXT(1, 2), 16,1) },   // extended header: incorrect member length
-    { true,  CDR(PHDR_EXT(0, 4), 32,1) },   // extended header: valid, present
-    { true,  CDR(PHDR_EXT(0, 0)) }          // extended header: valid, not present
+    { D(t1), false, CDR(PHDR(DDS_XCDR1_PL_SHORT_PID_EXTENDED, 6), 32,0, 32,4, 32,1) },   // extended header: incorrect slen for extended header (should be 8)
+    { D(t1), false, CDR(PHDR(~DDS_XCDR1_PL_SHORT_FLAG_MU & DDS_XCDR1_PL_SHORT_PID_EXTENDED, 8), 32,0, 32,4, 32,1) },   // extended header: MU flag missing
+    { D(t1), false, CDR(PHDR_EXT(1, 4), 32,1) },   // extended header: incorrect member id
+    { D(t1), false, CDR(PHDR_EXT(1, 2), 16,1) },   // extended header: incorrect member length
+    { D(t1), true,  CDR(PHDR_EXT(0, 4), 32,1) },   // extended header: valid, present
+    { D(t1), true,  CDR(PHDR_EXT(0, 0)) },          // extended header: valid, not present
+
+    { D(t2), true,  CDR(PHDR(321, 1), 8,1, PAD3, PHDR(123, 4), 32,1 ) },       // valid, present
+    { D(t2), true,  CDR(PHDR(321, 0),            PHDR(123, 4), 32,1 ) },       // valid, not-present/present
+    { D(t2), false, CDR(PHDR(321, 0),            PHDR(124, 0) ) },             // invalid, incorrect member id
+    { D(t2), true,  CDR(PHDR(321, 1), 8,1, PAD3, PHDR_EXT(123, 4), 32,1 ) },   // valid, short/extended header, present
+    { D(t2), true,  CDR(PHDR_EXT(321, 0),        PHDR_EXT(123, 0) ) },         // valid, extended header, not-present
+    { D(t2), false, CDR(PHDR(321, 0),            PHDR(DDS_XCDR1_PL_SHORT_FLAG_IMPL_EXT & DDS_XCDR1_PL_SHORT_PID_EXTENDED, 8), 32,123, 32,4, 32,1) },   // invalid extended header: impl_ext flag set
+
+    { D(t3), true,  CDR(PHDR(10, 1), 8,1, PAD3, PHDR(99, 9), 32,5, 8,'a', 8,'b', 8,'c', 8,'d', 8,'\0', PAD3, PHDR(100, 8), 64,1) },          // valid, present
+    { D(t3), true,  CDR(PHDR_EXT(10, 1), 8,1, PAD3, PHDR_EXT(99, 9), 32,5, 8,'a', 8,'b', 8,'c', 8,'d', 8,'\0', PAD3, PHDR(100, 8), 64,1) },  // valid, short/extended header, present
+    { D(t3), false, CDR(PHDR_EXT(10, 5), 8,1, PAD3, PHDR(99, 0), PHDR(100,8), 64,1) },                                                       // incorrect length, present/not-present
+    { D(t3), false, CDR(PHDR_EXT(10, 0), PHDR(99, 0), PHDR(100,5), 64,1) }                                                                  // incorrect length, present/not-present
   };
 
   for (uint32_t i = 0; i < sizeof (tests) / sizeof (tests[0]); i++)
   {
-    printf("running test %"PRIu32" \n", i);
+    printf("running test %"PRIu32" for type %s\n", i, tests[i].desc->m_typename);
     struct dds_cdrstream_desc desc;
-    dds_cdrstream_desc_from_topic_desc (&desc, &CdrStreamParamHeader_t1_desc);
+    dds_cdrstream_desc_from_topic_desc (&desc, tests[i].desc);
     assert (desc.ops.ops);
     dds_ostream_t os;
     dds_ostream_init (&os, &dds_cdrstream_default_allocator, 0, DDSI_RTPS_CDR_ENC_VERSION_1);
@@ -2737,3 +2754,4 @@ CU_Test (ddsc_cdrstream, check_xcdr1_param_normalize)
     dds_cdrstream_desc_fini (&desc, &dds_cdrstream_default_allocator);
   }
 }
+#undef D
