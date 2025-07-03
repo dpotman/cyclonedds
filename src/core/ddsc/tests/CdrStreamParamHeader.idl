@@ -32,3 +32,35 @@ module CdrStreamParamHeader {
   };
 
 };
+
+module CdrStreamAppedable {
+  @final
+  struct f1 {
+    long m1;
+    long m2;
+  };
+
+  @appendable
+  struct a1 {
+    long m1;
+    long m2;
+  };
+
+  @appendable
+  struct a2 {
+    long m1;
+    @optional long m2;
+  };
+
+  @appendable
+  struct a3_1 {
+    long s1;
+    long s2;
+  };
+  @appendable
+  struct a3 {
+    long m1;
+    @optional a3_1 m2;
+  };
+
+};
