@@ -997,7 +997,7 @@ CU_Test (ddsc_cdrstream, ser_des_multiple, .init = cdrstream_init, .fini = cdrst
     for (uint32_t x = 0; x <= (tests[i].test_xcdr1 ? 1 : 0); x++)
     {
       dds_return_t ret;
-      tprintf ("Running test ser_des_multiple: %s\n", tests[i].descr);
+      tprintf ("Running test ser_des_multiple: %s, XCDR%d\n", tests[i].descr, x ? 1 : 2);
 
       entity_init (tests[i].desc, x ? DDS_DATA_REPRESENTATION_XCDR1 : DDS_DATA_REPRESENTATION_XCDR2, false);
 
@@ -1577,7 +1577,7 @@ CU_Test(ddsc_cdrstream, init_sequence_in_external_struct)
   };
   struct dds_cdrstream_desc descr;
   memset (&descr, 0, sizeof (descr));
-  dds_cdrstream_desc_init (&descr, &dds_cdrstream_default_allocator, sizeof (ExternMutStructSeq), dds_alignof (ExternMutStructSeq), 0, ExternMutStructSeq_ops, NULL, 0, 0);
+  dds_cdrstream_desc_init_with_nops (&descr, &dds_cdrstream_default_allocator, sizeof (ExternMutStructSeq), dds_alignof (ExternMutStructSeq), 0, ExternMutStructSeq_ops, sizeof (ExternMutStructSeq_ops) / sizeof (ExternMutStructSeq_ops[0]), NULL, 0);
   uint32_t actual_size;
   const bool byteswap = (DDSRT_ENDIAN != DDSRT_LITTLE_ENDIAN);
   const bool norm_ok = dds_stream_normalize (cdr, sizeof (cdr), byteswap, DDSI_RTPS_CDR_ENC_VERSION_2, &descr, false, &actual_size);

@@ -158,7 +158,6 @@ struct descriptor {
   const struct alignment *alignment; /**< alignment of topic type */
   uint32_t n_keys; /**< number of keys in topic */
   struct key_meta_data *keys; /**< key meta-data */
-  uint32_t n_opcodes; /**< number of opcodes in descriptor */
   uint32_t flags; /**< topic descriptor flag values */
   uint32_t data_representations; /**< restrict data representations for top-level type */
   struct stack_type *type_stack;

@@ -797,7 +797,7 @@ static dds_return_t typebuilder_add_aggrtype (struct typebuilder_data *tbd, stru
   return ret;
 }
 
-static dds_return_t push_op_impl (struct typebuilder_ops *ops, uint32_t op, uint32_t index, bool inc_nops)
+static dds_return_t push_op_impl (struct typebuilder_ops *ops, uint32_t op, uint32_t index)
 {
   assert (ops);
   while (index >= ops->maximum)
@@ -813,24 +813,23 @@ static dds_return_t push_op_impl (struct typebuilder_ops *ops, uint32_t op, uint
     ops->ops = tmp;
   }
   ops->ops[index] = op;
-  if (inc_nops)
-    ops->n_ops++;
+  ops->n_ops++;
   return DDS_RETCODE_OK;
 }
 
 static dds_return_t set_op (struct typebuilder_ops *ops, uint32_t index, uint32_t op)
 {
-  return push_op_impl (ops, op, index, true);
+  return push_op_impl (ops, op, index);
 }
 
 static dds_return_t push_op (struct typebuilder_ops *ops, uint32_t op)
 {
-  return push_op_impl (ops, op, ops->index++, true);
+  return push_op_impl (ops, op, ops->index++);
 }
 
 static dds_return_t push_op_arg (struct typebuilder_ops *ops, uint32_t op)
 {
-  return push_op_impl (ops, op, ops->index++, false);
+  return push_op_impl (ops, op, ops->index++);
 }
 
 static void or_op (struct typebuilder_ops *ops, uint32_t index, uint32_t value)

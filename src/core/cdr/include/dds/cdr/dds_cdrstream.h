@@ -324,8 +324,13 @@ dds_data_type_properties_t dds_stream_data_types (const uint32_t *ops)
   ddsrt_nonnull_all;
 
 /** @component cdr_serializer */
+DDS_EXPORT void dds_cdrstream_desc_init_with_nops (struct dds_cdrstream_desc *desc, const struct dds_cdrstream_allocator *allocator,
+    uint32_t size, uint32_t align, uint32_t flagset, const uint32_t *ops, uint32_t nops, const dds_key_descriptor_t *keys, uint32_t nkeys)
+  ddsrt_nonnull ((1, 2, 6));
+
+/** @component cdr_serializer */
 DDS_EXPORT void dds_cdrstream_desc_init (struct dds_cdrstream_desc *desc, const struct dds_cdrstream_allocator *allocator,
-    uint32_t size, uint32_t align, uint32_t flagset, const uint32_t *ops, const dds_key_descriptor_t *keys, uint32_t nkeys, uint32_t mid_table_offs)
+    uint32_t size, uint32_t align, uint32_t flagset, const uint32_t *ops, const dds_key_descriptor_t *keys, uint32_t nkeys)
   ddsrt_nonnull ((1, 2, 6));
 
 /** @component cdr_serializer */
