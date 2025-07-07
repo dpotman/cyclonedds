@@ -1901,17 +1901,18 @@ static inline void getsize_reserve (struct getsize_state *st, uint32_t elemsz)
   assert (elemsz == 1 || elemsz == 2 || elemsz == 4 || elemsz == 8);
   assert (st->alignmask == 3 || st->alignmask == 7);
   const size_t a = (elemsz - 1) & st->alignmask;
-  st->pos = ((st->pos - st->align_off + a) & ~a) + elemsz + st->align_off;
+  const size_t pad = ((a + 1) - ((st->pos - st->align_off) & a)) % (a + 1);
+  st->pos += pad + elemsz;
 }
 
 ddsrt_nonnull_all
 static inline void getsize_reserve_many (struct getsize_state *st, uint32_t elemsz, uint32_t n)
 {
   // elemsz is also alignment
-  assert (elemsz == 1 || elemsz == 2 || elemsz == 4 || elemsz == 8);
-  assert (st->alignmask == 3 || st->alignmask == 7);
-  const size_t a = (elemsz - 1) & st->alignmask;
-  st->pos = ((st->pos - st->align_off + a) & ~a) + n * elemsz + st->align_off;
+  if (n == 0)
+    return;
+  getsize_reserve (st, elemsz);
+  st->pos += (n - 1) * elemsz;
 }
 
 ddsrt_nonnull ((1))
@@ -2217,7 +2218,11 @@ static const uint32_t *dds_stream_getsize_adr (uint32_t insn, struct getsize_sta
       }
     }
     if (!addr)
+    {
+      if (alignment_offset_by_4)
+        st->align_off -= 4;
       return dds_stream_skip_adr (insn, ops);
+    }
   }
   assert (addr || DDS_OP_TYPE (insn) == DDS_OP_VAL_STR || DDS_OP_TYPE (insn) == DDS_OP_VAL_WSTR);
 
@@ -2375,6 +2380,7 @@ static size_t dds_stream_getsize_sample_impl (const char *data, const uint32_t *
     .xcdr_version = xcdr_version
   };
   (void) dds_stream_getsize_impl (&st, data, ops, false);
+  assert (st.align_off == 0);
   return st.pos;
 }
 
