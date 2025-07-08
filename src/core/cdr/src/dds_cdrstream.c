@@ -115,7 +115,7 @@ typedef struct restrict_ostreamLE {
 #define dds_stream_write_with_midBO                         NAME_BYTE_ORDER(dds_stream_write_with_mid)
 #define dds_stream_writeBO                                  NAME_BYTE_ORDER(dds_stream_write)
 #define dds_stream_write_implBO                             NAME_BYTE_ORDER(dds_stream_write_impl)
-#define dds_stream_write_paramheaderBO                      NAME_BYTE_ORDER(dds_stream_write_paramheader)
+#define dds_stream_write_xcdr1_paramheaderBO                NAME_BYTE_ORDER(dds_stream_write_xcdr1_paramheader)
 #define dds_stream_write_adrBO                              NAME_BYTE_ORDER(dds_stream_write_adr)
 #define dds_stream_write_xcdr2_plBO                         NAME_BYTE_ORDER(dds_stream_write_xcdr2_pl)
 #define dds_stream_write_xcdr2_pl_memberlistBO              NAME_BYTE_ORDER(dds_stream_write_xcdr2_pl_memberlist)

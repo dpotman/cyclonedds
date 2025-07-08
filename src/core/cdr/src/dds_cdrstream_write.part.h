@@ -535,7 +535,7 @@ static const uint32_t *dds_stream_write_uniBO (RESTRICT_OSTREAM_T *os, const str
   return ops;
 }
 
-static void dds_stream_write_paramheaderBO (RESTRICT_OSTREAM_T *os, const struct dds_cdrstream_allocator *allocator, bool flag_mu, uint32_t member_id, uint32_t *param_length_offset, bool *alignment_offset_by_4)
+static void dds_stream_write_xcdr1_paramheaderBO (RESTRICT_OSTREAM_T *os, const struct dds_cdrstream_allocator *allocator, bool flag_mu, uint32_t member_id, uint32_t *param_length_offset, bool *alignment_offset_by_4)
 {
   // Always using long PL encoding
   uint16_t phdr = DDS_XCDR1_PL_SHORT_FLAG_MU | DDS_XCDR1_PL_SHORT_PID_EXTENDED; // support for FLAG_IMPL_EXT not implemented
@@ -589,9 +589,16 @@ static const uint32_t *dds_stream_write_adrBO (uint32_t insn, RESTRICT_OSTREAM_T
       uint32_t member_id;
       if (!find_member_id (mid_table, ops, &member_id))
         return NULL;
-      dds_stream_write_paramheaderBO (os, allocator, must_understand, member_id, &param_length_offs, &alignment_offset_by_4);
+      dds_stream_write_xcdr1_paramheaderBO (os, allocator, must_understand, member_id, &param_length_offs, &alignment_offset_by_4);
       if (!present)
+      {
         *((uint32_t *) (os->x.m_buffer + param_length_offs - 4)) = to_BO4u (0);
+        if (alignment_offset_by_4)
+        {
+          assert (os->x.m_align_off >= 4);
+          os->x.m_align_off -= 4;
+        }
+      }
     }
     else // DDSI_RTPS_CDR_ENC_VERSION_2
     {
