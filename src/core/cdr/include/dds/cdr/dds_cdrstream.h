@@ -212,16 +212,29 @@ DDS_EXPORT const uint32_t *dds_stream_normalize_xcdr2_data (char *data, uint32_t
   ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
 
 /** @component cdr_serializer */
-DDS_EXPORT const uint32_t *dds_stream_write (dds_ostream_t *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops)
+DDS_EXPORT const uint32_t *dds_stream_write (dds_ostream_t *os, const struct dds_cdrstream_allocator *allocator, const char *data, const uint32_t *ops)
+  ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+
+/** @component cdr_serializer */
+DDS_EXPORT const uint32_t *dds_stream_writeLE (dds_ostreamLE_t *os, const struct dds_cdrstream_allocator *allocator, const char *data, const uint32_t *ops)
+  ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+
+/** @component cdr_serializer */
+DDS_EXPORT const uint32_t *dds_stream_writeBE (dds_ostreamBE_t *os, const struct dds_cdrstream_allocator *allocator, const char *data, const uint32_t *ops)
+  ddsrt_attribute_warn_unused_result ddsrt_nonnull_all;
+
+/** @component cdr_serializer */
+DDS_EXPORT const uint32_t *dds_stream_write_with_mid (dds_ostream_t *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops)
   ddsrt_attribute_warn_unused_result ddsrt_nonnull ((1, 2, 4, 5));
 
 /** @component cdr_serializer */
-DDS_EXPORT const uint32_t *dds_stream_writeLE (dds_ostreamLE_t *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops)
+DDS_EXPORT const uint32_t *dds_stream_write_with_midLE (dds_ostreamLE_t *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops)
   ddsrt_attribute_warn_unused_result ddsrt_nonnull ((1, 2, 4, 5));
 
 /** @component cdr_serializer */
-DDS_EXPORT const uint32_t *dds_stream_writeBE (dds_ostreamBE_t *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops)
+DDS_EXPORT const uint32_t *dds_stream_write_with_midBE (dds_ostreamBE_t *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops)
   ddsrt_attribute_warn_unused_result ddsrt_nonnull ((1, 2, 4, 5));
+
 
 /** @component cdr_serializer */
 DDS_EXPORT const uint32_t * dds_stream_write_with_byte_order (dds_ostream_t *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops, enum ddsrt_byte_order_selector bo)

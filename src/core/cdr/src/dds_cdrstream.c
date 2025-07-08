@@ -112,6 +112,7 @@ typedef struct restrict_ostreamLE {
 #define dds_stream_write_bitmask_arrBO                      NAME_BYTE_ORDER(dds_stream_write_bitmask_arr)
 #define dds_stream_write_union_discriminantBO               NAME_BYTE_ORDER(dds_stream_write_union_discriminant)
 #define dds_stream_write_uniBO                              NAME_BYTE_ORDER(dds_stream_write_uni)
+#define dds_stream_write_with_midBO                         NAME_BYTE_ORDER(dds_stream_write_with_mid)
 #define dds_stream_writeBO                                  NAME_BYTE_ORDER(dds_stream_write)
 #define dds_stream_write_implBO                             NAME_BYTE_ORDER(dds_stream_write_impl)
 #define dds_stream_write_paramheaderBO                      NAME_BYTE_ORDER(dds_stream_write_paramheader)
@@ -1817,7 +1818,7 @@ bool dds_stream_write_sampleLE (dds_ostreamLE_t *os, const struct dds_cdrstream_
     memcpy (os, &ros, sizeof (*os));
     res = true;
   } else {
-    res = dds_stream_writeLE (os, allocator, &desc->member_ids, data, desc->ops.ops) != NULL;
+    res = dds_stream_write_with_midLE (os, allocator, &desc->member_ids, data, desc->ops.ops) != NULL;
   }
   STREAM_SIZE_CHECK (os->x);
   return res;
@@ -1826,7 +1827,7 @@ bool dds_stream_write_sampleLE (dds_ostreamLE_t *os, const struct dds_cdrstream_
 bool dds_stream_write_sampleBE (dds_ostreamBE_t *os, const struct dds_cdrstream_allocator *allocator, const void *data, const struct dds_cdrstream_desc *desc)
 {
   STREAM_SIZE_CHECK_INIT (os->x);
-  const bool res = (dds_stream_writeBE (os, allocator, &desc->member_ids, data, desc->ops.ops) != NULL);
+  const bool res = (dds_stream_write_with_midBE (os, allocator, &desc->member_ids, data, desc->ops.ops) != NULL);
   STREAM_SIZE_CHECK (os->x);
   return res;
 }
@@ -1844,7 +1845,7 @@ bool dds_stream_write_sample (dds_ostream_t *os, const struct dds_cdrstream_allo
 bool dds_stream_write_sampleLE (dds_ostreamLE_t *os, const struct dds_cdrstream_allocator *allocator, const void *data, const struct dds_cdrstream_desc *desc)
 {
   STREAM_SIZE_CHECK_INIT (os->x);
-  const bool res = (dds_stream_writeLE (os, allocator, &desc->member_ids, data, desc->ops.ops) != NULL);
+  const bool res = (dds_stream_write_with_midLE (os, allocator, &desc->member_ids, data, desc->ops.ops) != NULL);
   STREAM_SIZE_CHECK (os->x);
   return res;
 }
@@ -1862,7 +1863,7 @@ bool dds_stream_write_sampleBE (dds_ostreamBE_t *os, const struct dds_cdrstream_
     memcpy (os, &ros, sizeof (*os));
     res = true;
   } else {
-    res = dds_stream_writeBE (os, allocator, &desc->member_ids, data, desc->ops.ops) != NULL;
+    res = dds_stream_write_with_midBE (os, allocator, &desc->member_ids, data, desc->ops.ops) != NULL;
   }
   STREAM_SIZE_CHECK (os->x);
   return res;
@@ -1876,11 +1877,11 @@ bool dds_stream_write_sampleBE (dds_ostreamBE_t *os, const struct dds_cdrstream_
 const uint32_t * dds_stream_write_with_byte_order (dds_ostream_t *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops, enum ddsrt_byte_order_selector bo)
 {
   if (bo == DDSRT_BOSEL_LE)
-    return dds_stream_writeLE ((dds_ostreamLE_t *) os, allocator, mid_table, data, ops);
+    return dds_stream_write_with_midLE ((dds_ostreamLE_t *) os, allocator, mid_table, data, ops);
   else if (bo == DDSRT_BOSEL_BE)
-    return dds_stream_writeBE ((dds_ostreamBE_t *) os, allocator, mid_table, data, ops);
+    return dds_stream_write_with_midBE ((dds_ostreamBE_t *) os, allocator, mid_table, data, ops);
   else
-    return dds_stream_write (os, allocator, mid_table, data, ops);
+    return dds_stream_write_with_mid (os, allocator, mid_table, data, ops);
 }
 
 struct getsize_state {

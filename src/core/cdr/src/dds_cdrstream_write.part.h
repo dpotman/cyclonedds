@@ -794,7 +794,7 @@ static const uint32_t *dds_stream_write_implBO (RESTRICT_OSTREAM_T *os, const st
   return ops;
 }
 
-const uint32_t *dds_stream_writeBO (DDS_OSTREAM_T *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops)
+const uint32_t *dds_stream_write_with_midBO (DDS_OSTREAM_T *os, const struct dds_cdrstream_allocator *allocator, const struct dds_cdrstream_desc_mid_table *mid_table, const char *data, const uint32_t *ops)
 {
   const struct dds_cdrstream_desc_mid_table empty_mid_table = { .table = (struct ddsrt_hh *) &ddsrt_hh_empty, .op0 = ops };
   RESTRICT_OSTREAM_T ros;
@@ -803,4 +803,9 @@ const uint32_t *dds_stream_writeBO (DDS_OSTREAM_T *os, const struct dds_cdrstrea
   const uint32_t *ret = dds_stream_write_implBO (&ros, allocator, mid_table ? mid_table : &empty_mid_table, data, ops, false, CDR_KIND_DATA);
   memcpy (os, &ros, sizeof (*os));
   return ret;
+}
+
+const uint32_t *dds_stream_writeBO (DDS_OSTREAM_T *os, const struct dds_cdrstream_allocator *allocator, const char *data, const uint32_t *ops)
+{
+  return dds_stream_write_with_midBO (os, allocator, NULL, data, ops);
 }

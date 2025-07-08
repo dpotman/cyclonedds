@@ -502,9 +502,12 @@ int main (int argc, char **argv)
   ret_cdrs = dds_stream_normalize_xcdr2_data (ptr, ptr2, 0, 0, ptr3);
   (void) ret_cdrs;
 
-  dds_stream_write (ptr, ptr2, ptr3, ptr4, ptr5);
-  dds_stream_writeLE (ptr, ptr2, ptr3, ptr4, ptr5);
-  dds_stream_writeBE (ptr, ptr2, ptr3, ptr4, ptr5);
+  dds_stream_write (ptr, ptr2, ptr3, ptr4);
+  dds_stream_writeLE (ptr, ptr2, ptr3, ptr4);
+  dds_stream_writeBE (ptr, ptr2, ptr3, ptr4);
+  dds_stream_write_with_mid (ptr, ptr2, ptr3, ptr4, ptr5);
+  dds_stream_write_with_midLE (ptr, ptr2, ptr3, ptr4, ptr5);
+  dds_stream_write_with_midBE (ptr, ptr2, ptr3, ptr4, ptr5);
   dds_stream_write_with_byte_order (ptr, ptr2, ptr3, ptr4, ptr5, 0);
   dds_stream_write_sample (ptr, ptr2, ptr3, ptr4);
   dds_stream_write_sampleLE (ptr, ptr2, ptr3, ptr4);

@@ -1907,7 +1907,7 @@ CU_Test (ddsc_cdrstream, check_wstring_valid)
 
     dds_ostream_t os;
     dds_ostream_init (&os, &dds_cdrstream_default_allocator, 0, DDSI_RTPS_CDR_ENC_VERSION_2);
-    const bool wok = dds_stream_write (&os, &dds_cdrstream_default_allocator, NULL, tests[i].data, desc.ops.ops);
+    const bool wok = dds_stream_write_sample (&os, &dds_cdrstream_default_allocator, tests[i].data, &desc);
     CU_ASSERT_FATAL (wok);
 
     CU_ASSERT_FATAL (os.m_index == tests[i].cdrsize);
