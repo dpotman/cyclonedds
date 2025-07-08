@@ -909,7 +909,7 @@ CU_Test (ddsc_cdrstream, ser_des, .init = cdrstream_init, .fini = cdrstream_fini
 
   for (uint32_t i = 0; i < sizeof (tests) / sizeof (tests[0]); i++)
   {
-    for (uint32_t x = 0; x <= (tests[i].test_xcdr1 ? 1 : 0); x++)
+    for (uint32_t x = 0; x <= (tests[i].test_xcdr1 ? 1u : 0u); x++)
     {
       dds_return_t ret;
       tprintf ("Running test ser_des: %s, XCDR%d\n", tests[i].descr, x ? 1 : 2);
@@ -994,7 +994,7 @@ CU_Test (ddsc_cdrstream, ser_des_multiple, .init = cdrstream_init, .fini = cdrst
 
   for (uint32_t i = 0; i < sizeof (tests) / sizeof (tests[0]); i++)
   {
-    for (uint32_t x = 0; x <= (tests[i].test_xcdr1 ? 1 : 0); x++)
+    for (uint32_t x = 0; x <= (tests[i].test_xcdr1 ? 1u : 0u); x++)
     {
       dds_return_t ret;
       tprintf ("Running test ser_des_multiple: %s, XCDR%d\n", tests[i].descr, x ? 1 : 2);
@@ -1048,7 +1048,7 @@ CU_Test (ddsc_cdrstream, appendable_mutable, .init = cdrstream_init, .fini = cdr
 
   for (uint32_t i = 0; i < sizeof (tests) / sizeof (tests[0]); i++)
   {
-    for (uint32_t x = 0; x <= (tests[i].test_xcdr1 ? 1 : 0); x++)
+    for (uint32_t x = 0; x <= (tests[i].test_xcdr1 ? 1u : 0u); x++)
     {
       for (int t = 0; t <= 1; t++)
       {
