@@ -1044,7 +1044,7 @@ CU_Test (ddsc_cdrstream, appendable_mutable, .init = cdrstream_init, .fini = cdr
   } tests[] = {
     { "appendable struct", true, &D(AppendStruct1), &D(AppendStruct2), I(appendstruct1), I(appendstruct2), C(appendstruct1), C(appendstruct2), F(appendstruct), F(appendstruct) },
     { "appendable defaults", true, &D(AppendDefaults1), &D(AppendDefaults2), I(appenddefaults1), I(appenddefaults2), C(appenddefaults1), C(appenddefaults2), F(appenddefaults1), F(appenddefaults2) },
-    { "mutable", false, &D(Mutable1), &D(Mutable2), I(mutable1), I(mutable2), C(mutable1), C(mutable2), F(mutable1), F(mutable2) }
+    { "mutable", true, &D(Mutable1), &D(Mutable2), I(mutable1), I(mutable2), C(mutable1), C(mutable2), F(mutable1), F(mutable2) }
   };
 
   for (uint32_t i = 0; i < sizeof (tests) / sizeof (tests[0]); i++)
